@@ -38,7 +38,7 @@ public class Dpt {
         ApkUtils.addProxyDex(ApkUtils.getOutDir().getAbsolutePath());
 
         ApkUtils.deleteMetaData();
-        ApkUtils.copyShellLibs(new File("shell/libs"));
+        ApkUtils.copyShellLibs(new File("shell-files/libs"));
         File apkFile = new File(apkPath);
         File newApkFile = new File(apkFile.getParent() , ApkUtils.getNewApkName(apkFile.getName()));
         ApkUtils.compress(ApkUtils.getOutDir().getAbsolutePath(),newApkFile.getAbsolutePath());

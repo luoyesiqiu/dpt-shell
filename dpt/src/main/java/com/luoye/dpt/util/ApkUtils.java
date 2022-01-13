@@ -170,7 +170,7 @@ public class ApkUtils {
      * @param apkDir
      */
     public static void addProxyDex(String apkDir){
-        String proxyDexPath = "shell/dex/classes.dex";
+        String proxyDexPath = "shell-files/dex/classes.dex";
         addDex(proxyDexPath,apkDir);
     }
 
