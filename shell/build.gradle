@@ -1,0 +1,63 @@
+plugins {
+    id 'com.android.application'
+}
+
+android {
+    compileSdkVersion 30
+    buildToolsVersion "30.0.2"
+
+    defaultConfig {
+        applicationId "com.luoye.dpt"
+        minSdkVersion 23
+        targetSdkVersion 30
+        versionCode 1
+        versionName "1.0"
+
+        multiDexEnabled false
+
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+        externalNativeBuild {
+            cmake {
+                cppFlags "-std=c++11"
+                abiFilters "armeabi-v7a","arm64-v8a"
+            }
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+    }
+    externalNativeBuild {
+        cmake {
+            path "src/main/cpp/CMakeLists.txt"
+            version "3.10.2"
+        }
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+}
+
+afterEvaluate{
+    copy {
+        from project.buildDir.absolutePath + File.separator + "intermediates" + File.separator + "dex" + File.separator + "debug" + File.separator + "mergeDexDebug" + File.separator + "classes.dex"
+        into project.rootDir.absolutePath + File.separator + "output" + File.separator + "shell" + File.separator + "dex"
+    }
+
+    copy {
+        from project.buildDir.absolutePath + File.separator + "intermediates" + File.separator + "stripped_native_libs" + File.separator + "debug" + File.separator + "out" + File.separator + "lib"
+        into project.rootDir.absolutePath + File.separator + "output" + File.separator + "shell" + File.separator + "libs"
+    }
+}
+
+dependencies {
+
+    testImplementation 'junit:junit:4.+'
+    androidTestImplementation 'androidx.test.ext:junit:1.1.2'
+    androidTestImplementation 'androidx.test.espresso:espresso-core:3.3.0'
+    implementation 'androidx.annotation:annotation:1.0.0'
+}
