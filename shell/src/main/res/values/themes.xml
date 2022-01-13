@@ -1,0 +1,7 @@
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <!-- Base application theme. -->
+    <style name="Theme.Dpt" parent="@android:style/Theme.Holo">
+
+        <!-- Customize your theme here. -->
+    </style>
+</resources>

@@ -1,0 +1,3 @@
+include ':dpt'
+include ':shell'
+rootProject.name = "dpt"
