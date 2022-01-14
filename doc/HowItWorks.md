@@ -483,7 +483,3 @@ void mergeDexElements(JNIEnv* env,jclass klass,jobject oldClassLoader,jobject ne
     DLOGD("mergeDexElements success");
 }
 ```
-
-## 0x4 总结
-
-做这个壳确实花了不少的时间，其中走过的弯路只有自己知道，不过还好做出来了。dpt未经过大量测试，后续发现问题再慢慢解决。
