@@ -10,7 +10,6 @@
 
 ![](代码抽取后.png)
 
-很早之前就想写这类的壳，最近终于把它做出来了，取名为dpt。现在将代码分享出来，欢迎把玩。项目地址：https://github.com/luoyesiqiu/dpt-shell
 
 ## 0x1 项目的结构
 
