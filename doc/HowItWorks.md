@@ -25,7 +25,7 @@ proccessor是可以将普通apk处理成加壳apk的模块。它的主要功能�
 
 - 生成新的apk
 
-  它的流程如下：
+流程如下：
 
 ![](proccessor流程.png)
 
@@ -43,9 +43,9 @@ shell模块最终生成的dex文件和so文件将被集成到需要加壳的apk�
 
 - codeitem填回
 
-  
 
-  shell模块的流程如下：
+流程如下：
+
 
 ![](shell流程.png)
 
@@ -100,7 +100,7 @@ proccessor比较重要的逻辑两点，AndroidManiest.xml的处理和Codeitem�
 
 ### (2) 提取CodeItem
 
-CodeItem是什么东西，CodeItem就是dex文件中存放函数字节码相关数据的结构。下图显示的就是CodeItem大概的样子。
+CodeItem是dex文件中存放函数字节码相关数据的结构。下图显示的就是CodeItem大概的样子。
 
 ![](codeitem结构.png)
 
