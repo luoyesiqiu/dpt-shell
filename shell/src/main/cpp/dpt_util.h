@@ -13,6 +13,11 @@
 #include <unistd.h>
 #include <android/asset_manager.h>
 #include <android/asset_manager_jni.h>
+#include <fcntl.h>
+#include <sys/mman.h>
+#include <libzip/zip.h>
+#include <libzip/zipint.h>
+#include <stdlib.h>
 #include "dpt_log.h"
 #include "JniWrapper.h"
 
@@ -28,8 +33,10 @@ static jclass g_ContextClass = nullptr;
 jclass getContextClass(JNIEnv *env);
 AAssetManager *getAssetMgr(JNIEnv *env, jobject assetManager);
 AAsset *getAsset(JNIEnv *env, jobject context, const char *filename);
-jbyteArray readFromZip(JNIEnv* env,jstring zipPath,jstring fileName);
 jstring getApkPath(JNIEnv *env,jclass ,jobject classLoader);
 int endWith(const char *str,const char* sub);
 void appendLog(const char* log);
+void hexDump(const char* name,const void* data, size_t size);
+void load_zip(const char* zip_file_path,void **zip_addr,off_t *zip_size);
+void *read_zip_file_entry(const void* zip_addr,off_t zip_size,const char* entry_name,zip_uint64_t *entry_size);
 #endif //DPT_DPT_UTIL_H

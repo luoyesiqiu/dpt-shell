@@ -113,87 +113,6 @@ jstring getApkPath(JNIEnv *env,jclass ,jobject classLoader) {
 
 }
 
-jbyteArray readFromZip(JNIEnv* env,jstring zipPath,jstring fileName){
-    const char* fileNameChs = env->GetStringUTFChars(fileName,nullptr);
-    const char* zipPathChs = env->GetStringUTFChars(zipPath,nullptr);
-
-    if(fileNameChs == nullptr || strlen(fileNameChs) == 0){
-        return nullptr;
-    }
-
-    if(zipPathChs == nullptr || strlen(zipPathChs) == 0){
-        return nullptr;
-    }
-    DLOGD("readFromZip read path = %s,read file = %s",zipPathChs,fileNameChs);
-    jclass ZipInputStreamClass = env->FindClass("java/util/zip/ZipInputStream");
-    jclass FileInputStreamClass = env->FindClass("java/io/FileInputStream");
-    jclass ByteArrayOutputStreamClass = env->FindClass("java/io/ByteArrayOutputStream");
-    jclass ZipEntryClass = env->FindClass("java/util/zip/ZipEntry");
-
-    jobject FileInputStreamObj = W_NewObject(env,FileInputStreamClass,"(Ljava/lang/String;)V",zipPath);
-    jobject ZipInputStreamObj = W_NewObject(env,ZipInputStreamClass,"(Ljava/io/InputStream;)V",FileInputStreamObj);
-    jobject ByteArrayOutputStreamObj = W_NewObject(env,ByteArrayOutputStreamClass,"()V");
-
-    jmethodID  getNextEntryMid = env->GetMethodID(ZipInputStreamClass,"getNextEntry", "()Ljava/util/zip/ZipEntry;");
-    jmethodID  readMid = env->GetMethodID(ZipInputStreamClass,"read", "([B)I");
-    jmethodID  writeMid = env->GetMethodID(ByteArrayOutputStreamClass,"write", "([BII)V");
-    jmethodID  toByteArrayMid = env->GetMethodID(ByteArrayOutputStreamClass,"toByteArray", "()[B");
-    jmethodID  getNameMid = env->GetMethodID(ZipEntryClass,"getName", "()Ljava/lang/String;");
-
-
-    for(;;) {
-        jobject ZipEntryObj = env->CallObjectMethod(ZipInputStreamObj,getNextEntryMid);
-        if(env->ExceptionCheck() || nullptr == ZipEntryObj){
-            env->ExceptionClear();
-            DLOGW("readFromZip ZipEntryObj is null");
-            break;
-        }
-
-        jstring currentName = (jstring)env->CallObjectMethod(ZipEntryObj,getNameMid);
-        if(env->ExceptionCheck() || nullptr == currentName){
-            env->ExceptionClear();
-            DLOGW("readFromZip get name fail.");
-            break;
-        }
-        const char* nameChs = env->GetStringUTFChars(currentName,nullptr);
-        if(strcmp(nameChs,fileNameChs) == 0){
-            DLOGD("readFromZip zip name = %s",nameChs);
-            for(;;){
-                jbyteArray  buf = env->NewByteArray(1024);
-                jint len = env->CallIntMethod(ZipInputStreamObj,readMid,buf);
-                if(env->ExceptionCheck()){
-                    env->ExceptionClear();
-                    DLOGW("readFromZip call read fail.");
-                    break;
-                }
-                if(len == -1){
-                    W_DeleteLocalRef(env,buf);
-                    break;
-                }
-
-                env->CallVoidMethod(ByteArrayOutputStreamObj,writeMid,buf,0,len);
-                if(env->ExceptionCheck()){
-                    env->ExceptionClear();
-                    DLOGW("readFromZip call write fail.");
-                    break;
-                }
-                W_DeleteLocalRef(env,buf);
-
-            }
-        }
-        env->ReleaseStringUTFChars(currentName,nameChs);
-        W_DeleteLocalRef(env,currentName);
-    }
-    jbyteArray ret = (jbyteArray)env->CallObjectMethod(ByteArrayOutputStreamObj,toByteArrayMid);
-    if(env->ExceptionCheck()){
-        env->ExceptionClear();
-        DLOGW("readFromZip call toByteArray fail.");
-    }
-    DLOGD("readFromZip success");
-
-    return ret;
-}
-
 int endWith(const char *str,const char* sub){
     if(NULL == str  || NULL == sub){
         return -1;
@@ -213,9 +132,112 @@ int endWith(const char *str,const char* sub){
             count++;
         }
     }
-    DLOGD("sublen = %d,count = %d",sub_len,count);
 
     return count == sub_len ? 0 : -1;
+}
+
+void load_zip(const char* zip_file_path,void **zip_addr,off_t *zip_size){
+    int fd = open(zip_file_path,O_RDONLY);
+    if(fd < 0){
+        return;
+    }
+    struct stat fst;
+    fstat(fd,&fst);
+    *zip_addr = mmap(nullptr, fst.st_size, PROT_READ, MAP_PRIVATE, fd, 0);
+    *zip_size = fst.st_size;
+}
+
+void *read_zip_file_entry(const void* zip_addr,off_t zip_size,const char* entry_name,zip_uint64_t *entry_size){
+
+    DLOGD("read_zip_file_item start = %llx,size = %ld",zip_addr,zip_size);
+    zip_error_t  err;
+    zip_source_t *zip_src = zip_source_buffer_create(zip_addr,zip_size,0,&err);
+    if(nullptr == zip_src){
+        DLOGE("read_zip_file_item zip_source_buffer_create err = %s",err.str);
+        return nullptr;
+    }
+
+    zip_source_keep(zip_src);
+    zip_t *achieve = zip_open_from_source(zip_src,ZIP_RDONLY,&err);
+
+    if(achieve != nullptr) {
+        size_t entry_number = zip_get_num_files(achieve);
+        DLOGD("read_zip_file_item read from mem success,entry num = %zu", entry_number);
+
+        for (size_t i = 0; i < entry_number; i++) {
+            const char* entry_name_tmp = zip_get_name(achieve,i,ZIP_FL_ENC_GUESS);
+            zip_file_t *file = zip_fopen(achieve, entry_name_tmp, ZIP_FL_ENC_GUESS);
+            if (file != nullptr) {
+                zip_stat_t zst;
+                zip_stat(achieve, entry_name_tmp, 0, &zst);
+                if(endWith(entry_name_tmp,entry_name) == 0){
+                    DLOGD("read_zip_file_item entry name = %s,size = %u",entry_name_tmp,zst.size);
+
+                    void *entry_data = calloc(zst.size, 1);
+                    zip_uint64_t entry_size_tmp = zip_fread(file, entry_data, zst.size);
+                    *entry_size = entry_size_tmp;
+
+                    return entry_data;
+                }
+            } else {
+                DLOGE("read_zip_file_item zip entry(%s) open fail!",entry_name_tmp);
+            }
+        }
+    }
+    else{
+        DLOGE("read_zip_file_item read from mem fail");
+    }
+
+    return nullptr;
+}
+
+void hexDump(const char* name,const void* data, size_t size){
+    char ascii[17];
+    size_t i, j;
+    ascii[16] = '\0';
+    char *buffer = (char*)calloc(size,1);
+    const size_t MAX_LEN = size/2;
+    char *item = (char*)calloc(MAX_LEN,1);
+    for (i = 0; i < size; ++i) {
+        memset(item,0,MAX_LEN);
+        snprintf(item,MAX_LEN,"%02X ", ((unsigned char*)data)[i]);
+        strncat(buffer,item,MAX_LEN);
+        if (((unsigned char*)data)[i] >= ' ' && ((unsigned char*)data)[i] <= '~') {
+            ascii[i % 16] = ((unsigned char*)data)[i];
+        } else {
+            ascii[i % 16] = '.';
+        }
+        if ((i+1) % 8 == 0 || i+1 == size) {
+            memset(item,0,MAX_LEN);
+            snprintf(item,MAX_LEN,"%s"," ");
+            strncat(buffer,item,MAX_LEN);
+
+            if ((i+1) % 16 == 0) {
+                memset(item,0,MAX_LEN);
+                snprintf(item,MAX_LEN,"|  %s \n", ascii);
+                strncat(buffer,item,MAX_LEN);
+
+            } else if (i+1 == size) {
+                ascii[(i+1) % 16] = '\0';
+                if ((i+1) % 16 <= 8) {
+                    memset(item,0,MAX_LEN);
+                    snprintf(item,MAX_LEN,"%s"," ");
+                    strncat(buffer,item,MAX_LEN);
+                }
+                for (j = (i+1) % 16; j < 16; ++j) {
+                    memset(item,0,MAX_LEN);
+                    snprintf(item,MAX_LEN,"%s","   ");
+                    strncat(buffer,item,MAX_LEN);
+                }
+                memset(item,0,MAX_LEN);
+                snprintf(item,MAX_LEN,"|  %s \n", ascii);
+                strncat(buffer,item,MAX_LEN);
+            }
+        }
+    }
+    DLOGD("%s: \n%s",name,buffer);
+    free(item);
+    free(buffer);
 }
 
 void appendLog(const char* log){
