@@ -396,6 +396,13 @@ void* MapFileAtAddress30(void* thiz,uint8_t* expected_ptr,
                          std::string* error_msg){
     int new_prot = (prot | PROT_WRITE);
 
+    if(filename == nullptr) {
+        DLOGD("MemMap::MapFileAtAddress call,prot = %d,new_prot = %d", prot,new_prot);
+    }
+    else {
+        DLOGD("MemMap::MapFileAtAddress call,prot = %d,new_prot = %d,filename = %s", prot,new_prot,filename);
+    }
+
     if(nullptr != g_originMapFileAtAddress30) {
         return g_originMapFileAtAddress30(thiz,expected_ptr,byte_count,new_prot,flags,fd,start,low_4gb,filename,reuse,reservation,error_msg);
     }
@@ -423,6 +430,15 @@ void hookMapFileAtAddress(){
                       (void **) &g_originMapFileAtAddress29);
         }
             break;
+        case 30: {
+            void *MapFileAtAddressAddr = DobbySymbolResolver(GetArtBaseLibPath(),
+                                                             MapFileAtAddress_Sym());
+
+            DobbyHook(MapFileAtAddressAddr, (void *) MapFileAtAddress30,
+                      (void **) &g_originMapFileAtAddress30);
+        }
+            break;
+
 
     }
 }
