@@ -31,9 +31,8 @@ public class Dpt {
         ApkUtils.saveApplicationName(ApkUtils.getOutDir().getAbsolutePath());
         ApkUtils.writeProxyAppName();
         boolean needWrite = ApkUtils.saveAppComponentFactory(ApkUtils.getOutDir().getAbsolutePath());
-        if(needWrite) {
-            ApkUtils.writeProxyComponentFactoryName();
-        }
+
+        ApkUtils.writeProxyComponentFactoryName();
         ApkUtils.setExtractNativeLibs();
         ApkUtils.addProxyDex(ApkUtils.getOutDir().getAbsolutePath());
 
