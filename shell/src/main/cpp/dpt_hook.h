@@ -39,7 +39,7 @@ static void * (*g_originMapFileAtAddress29)(void* thiz,uint8_t* addr,
                                             void* reservation,
                                             std::string* error_msg) = nullptr;
 
-static void * (*g_originMapFileAtAddress30)(void* thiz,uint8_t* expected_ptr,
+static void *(*g_originMapFileAtAddress30)(void* thiz,uint8_t* expected_ptr,
                                             size_t byte_count,
                                             int prot,
                                             int flags,
@@ -49,7 +49,7 @@ static void * (*g_originMapFileAtAddress30)(void* thiz,uint8_t* expected_ptr,
                                             const char* filename,
                                             bool reuse,
                                             void* reservation,
-                                            std::string* error_msg) = nullptr;
+                                            std::string* error_msg);
 
 void hook_ClassLinker_LoadMethod();
 void callOriginLoadMethod(void *thiz, void *self, const void *dex_file, const void *it, const void *method,
