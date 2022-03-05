@@ -8,7 +8,11 @@
 static jobject g_realApplicationInstance = nullptr;
 static jclass g_realApplicationClass = nullptr;
 static jobject g_context = nullptr;
-static jobject g_packageName = nullptr;
+void* zip_addr = nullptr;
+off_t zip_size;
+char *appComponentFactoryChs = nullptr;
+void *codeItemFilePtr = nullptr;
+
 
 static JNINativeMethod gMethods[] = {
         {"craoc", "(Ljava/lang/String;)V",                               (void *) callRealApplicationOnCreate},
@@ -93,14 +97,18 @@ void mergeDexElements(JNIEnv* env,jclass klass,jobject oldClassLoader,jobject ne
 }
 
 jstring readAppComponentFactory(JNIEnv *env, jclass klass, jobject classLoader) {
-    jstring apkPath = getApkPath(env, klass, classLoader);
-    jstring fileName = env->NewStringUTF("assets/app_acf");
-    jbyteArray appComponentFactory = readFromZip(env, apkPath, fileName);
-    jclass StringClass = env->FindClass("java/lang/String");
-    jstring StringObj = (jstring) W_NewObject(env, StringClass, "([B)V", appComponentFactory);
-    const char *StringChs = env->GetStringUTFChars(StringObj, NULL);
-    DLOGD("readAppComponentFactory = %s", StringChs);
-    return StringObj;
+    zip_uint64_t entry_size;
+    if(zip_addr == nullptr){
+        jstring apkPath = getApkPath(env,klass,classLoader);
+        const char *apkPathChs = env->GetStringUTFChars(apkPath,nullptr);
+        load_zip(apkPathChs,&zip_addr,&zip_size);
+    }
+
+    if(appComponentFactoryChs == nullptr) {
+        appComponentFactoryChs = (char*)read_zip_file_entry(zip_addr, zip_size,"app_acf", &entry_size);
+    }
+    DLOGD("readAppComponentFactory = %s", appComponentFactoryChs);
+    return env->NewStringUTF((appComponentFactoryChs));
 }
 
 void init_dpt(JNIEnv *env) {
@@ -236,35 +244,24 @@ void init_app(JNIEnv *env, jclass klass, jobject context, jobject classLoader) {
     DLOGD("init_app!");
     if (nullptr == context) {
 
-        jstring apkPath = getApkPath(env, klass, classLoader);
-        jstring fileName = env->NewStringUTF("assets/OoooooOooo");
-        jbyteArray data = readFromZip(env, apkPath, fileName);
+        zip_uint64_t entry_size;
 
-
-        int len = env->GetArrayLength(data);
-        if (len <= 0) {
-            DLOGE("readCodeItem Cannot read code item file!");
-            return;
+        if(zip_addr == nullptr){
+            jstring apkPath = getApkPath(env,klass,classLoader);
+            const char *apkPathChs = env->GetStringUTFChars(apkPath,nullptr);
+            load_zip(apkPathChs,&zip_addr,&zip_size);
         }
-        DLOGD("readCodeItem data len = %d", len);
-        auto *buf = (uint8_t *) env->GetByteArrayElements(data, nullptr);
 
+        if(codeItemFilePtr == nullptr) {
+            codeItemFilePtr = read_zip_file_entry(zip_addr,zip_size,"OoooooOooo",&entry_size);
+        }
+        //hexDump("read_zip_file_item item hexdump", (char *) codeItemFilePtr, 1024);
+        readCodeItem(env, klass,(uint8_t*)codeItemFilePtr,entry_size);
 
-        readCodeItem(env, klass, buf,len);
     } else {
         AAsset *aAsset = getAsset(env, context, "OoooooOooo");
 
         g_context = env->NewGlobalRef(context);
-
-        jclass contextClass = env->GetObjectClass(context);
-        jstring packageName = (jstring) W_CallObjectMethod(env, contextClass, context,
-                                                           "getPackageName",
-                                                           "()Ljava/lang/String;");
-        const char *packageNameChs = env->GetStringUTFChars(packageName, nullptr);
-
-        g_packageName = env->NewGlobalRef(packageName);
-
-        DLOGD("init_app %s", packageNameChs);
 
         if (aAsset != nullptr) {
             int len = AAsset_getLength(aAsset);

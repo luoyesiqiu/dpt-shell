@@ -13,6 +13,7 @@ set(DPT_NATIVE_SOURCE
         )
 
 include_directories(./ )
+include_directories(./libzip/)
 
 
 # 添加库
@@ -25,18 +26,19 @@ include_directories(
         dobby
 )
 
+add_subdirectory(libzip)
+
 # 使用预编译库
 add_library(local_dobby STATIC IMPORTED)
-
 set_target_properties(local_dobby PROPERTIES IMPORTED_LOCATION ${CMAKE_CURRENT_SOURCE_DIR}/../../../libs/${ANDROID_ABI}/libdobby.a)
 
 # 寻找已存在的库
 find_library(log-lib log)
-find_library(z-lib z)
 find_library(android-lib android)
 
 target_link_libraries( dpt
             ${log-lib}
+        zip
         local_dobby
         ${android-lib}
         )
