@@ -4,6 +4,7 @@
     package="com.luoye.dpt">
 
     <application
+        android:appComponentFactory="com.luoyesiqiu.shell.ProxyComponentFactory"
         android:name="com.luoyesiqiu.shell.ProxyApplication"
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
