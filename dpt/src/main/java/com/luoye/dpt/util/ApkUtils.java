@@ -229,20 +229,14 @@ public class ApkUtils {
      * 保存ComponentFactory
      * @param apkOutDir
      */
-    public static boolean saveAppComponentFactory(String apkOutDir){
+    public static void saveAppComponentFactory(String apkOutDir){
         String androidManifestFile = getManifestFilePath(apkOutDir);
         File appNameOutFile = new File(getOutAssetsDir(),"app_acf");
         String appName = ManifestUtils.getAppComponentFactory(androidManifestFile);
 
         appName = appName == null ? "" : appName;
 
-        if(isSystemComponentFactory(appName)){
-            appName = "";
-        }
-
         IoUtils.writeFile(appNameOutFile.getAbsolutePath(),appName.getBytes());
-
-        return !appName.equals("");
     }
 
     public static boolean isSystemComponentFactory(String name){
