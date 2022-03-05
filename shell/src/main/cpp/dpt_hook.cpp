@@ -334,7 +334,7 @@ const char* MapFileAtAddress_Sym(){
         case 29:
             return "_ZN3art6MemMap16MapFileAtAddressEPhjiiilbPKcbPS0_PNSt3__112basic_stringIcNS5_11char_traitsIcEENS5_9allocatorIcEEEE";
         case 30:
-            return "_ZN3art6MemMap16MapFileAtAddressEPhmiiilbPKcbPS0_PNSt3__112basic_stringIcNS5_11char_traitsIcEENS5_9allocatorIcEEE";
+            return "_ZN3art6MemMap16MapFileAtAddressEPhmiiilbPKcbPS0_PNSt3__112basic_stringIcNS5_11char_traitsIcEENS5_9allocatorIcEEEE";
     }
 }
 
