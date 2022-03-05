@@ -17,5 +17,7 @@ java -jar dpt.jar /path/to/apk
 
 ## 感谢
 
+- [dx](https://android.googlesource.com/platform/dalvik/+/refs/heads/master/dx/)
 - [Dobby](https://github.com/jmpews/Dobby)
 - [libzip-android](https://github.com/julienr/libzip-android)
+- [ManifestEditor](https://github.com/WindySha/ManifestEditor)
