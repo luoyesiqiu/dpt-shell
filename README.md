@@ -14,3 +14,8 @@ dpt目前已适配Android6~11。想要了解实现原理，可以查看[文档](
 ```
 java -jar dpt.jar /path/to/apk
 ```
+
+## 感谢
+
+- [Dobby](https://github.com/jmpews/Dobby)
+- [libzip-android](https://github.com/julienr/libzip-android)
