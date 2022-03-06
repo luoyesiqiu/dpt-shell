@@ -39,7 +39,7 @@ static void * (*g_originMapFileAtAddress29)(void* thiz,uint8_t* addr,
                                             void* reservation,
                                             std::string* error_msg) = nullptr;
 
-static void *(*g_originMapFileAtAddress30)(void* thiz,uint8_t* expected_ptr,
+static void *(*g_originMapFileAtAddress30)(uint8_t* expected_ptr,
                                             size_t byte_count,
                                             int prot,
                                             int flags,

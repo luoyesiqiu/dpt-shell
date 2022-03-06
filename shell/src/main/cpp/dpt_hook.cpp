@@ -383,7 +383,7 @@ void* MapFileAtAddress29(void* thiz,uint8_t* addr,
     }
 }
 
-void* MapFileAtAddress30(void* thiz,uint8_t* expected_ptr,
+void* MapFileAtAddress30(uint8_t* expected_ptr,
                          size_t byte_count,
                          int prot,
                          int flags,
@@ -403,9 +403,14 @@ void* MapFileAtAddress30(void* thiz,uint8_t* expected_ptr,
         DLOGD("MemMap::MapFileAtAddress call,prot = %d,new_prot = %d,filename = %s", prot,new_prot,filename);
     }
 
-    if(nullptr != g_originMapFileAtAddress30) {
-        return g_originMapFileAtAddress30(thiz,expected_ptr,byte_count,new_prot,flags,fd,start,low_4gb,filename,reuse,reservation,error_msg);
+    if(endWith(filename,"base.vdex") == 0 || endWith(filename,"base.odex") == 0){
+        return nullptr;
     }
+
+    if(nullptr != g_originMapFileAtAddress30) {
+        return g_originMapFileAtAddress30(expected_ptr,byte_count,new_prot,flags,fd,start,low_4gb,filename,reuse,reservation,error_msg);
+    }
+    return nullptr;
 }
 
 void hookMapFileAtAddress(){
