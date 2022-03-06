@@ -44,7 +44,8 @@ public class ProxyApplication extends Application {
         Log.d(TAG,"attachBaseContext classloader = " + base.getClassLoader());
 
 
-        if(!initialized) {
+        if(!base.getClassLoader().getClass().getSimpleName().equals(ShellClassLoader.class.getSimpleName())) {
+
             Log.d(TAG,"ProxyApplication init");
             JniBridge.ia(base,base.getClassLoader());
 
@@ -53,6 +54,7 @@ public class ProxyApplication extends Application {
             ClassLoader shellClassLoader = ShellClassLoader.loadDex(base);
 
             JniBridge.mde(oldClassLoader,shellClassLoader);
+            initialized = true;
 
         }
     }

@@ -20,7 +20,8 @@ static JNINativeMethod gMethods[] = {
         {"ia",    "(Landroid/content/Context;Ljava/lang/ClassLoader;)V", (void *) init_app},
         {"gap",   "(Ljava/lang/ClassLoader;)Ljava/lang/String;",         (void *) getApkPath},
         {"rcf",   "(Ljava/lang/ClassLoader;)Ljava/lang/String;",         (void *) readAppComponentFactory},
-        {"mde",   "(Ljava/lang/ClassLoader;Ljava/lang/ClassLoader;)V",        (void *) mergeDexElements}
+        {"mde",   "(Ljava/lang/ClassLoader;Ljava/lang/ClassLoader;)V",        (void *) mergeDexElements},
+        {"rde",   "(Ljava/lang/ClassLoader;Ljava/lang/ClassLoader;)V",        (void *) replaceDexElements}
 };
 
 void mergeDexElements(JNIEnv* env,jclass klass,jobject oldClassLoader,jobject newClassLoader){
@@ -94,6 +95,53 @@ void mergeDexElements(JNIEnv* env,jclass klass,jobject oldClassLoader,jobject ne
     env->SetObjectField(oldDexPathListObj, dexElementField,newElementArray);
 
     DLOGD("mergeDexElements success");
+}
+
+void replaceDexElements(JNIEnv* env,jclass klass,jobject oldClassLoader,jobject newClassLoader){
+    jclass BaseDexClassLoaderClass = env->FindClass("dalvik/system/BaseDexClassLoader");
+    jfieldID  pathList = env->GetFieldID(BaseDexClassLoaderClass,"pathList","Ldalvik/system/DexPathList;");
+    jobject oldDexPathListObj = env->GetObjectField(oldClassLoader,pathList);
+    if(env->ExceptionCheck() || nullptr == oldDexPathListObj ){
+        env->ExceptionClear();
+        W_DeleteLocalRef(env,BaseDexClassLoaderClass);
+        DLOGW("replaceDexElements oldDexPathListObj get fail");
+        return;
+    }
+    jobject newDexPathListObj = env->GetObjectField(newClassLoader,pathList);
+    if(env->ExceptionCheck() || nullptr == newDexPathListObj){
+        env->ExceptionClear();
+        W_DeleteLocalRef(env,BaseDexClassLoaderClass);
+        W_DeleteLocalRef(env,oldDexPathListObj);
+        DLOGW("replaceDexElements newDexPathListObj get fail");
+        return;
+    }
+
+    jclass DexPathListClass = env->FindClass("dalvik/system/DexPathList");
+    jfieldID  dexElementField = env->GetFieldID(DexPathListClass,"dexElements","[Ldalvik/system/DexPathList$Element;");
+    jobject newClassLoaderDexElements = env->GetObjectField(newDexPathListObj,dexElementField);
+    if(env->ExceptionCheck() || nullptr == newClassLoaderDexElements){
+        env->ExceptionClear();
+        W_DeleteLocalRef(env,BaseDexClassLoaderClass);
+        W_DeleteLocalRef(env,oldDexPathListObj);
+        W_DeleteLocalRef(env,newDexPathListObj);
+        W_DeleteLocalRef(env,DexPathListClass);
+        DLOGW("replaceDexElements dexElements get fail");
+        return;
+    }
+
+    env->SetObjectField(oldDexPathListObj,dexElementField,newClassLoaderDexElements);
+    if(env->ExceptionCheck()){
+        env->ExceptionClear();
+        W_DeleteLocalRef(env,BaseDexClassLoaderClass);
+        W_DeleteLocalRef(env,oldDexPathListObj);
+        W_DeleteLocalRef(env,newDexPathListObj);
+        W_DeleteLocalRef(env,DexPathListClass);
+        W_DeleteLocalRef(env,newClassLoaderDexElements);
+        DLOGW("replaceDexElements dexElements set fail");
+
+        return;
+    }
+    DLOGD("replaceDexElements success");
 }
 
 jstring readAppComponentFactory(JNIEnv *env, jclass klass, jobject classLoader) {
