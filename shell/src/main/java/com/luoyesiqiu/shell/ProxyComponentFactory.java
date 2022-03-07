@@ -22,7 +22,6 @@ import java.lang.reflect.Method;
 public class ProxyComponentFactory extends AppComponentFactory {
     private static final String TAG = "dpt " + ProxyComponentFactory.class.getSimpleName();
     private static AppComponentFactory sAppComponentFactory;
-    private boolean initialized = false;
 
     private String getTargetClassName(ClassLoader classLoader){
         return JniBridge.rcf(classLoader);
@@ -46,9 +45,9 @@ public class ProxyComponentFactory extends AppComponentFactory {
 
     private void init(ClassLoader cl){
 
-        if(!initialized){
+        if(!ProxyApplication.initialized){
 
-            initialized = true;
+            ProxyApplication.initialized = true;
 
             JniBridge.ia(null,cl);
             String apkPath = JniBridge.gap(cl);
