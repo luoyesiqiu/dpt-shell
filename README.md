@@ -6,6 +6,8 @@
 
 
 dpt目前已适配Android6~11。想要了解实现原理，可以查看[文档](doc/HowItWorks.md)
+
+
 已实现自动签名(cv自Xpatch)
 
 ## 用法
