@@ -48,7 +48,8 @@ afterEvaluate{
         printf("%s skip",project.name)
         return
     }
-    def targetDir = project.rootDir.absolutePath + File.separator + "shell-files"
+    def targetDir = project.rootDir.absolutePath + File.separator + "executable" + File.separator + "shell-files"
+    printf("shell-targetDir: %s\n",targetDir)
 
     copy {
         from project.buildDir.absolutePath + File.separator + "intermediates" + File.separator + "dex" + File.separator + "debug" + File.separator + "mergeDexDebug" + File.separator + "classes.dex"
