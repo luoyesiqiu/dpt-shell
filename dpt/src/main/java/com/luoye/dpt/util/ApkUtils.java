@@ -8,6 +8,9 @@ import com.wind.meditor.property.AttributeItem;
 import com.wind.meditor.property.ModificationProperty;
 import net.lingala.zip4j.ZipFile;
 import net.lingala.zip4j.exception.ZipException;
+import net.lingala.zip4j.model.ZipParameters;
+import net.lingala.zip4j.model.enums.CompressionLevel;
+import net.lingala.zip4j.model.enums.CompressionMethod;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -345,7 +348,11 @@ public class ApkUtils {
                     zipFile.addFolder(f.getAbsoluteFile());
                 }
                 else{
-                    zipFile.addFile(f.getAbsoluteFile());
+                    ZipParameters zipParameters = new ZipParameters();
+                    if(f.getName().equals("resources.arsc")) {
+                        zipParameters.setCompressionMethod(CompressionMethod.STORE);
+                    }
+                    zipFile.addFile(f.getAbsoluteFile(),zipParameters);
                 }
             }
         }
