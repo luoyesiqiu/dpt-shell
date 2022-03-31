@@ -59,9 +59,6 @@ public class Dpt {
 
         System.err.println("unzipApkFilePath: " + unzipApkFilePath);
 
-
-
-//        ApkUtils.deleteOutDir();
         ApkUtils.extract(apkPath,unzipApkFilePath);
         Global.packageName = ManifestUtils.getPackageName(unzipApkFilePath + File.separator + "AndroidManifest.xml");
         ApkUtils.extractDexCode(unzipApkFilePath);
@@ -76,12 +73,10 @@ public class Dpt {
 
         ApkUtils.deleteMetaData(unzipApkFilePath);
         ApkUtils.copyShellLibs(unzipApkFilePath, new File(outputApkFileParentPath,"shell-files/libs"));
-//        File newApkFile = new File(apkFile.getParent() , ApkUtils.getNewApkName(apkFile.getName()));
-//        ApkUtils.compress(ApkUtils.getOutDir().getAbsolutePath(),newApkFile.getAbsolutePath());
 
         boolean keepBuildFiles = false;
         new BuildAndSignApkTask(keepBuildFiles, unzipApkFilePath, output, apkPath).run();
-        // 5. delete all the build files that is useless now
+
         File unzipApkFile = new File(unzipApkFilePath);
         if (!keepBuildFiles && unzipApkFile.exists()) {
             WindFileUtils.deleteDir(unzipApkFile);

@@ -114,7 +114,6 @@ public class BuildAndSignApkTask{
                         .append(" " + apkPath + " ")
                         .append(" -digestalg SHA1 -sigalg SHA1withRSA ")
                         .append(" key0 ");
-//                System.out.println("\n" + signCmd + "\n");
                 String result = ShellCmdUtil.execCmd(signCmd.toString(), null);
                 System.out.println(" sign apk time is :" + ((System.currentTimeMillis() - time) / 1000) +
                         "s\n\n" + "  result=" + result);
@@ -130,7 +129,9 @@ public class BuildAndSignApkTask{
         }
     }
 
-    // 使用Android build-tools里自带的apksigner工具进行签名
+    /**
+     * 使用Android build-tools里自带的apksigner工具进行签名
+     */
     private boolean signApkUsingAndroidApksigner(String apkPath, String keyStorePath, String signedApkPath, String keyStorePassword) {
         ArrayList<String> commandList = new ArrayList<>();
 
