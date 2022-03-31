@@ -1,4 +1,4 @@
-package com.luoye.dpt;
+package com.luoye.dpt.task;
 
 import com.android.apksigner.ApkSignerTool;
 import com.luoye.dpt.util.WindFileUtils;
@@ -92,7 +92,6 @@ public class BuildAndSignApkTask{
     private boolean signApk(String apkPath, String keyStorePath, String signedApkPath) {
         String apkParentPath = (new File(apkPath)).getParent();
 
-        ShellCmdUtil.chmodNoException(apkParentPath, ShellCmdUtil.FileMode.MODE_755);
         if (signApkUsingAndroidApksigner(apkPath, keyStorePath, signedApkPath, "123456")) {
             return true;
         }
