@@ -1,5 +1,6 @@
 package com.luoye.dpt;
 
+import com.luoye.dpt.task.BuildAndSignApkTask;
 import com.luoye.dpt.util.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
