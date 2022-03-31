@@ -6,12 +6,17 @@
 
 
 dpt目前已适配Android6~11。想要了解实现原理，可以查看[文档](doc/HowItWorks.md)
+已实现自动签名(cv自Xpatch)
 
 ## 用法
 
 转到[Release页面](https://github.com/luoyesiqiu/dpt-shell/releases)下载executable.zip，解压，执行：
 
+
+## 编译使用
 ```
+对整个项目assemble
+cd executable
 java -jar dpt.jar /path/to/apk
 ```
 
@@ -21,3 +26,4 @@ java -jar dpt.jar /path/to/apk
 - [Dobby](https://github.com/jmpews/Dobby)
 - [libzip-android](https://github.com/julienr/libzip-android)
 - [ManifestEditor](https://github.com/WindySha/ManifestEditor)
+- [Xpatch](https://github.com/WindySha/Xpatch)
