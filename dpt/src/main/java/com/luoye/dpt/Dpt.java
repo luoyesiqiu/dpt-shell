@@ -30,7 +30,7 @@ public class Dpt {
     }
 
     private static void usage(){
-        System.err.println("Usage:\n\tjava -jar dpt.jar [--log] <ApkFile>\n\t" + ApkUtils.getOutDir().getAbsolutePath());
+        System.err.println("Usage:\n\tjava -jar dpt.jar [--log] <ApkFile>");
     }
 
     private static void processApk(String apkPath){
