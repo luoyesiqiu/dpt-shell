@@ -103,5 +103,8 @@ public class MultiDexCodeUtils {
         catch (IOException e){
             e.printStackTrace();
         }
+        finally {
+            IoUtils.close(randomAccessFile);
+        }
     }
 }
