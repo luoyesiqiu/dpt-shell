@@ -74,17 +74,16 @@ public class Dpt {
         ApkUtils.deleteMetaData(unzipApkFilePath);
         ApkUtils.copyShellLibs(unzipApkFilePath, new File(outputApkFileParentPath,"shell-files/libs"));
 
-        boolean keepBuildFiles = false;
-        new BuildAndSignApkTask(keepBuildFiles, unzipApkFilePath, output, apkPath).run();
+        new BuildAndSignApkTask(false, unzipApkFilePath, output, apkPath).run();
 
         File unzipApkFile = new File(unzipApkFilePath);
-        if (!keepBuildFiles && unzipApkFile.exists()) {
+        if (unzipApkFile.exists()) {
             WindFileUtils.deleteDir(unzipApkFile);
         }
 
-        File tempFile = new File(tempFilePath);
-        if (!keepBuildFiles && tempFile.exists()) {
-            tempFile.delete();
+        File tempFile = new File(tempFilePath.replaceAll("\\.",""));
+        if (tempFile.exists()) {
+            FileUtils.deleteRecurse(tempFile);
         }
     }
 }
