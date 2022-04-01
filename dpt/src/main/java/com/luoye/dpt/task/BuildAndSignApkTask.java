@@ -179,7 +179,6 @@ public class BuildAndSignApkTask{
 
         String zipalignPath = (new File(inputApkPath)).getParent() + File.separator + "zipalign";
         WindFileUtils.copyFileFromJar(zipalignAssetPath, zipalignPath);
-        ShellCmdUtil.chmodNoException(zipalignPath, ShellCmdUtil.FileMode.MODE_755);
         StringBuilder signCmd = new StringBuilder(zipalignPath + " ");
 
         signCmd.append(" -f ")
