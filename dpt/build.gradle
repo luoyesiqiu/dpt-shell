@@ -8,8 +8,9 @@ java {
 
 
 jar {
-    baseName = 'dpt'
-    version = '1.0'
+    archiveBaseName = "dpt"
+    archiveVersion = "1.0"
+    archiveFileName.set("dpt.jar")
     manifest {
         attributes 'Main-Class': 'com.luoye.dpt.Dpt'
     }
@@ -28,8 +29,8 @@ jar {
     exclude 'META-INF/*.SF', 'META-INF/*.DSA', 'META-INF/*.RSA', 'META-INF/*.MF', 'META-INF/*.txt', "META-INF/versions/**"
 
     manifest {
-        attributes("Implementation-Title": baseName,
-                "Implementation-Version": version,
+        attributes("Implementation-Title": archiveBaseName,
+                "Implementation-Version": archiveVersion,
                 "Build-Time": new Date().format("yyyy-MM-dd'T'HH:mm:ssZ"),
                 "Build-Number": System.env.BUILD_NUMBER ? System.env.BUILD_NUMBER : "-1",
         )
