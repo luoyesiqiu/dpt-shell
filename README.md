@@ -8,9 +8,21 @@ dpt目前已适配Android6~11。想要了解实现原理，可以查看[文档](
 
 已实现自动签名(cv自Xpatch)
 
-## 编译使用
+## 用法
+
+### 快速使用
+
+转到[Releases](https://github.com/luoyesiqiu/dpt-shell/releases)页面下载executable.zip，解压，执行：
 
 ```shell
+java -jar dpt.jar /path/to/apk
+```
+
+### 手动编译
+
+```shell
+git clone https://github.com/luoyesiqiu/dpt-shell
+cd dpt-shell
 gradlew :dpt:assemble
 cd executable
 java -jar dpt.jar /path/to/apk
