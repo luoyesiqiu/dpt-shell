@@ -291,7 +291,7 @@ bool registerNativeMethods(JNIEnv *env) {
 void init_app(JNIEnv *env, jclass klass, jobject context, jobject classLoader) {
     DLOGD("init_app!");
     if (nullptr == context) {
-
+        clock_t start = clock();
         zip_uint64_t entry_size;
 
         if(zip_addr == nullptr){
@@ -306,6 +306,7 @@ void init_app(JNIEnv *env, jclass klass, jobject context, jobject classLoader) {
         //hexDump("read_zip_file_item item hexdump", (char *) codeItemFilePtr, 1024);
         readCodeItem(env, klass,(uint8_t*)codeItemFilePtr,entry_size);
 
+        printTime("readCodeItem took =" , start);
     } else {
         AAsset *aAsset = getAsset(env, context, "OoooooOooo");
 

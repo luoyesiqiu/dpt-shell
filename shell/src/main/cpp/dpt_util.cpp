@@ -249,7 +249,7 @@ void appendLog(const char* log){
     }
 }
 
-void printTime(const char* msg,int start){
-    int end = clock();
+void printTime(const char* msg,clock_t start){
+    clock_t end = clock();
     DLOGD("%s %lf",msg,(double)(end - start) / CLOCKS_PER_SEC);
 }
