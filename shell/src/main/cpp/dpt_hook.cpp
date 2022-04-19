@@ -28,6 +28,7 @@ const char *GetClassLinker_LoadMethod_Sym() {
             return "_ZN3art11ClassLinker10LoadMethodERKNS_7DexFileERKNS_21ClassDataItemIteratorENS_6HandleINS_6mirror5ClassEEEPNS_9ArtMethodE";
         case 29:
         case 30:
+        case 31:
             return "_ZN3art11ClassLinker10LoadMethodERKNS_7DexFileERKNS_13ClassAccessor6MethodENS_6HandleINS_6mirror5ClassEEEPNS_9ArtMethodE";
         default:
             return "";
@@ -43,6 +44,9 @@ const char *GetArtLibPath() {
     else if(g_sdkLevel == 30){
         return "/apex/com.android.art/" LIB_DIR "/libart.so";
     }
+    else if(g_sdkLevel == 31){
+        return "/apex/com.android.art/" LIB_DIR "/libart.so";
+    }
 }
 
 const char *GetArtBaseLibPath() {
@@ -50,6 +54,9 @@ const char *GetArtBaseLibPath() {
         return "/apex/com.android.runtime/" LIB_DIR "/libartbase.so";
     }
     else if(g_sdkLevel == 30) {
+        return "/apex/com.android.art/" LIB_DIR "/libartbase.so";
+    }
+    else if(g_sdkLevel == 31) {
         return "/apex/com.android.art/" LIB_DIR "/libartbase.so";
     }
 }
@@ -70,6 +77,7 @@ void callOriginLoadMethod(void *thiz, void *self, const void *dex_file, const vo
             break;
         case 29:
         case 30:
+        case 31:
             g_originLoadMethod29(thiz, dex_file, method, klass, dst);
             break;
     }
@@ -104,6 +112,7 @@ uint32_t getDexFileLocationOffset() {
             break;
         case 29:
         case 30:
+        case 31:
 #ifndef __LP64__
             location_offset = 20;
 #else
@@ -126,6 +135,7 @@ uint32_t getDataItemCodeItemOffset() {
         case 28:
         case 29:
         case 30:
+        case 31:
 #ifndef __LP64__
             begin_offset = 4;
 #else
@@ -194,6 +204,7 @@ ClassDataItemReader* getClassDataItemReader(const void* it,const void* method){
             return new ClassDataItemReader(it);
         case 29:
         case 30:
+        case 31:
             return new ClassDataItemReader(method);
     }
     return nullptr;
@@ -316,6 +327,7 @@ void hook_ClassLinker_LoadMethod() {
             break;
         case 29:
         case 30:
+        case 31:
             DobbyHook(loadMethodAddress, (void *) LoadMethod_QR,(void**)&g_originLoadMethod29);
             break;
 

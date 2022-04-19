@@ -7,7 +7,7 @@ extern int g_sdkLevel;
 uint32_t ClassDataItemReader::GetMethodCodeItemOffset(){
     int api = g_sdkLevel;
     uint32_t ret = 0;
-    if(api == 29 || api == 30){
+    if(api == 29 || api == 30 || api == 31){
         ClassDataItemIteratorQ::Method *q = (ClassDataItemIteratorQ::Method *) it;
         ret = q->GetMethodCodeItemOffset();
     }
@@ -32,7 +32,7 @@ uint32_t ClassDataItemReader::GetMethodCodeItemOffset(){
 bool ClassDataItemReader::MemberIsNative(){
     int api = g_sdkLevel;
     bool ret = false;
-    if(api == 29 || api == 30){
+    if(api == 29 || api == 30 || api == 31){
         ClassDataItemIteratorQ::Method *q = (ClassDataItemIteratorQ::Method *) it;
         ret = q->MemberIsNative();
     }
@@ -57,7 +57,7 @@ bool ClassDataItemReader::MemberIsNative(){
 bool ClassDataItemReader::MemberIsFinal(){
     int api = g_sdkLevel;
     bool ret = false;
-    if(api == 29 || api == 30){
+    if(api == 29 || api == 30 || api == 31){
         ClassDataItemIteratorQ::Method *q = (ClassDataItemIteratorQ::Method *) it;
         ret = q->MemberIsFinal();
     }
@@ -82,7 +82,7 @@ bool ClassDataItemReader::MemberIsFinal(){
 uint32_t ClassDataItemReader::GetMemberIndex(){
     int api = g_sdkLevel;
     uint32_t ret = false;
-    if(api == 29 || api == 30){
+    if(api == 29 || api == 30 || api == 31){
         ClassDataItemIteratorQ::Method *q = (ClassDataItemIteratorQ::Method *) it;
         ret = q->GetMemberIndex();
     }
