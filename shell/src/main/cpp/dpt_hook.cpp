@@ -342,7 +342,11 @@ const char* MapFileAtAddress_Sym(){
         case 26:
         case 27:
         case 28:
+        #ifndef __LP64__
             return "_ZN3art6MemMap16MapFileAtAddressEPhjiiilbbPKcPNSt3__112basic_stringIcNS4_11char_traitsIcEENS4_9allocatorIcEEEE";
+        #else
+            return "_ZN3art6MemMap16MapFileAtAddressEPhmiiilbbPKcPNSt3__112basic_stringIcNS4_11char_traitsIcEENS4_9allocatorIcEEEE";
+        #endif
         case 29:
             return "_ZN3art6MemMap16MapFileAtAddressEPhjiiilbPKcbPS0_PNSt3__112basic_stringIcNS5_11char_traitsIcEENS5_9allocatorIcEEEE";
         case 30:
