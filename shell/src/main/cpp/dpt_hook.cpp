@@ -125,26 +125,11 @@ uint32_t getDexFileLocationOffset() {
 }
 
 uint32_t getDataItemCodeItemOffset() {
-    uint32_t begin_offset = 0;
-    switch (g_sdkLevel) {
-        case 23:
-        case 24:
-        case 25:
-        case 26:
-        case 27:
-        case 28:
-        case 29:
-        case 30:
-        case 31:
-#ifndef __LP64__
-            begin_offset = 4;
-#else
-            begin_offset = 8;
-#endif
-            break;
-    }
-
-    return begin_offset;
+    #ifndef __LP64__
+        return 4;
+    #else
+        return  8;
+    #endif
 }
 
 int dexNumber(std::string *location){
