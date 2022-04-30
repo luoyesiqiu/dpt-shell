@@ -13,7 +13,6 @@ int g_sdkLevel = 0;
 
 void dpt_hook() {
     g_sdkLevel = android_get_device_api_level();
-
     hookMapFileAtAddress();
     hook_ClassLinker_LoadMethod();
 }
@@ -334,29 +333,25 @@ const char *getMapFileAtAddressLibPath() {
 }
 
 const char* getMapFileAtAddressSymbol(){
-    pointer_t start,size;
-    char full_path[128] = {0};
-    int found = find_in_maps(getMapFileAtAddressLibPath(),&start,&size,full_path);
-    if(found){
-        FILE *lib_fp = fopen(full_path,"r");
-        if(lib_fp){
-            struct stat st;
-            stat(full_path,&st);
-            off_t lib_size = st.st_size;
-            char *data = (char *)calloc(lib_size,1);
-            fread(data,1,lib_size,lib_fp);
-            const char * symbol = find_symbol_in_elf((void*)data,2,"MemMap","MapFileAtAddress");
-            if(symbol != nullptr) {
-                DLOGD("getMapFileAtAddressSymbol find symbol = %s", symbol);
-                fclose(lib_fp);
-                return symbol;
-            }
-            else{
-                DLOGE("getMapFileAtAddressSymbol no found symbol!");
-            }
+    FILE *lib_fp = fopen(getMapFileAtAddressLibPath(),"r");
+    if(lib_fp){
+        fseek(lib_fp,0L,SEEK_END);
+        size_t lib_size = ftell(lib_fp);
+        fseek(lib_fp,0L,SEEK_SET);
 
-            free(data);
+        char *data = (char *)calloc(lib_size,1);
+        fread(data,1,lib_size,lib_fp);
+        const char * symbol = find_symbol_in_elf((void*)data,2,"MemMap","MapFileAtAddress");
+        if(symbol != nullptr) {
+            DLOGD("getMapFileAtAddressSymbol find symbol = %s", symbol);
+            fclose(lib_fp);
+            return symbol;
         }
+        else{
+            DLOGE("getMapFileAtAddressSymbol no found symbol!");
+        }
+
+        free(data);
     }
 
     return "";

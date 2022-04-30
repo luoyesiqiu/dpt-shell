@@ -245,59 +245,6 @@ const char* find_symbol_in_elf(void* elf_bytes_data,int keyword_count,...) {
     return nullptr;
 }
 
-int find_in_maps(const char* find_name,pointer_t *start,pointer_t *size,char *full_path) {
-    const int MAX_READ_LINE = 10 * 1024;
-    char maps_path[128] = {0};
-    snprintf(maps_path,128,"/proc/%d/maps",getpid());
-    FILE *fp = fopen(maps_path,"r");
-    int found = 0;
-    if(fp != nullptr) {
-        DLOGD("find_in_maps open file success!");
-        char *line = (char *)calloc(256,1);
-        int read_line = 0;
-        while(fgets(line,256,fp) != nullptr){
-            if(read_line++ >= MAX_READ_LINE){
-                break;
-            }
-            char flag[10] = {0};
-            char item_path[128] = {0};
-
-#ifdef __LP64__
-            pointer_t item_start,item_size;
-            int ret = sscanf(line, "%llx-%*llx %s %llx %*s %*s %s", &item_start,flag, &item_size, item_path);
-            if(ret != 4){
-                continue;
-            }
-#else
-            pointer_t item_start,item_size;
-            int ret = sscanf(line, "%x-%*x %s %x %*s %*s %s", &item_start,flag,&item_size, item_path);
-            if(ret != 4){
-                continue;
-            }
-#endif
-
-            if(flag[0] == 'r' && endWith(item_path,find_name) == 0) {
-                *start = item_start;
-                *size = item_size;
-                for(int i = 0; i < strnlen(item_path,128);i ++){
-                    char ch = item_path[i];
-                    if(ch == '\n' || ch == '\r'){
-                        continue;
-                    }
-                    *(full_path + i) = ch;
-                }
-                DLOGD("find_in_maps path = %s",item_path);
-                found = 1;
-                break;
-            }
-
-        }
-        free(line);
-    }
-
-    return found;
-}
-
 void hexDump(const char* name,const void* data, size_t size){
     char ascii[17];
     size_t i, j;
