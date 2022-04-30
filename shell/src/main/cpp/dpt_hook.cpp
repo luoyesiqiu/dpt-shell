@@ -17,23 +17,6 @@ void dpt_hook() {
     hook_ClassLinker_LoadMethod();
 }
 
-const char *GetClassLinker_LoadMethod_Sym() {
-    switch (g_sdkLevel) {
-        case 24:
-        case 25:
-            return "_ZN3art11ClassLinker10LoadMethodEPNS_6ThreadERKNS_7DexFileERKNS_21ClassDataItemIteratorENS_6HandleINS_6mirror5ClassEEEPNS_9ArtMethodE";
-        case 27:
-        case 28:
-            return "_ZN3art11ClassLinker10LoadMethodERKNS_7DexFileERKNS_21ClassDataItemIteratorENS_6HandleINS_6mirror5ClassEEEPNS_9ArtMethodE";
-        case 29:
-        case 30:
-        case 31:
-            return "_ZN3art11ClassLinker10LoadMethodERKNS_7DexFileERKNS_13ClassAccessor6MethodENS_6HandleINS_6mirror5ClassEEEPNS_9ArtMethodE";
-        default:
-            return "";
-    }
-}
-
 const char *GetArtLibPath() {
     if(g_sdkLevel < 29)
         return  "/system/" LIB_DIR "/libart.so" ;
@@ -58,6 +41,35 @@ const char *GetArtBaseLibPath() {
     else if(g_sdkLevel == 31) {
         return "/apex/com.android.art/" LIB_DIR "/libartbase.so";
     }
+}
+
+const char *GetClassLinkerLoadMethodLibPath(){
+    return GetArtLibPath();
+}
+
+const char *getClassLinkerLoadMethodSymbol() {
+    FILE *lib_fp = fopen(GetClassLinkerLoadMethodLibPath(),"r");
+    if(lib_fp){
+        fseek(lib_fp,0L,SEEK_END);
+        size_t lib_size = ftell(lib_fp);
+        fseek(lib_fp,0L,SEEK_SET);
+
+        char *data = (char *)calloc(lib_size,1);
+        fread(data,1,lib_size,lib_fp);
+        const char * symbol = find_symbol_in_elf((void*)data,2,"ClassLinker","LoadMethod","DexFile","ArtMethod");
+        if(symbol != nullptr) {
+            DLOGD("getClassLinkerLoadMethodSymbol find symbol = %s", symbol);
+            fclose(lib_fp);
+            return symbol;
+        }
+        else{
+            DLOGE("getClassLinkerLoadMethodSymbol no found symbol!");
+        }
+
+        free(data);
+    }
+
+    return "";
 }
 
 void callOriginLoadMethod(void *thiz, void *self, const void *dex_file, const void *it,
@@ -296,7 +308,7 @@ void LoadMethod_QR(void *thiz, const void *dex_file, const void *method, void *k
 };
 
 void hook_ClassLinker_LoadMethod() {
-    void* loadMethodAddress = DobbySymbolResolver(GetArtLibPath(),GetClassLinker_LoadMethod_Sym());
+    void* loadMethodAddress = DobbySymbolResolver(GetArtLibPath(),getClassLinkerLoadMethodSymbol());
     switch (g_sdkLevel) {
         case 23:
         case 24:
