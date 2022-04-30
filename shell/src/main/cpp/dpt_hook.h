@@ -57,4 +57,5 @@ void callOriginLoadMethod(void *thiz, void *self, const void *dex_file, const vo
 uint32_t getDexFileLocationOffset();
 uint32_t getDataItemCodeItemOffset();
 void hookMapFileAtAddress();
+const char* getMapFileAtAddressSymbol();
 #endif //DPT_DPT_HOOK_H
