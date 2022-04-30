@@ -27,7 +27,7 @@ static void (*g_originLoadMethod29)(void* thiz, const void* dex_file, const void
 
 
 static void * (*g_originMapFileAtAddress28)(uint8_t*,size_t,int,int,int,off_t,bool,bool,const char*,std::string*) = nullptr;
-static void * (*g_originMapFileAtAddress29)(void* thiz,uint8_t* addr,
+static void * (*g_originMapFileAtAddress29)(uint8_t* addr,
                                             size_t byte_count,
                                             int prot,
                                             int flags,
