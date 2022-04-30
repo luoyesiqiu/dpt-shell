@@ -4,8 +4,21 @@
 
 #include <libgen.h>
 #include <ctime>
+#include <elf.h>
 #include "dpt_util.h"
+#include "dpt_log.h"
 
+#ifdef __LP64__
+#define Elf_Ehdr Elf64_Ehdr
+#define Elf_Shdr Elf64_Shdr
+#define Elf_Sym  Elf64_Sym
+#define Elf_Off  Elf64_Off
+#else
+#define Elf_Ehdr Elf32_Ehdr
+#define Elf_Shdr Elf32_Shdr
+#define Elf_Sym  Elf32_Sym
+#define Elf_Off  Elf32_Off
+#endif
 
 jclass getContextClass(JNIEnv *env) {
     if (g_ContextClass == nullptr) {
@@ -189,6 +202,100 @@ void *read_zip_file_entry(const void* zip_addr,off_t zip_size,const char* entry_
     }
 
     return nullptr;
+}
+
+const char* find_symbol_in_elf(void* elf_bytes_data,int keyword_count,...) {
+    Elf_Ehdr* ehdr = (Elf_Ehdr*)elf_bytes_data;
+
+    Elf_Shdr *shdr = (Elf_Shdr *)(((uint8_t*) elf_bytes_data) + ehdr->e_shoff);
+
+    va_list kw_list;
+    for (int i = 0; i < ehdr->e_shnum;i++) {
+
+        if(shdr->sh_type == SHT_STRTAB){
+            const char* str_base = (char *)((uint8_t*)elf_bytes_data + shdr->sh_offset);
+            char* ptr = (char *)str_base;
+
+            for(int k = 0; ptr < (str_base + shdr->sh_size);k++){
+                const char* item_value = ptr;
+                size_t item_len = strnlen(item_value,128);
+                ptr += (item_len + 1);
+
+                if(item_len == 0){
+                    continue;
+                }
+                int match_count = 0;
+                va_start(kw_list,keyword_count);
+                for(int n = 0;n < keyword_count;n++){
+                    const char *keyword = va_arg(kw_list,const char*);
+                    if(strstr(item_value,keyword)){
+                        match_count++;
+                    }
+                }
+                va_end(kw_list);
+                if(match_count == keyword_count){
+                    return item_value;
+                }
+            }
+            break;
+        }
+
+        shdr++;
+    }
+    return nullptr;
+}
+
+int find_in_maps(const char* find_name,pointer_t *start,pointer_t *size,char *full_path) {
+    const int MAX_READ_LINE = 10 * 1024;
+    char maps_path[128] = {0};
+    snprintf(maps_path,128,"/proc/%d/maps",getpid());
+    FILE *fp = fopen(maps_path,"r");
+    int found = 0;
+    if(fp != nullptr) {
+        DLOGD("find_in_maps open file success!");
+        char *line = (char *)calloc(256,1);
+        int read_line = 0;
+        while(fgets(line,256,fp) != nullptr){
+            if(read_line++ >= MAX_READ_LINE){
+                break;
+            }
+            char flag[10] = {0};
+            char item_path[128] = {0};
+
+#ifdef __LP64__
+            pointer_t item_start,item_size;
+            int ret = sscanf(line, "%llx-%*llx %s %llx %*s %*s %s", &item_start,flag, &item_size, item_path);
+            if(ret != 4){
+                continue;
+            }
+#else
+            pointer_t item_start,item_size;
+            int ret = sscanf(line, "%x-%*x %s %x %*s %*s %s", &item_start,flag,&item_size, item_path);
+            if(ret != 4){
+                continue;
+            }
+#endif
+
+            if(flag[0] == 'r' && endWith(item_path,find_name) == 0) {
+                *start = item_start;
+                *size = item_size;
+                for(int i = 0; i < strnlen(item_path,128);i ++){
+                    char ch = item_path[i];
+                    if(ch == '\n' || ch == '\r'){
+                        continue;
+                    }
+                    *(full_path + i) = ch;
+                }
+                DLOGD("find_in_maps path = %s",item_path);
+                found = 1;
+                break;
+            }
+
+        }
+        free(line);
+    }
+
+    return found;
 }
 
 void hexDump(const char* name,const void* data, size_t size){
