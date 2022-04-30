@@ -367,19 +367,11 @@ void* MapFileAtAddress28(uint8_t* expected_ptr,
               bool reuse,
               const char* filename,
               std::string* error_msg){
-    int new_prot = (prot | PROT_WRITE);
-    if(filename == nullptr) {
-        DLOGD("MemMap::MapFileAtAddress call,start = %p,new_prot = %d", start,new_prot);
-    }
-    else {
-        DLOGD("MemMap::MapFileAtAddress call,start = %p,new_prot = %d,filename = %s", start,new_prot,filename);
-    }
-    if(nullptr != g_originMapFileAtAddress28) {
-        return g_originMapFileAtAddress28(expected_ptr,byte_count,new_prot,flags,fd,start,low_4gb,reuse,filename,error_msg);
-    }
+    DLOGD("MemMap::MapFileAtAddress call,filename = %s,prot = %d",filename, prot);
+    return nullptr;
 }
 
-void* MapFileAtAddress29(void* thiz,uint8_t* addr,
+void* MapFileAtAddress29(uint8_t* addr,
                          size_t byte_count,
                          int prot,
                          int flags,
@@ -390,16 +382,8 @@ void* MapFileAtAddress29(void* thiz,uint8_t* addr,
                          bool reuse,
                          void* reservation,
                          std::string* error_msg){
-    int new_prot = (prot | PROT_WRITE);
-    if(filename == nullptr) {
-        DLOGD("MemMap::MapFileAtAddress call,prot = %d,new_prot = %d", prot,new_prot);
-    }
-    else {
-        DLOGD("MemMap::MapFileAtAddress call,prot = %d,new_prot = %d,filename = %s", prot,new_prot,filename);
-    }
-    if(nullptr != g_originMapFileAtAddress29) {
-        return g_originMapFileAtAddress29(thiz,addr,byte_count,new_prot,flags,fd,start,low_4gb,filename,reuse,reservation,error_msg);
-    }
+    DLOGD("MemMap::MapFileAtAddress call,filename = %s,prot = %d",filename, prot);
+    return nullptr;
 }
 
 void* MapFileAtAddress30(uint8_t* expected_ptr,
@@ -413,22 +397,8 @@ void* MapFileAtAddress30(uint8_t* expected_ptr,
                          bool reuse,
                          void* reservation,
                          std::string* error_msg){
-    int new_prot = (prot | PROT_WRITE);
 
-    if(filename == nullptr) {
-        DLOGD("MemMap::MapFileAtAddress call,prot = %d,new_prot = %d", prot,new_prot);
-    }
-    else {
-        DLOGD("MemMap::MapFileAtAddress call,prot = %d,new_prot = %d,filename = %s", prot,new_prot,filename);
-    }
-
-    if(endWith(filename,"base.vdex") == 0 || endWith(filename,"base.odex") == 0){
-        return nullptr;
-    }
-
-    if(nullptr != g_originMapFileAtAddress30) {
-        return g_originMapFileAtAddress30(expected_ptr,byte_count,new_prot,flags,fd,start,low_4gb,filename,reuse,reservation,error_msg);
-    }
+    DLOGD("MemMap::MapFileAtAddress call,filename = %s,prot = %d",filename, prot);
     return nullptr;
 }
 
@@ -440,14 +410,14 @@ void hookMapFileAtAddress(){
         case 26:
         case 27:
         case 28: {
-            void* MapFileAtAddressAddr = DobbySymbolResolver(GetArtLibPath(),getMapFileAtAddressSymbol());
+            void* MapFileAtAddressAddr = DobbySymbolResolver(getMapFileAtAddressLibPath(),getMapFileAtAddressSymbol());
 
             DobbyHook(MapFileAtAddressAddr, (void *) MapFileAtAddress28,
                       (void **) &g_originMapFileAtAddress28);
         }
             break;
         case 29: {
-            void *MapFileAtAddressAddr = DobbySymbolResolver(GetArtBaseLibPath(),
+            void *MapFileAtAddressAddr = DobbySymbolResolver(getMapFileAtAddressLibPath(),
                                                              getMapFileAtAddressSymbol());
 
             DobbyHook(MapFileAtAddressAddr, (void *) MapFileAtAddress29,
@@ -455,9 +425,8 @@ void hookMapFileAtAddress(){
         }
             break;
         case 30: {
-            void *MapFileAtAddressAddr = DobbySymbolResolver(GetArtBaseLibPath(),
+            void *MapFileAtAddressAddr = DobbySymbolResolver(getMapFileAtAddressLibPath(),
                                                              getMapFileAtAddressSymbol());
-
             DobbyHook(MapFileAtAddressAddr, (void *) MapFileAtAddress30,
                       (void **) &g_originMapFileAtAddress30);
         }
