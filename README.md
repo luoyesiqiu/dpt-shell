@@ -6,8 +6,6 @@
 
 dpt目前已适配Android6~12。想要了解实现原理，可以查看[文档](doc/HowItWorks.md)
 
-已实现自动签名(cv自Xpatch)
-
 ## 用法
 
 ### 快速使用
@@ -35,3 +33,4 @@ java -jar dpt.jar /path/to/apk
 - [libzip-android](https://github.com/julienr/libzip-android)
 - [ManifestEditor](https://github.com/WindySha/ManifestEditor)
 - [Xpatch](https://github.com/WindySha/Xpatch)
+- [bhook](https://github.com/bytedance/bhook)
