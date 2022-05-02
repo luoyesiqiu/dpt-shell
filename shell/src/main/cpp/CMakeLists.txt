@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.10.2)
+cmake_minimum_required(VERSION 3.18.1)
 
 project("dpt")
 
@@ -14,7 +14,7 @@ set(DPT_NATIVE_SOURCE
 
 include_directories(./ )
 include_directories(./libzip/)
-
+include_directories(./bhook/include)
 
 # 添加库
 add_library(dpt
@@ -27,6 +27,7 @@ include_directories(
 )
 
 add_subdirectory(libzip)
+add_subdirectory(bhook)
 
 # 使用预编译库
 add_library(local_dobby STATIC IMPORTED)
@@ -40,6 +41,7 @@ target_link_libraries( dpt
             ${log-lib}
         zip
         local_dobby
+        bytehook
         ${android-lib}
         )
 
