@@ -52,7 +52,7 @@ public class ProxyComponentFactory extends AppComponentFactory {
             JniBridge.ia(null,cl);
             String apkPath = JniBridge.gap(cl);
             ClassLoader classLoader = ShellClassLoader.loadDex(apkPath);
-            JniBridge.rde(cl,classLoader);
+            JniBridge.mde(cl,classLoader);
 
             Log.d(TAG,"ProxyComponentFactory init() classLoader = " + classLoader);
 
