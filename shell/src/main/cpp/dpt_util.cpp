@@ -205,7 +205,7 @@ void *read_zip_file_entry(const void* zip_addr,off_t zip_size,const char* entry_
 }
 
 const char* find_symbol_in_elf(void* elf_bytes_data,int keyword_count,...) {
-    Elf_Ehdr* ehdr = (Elf_Ehdr*)elf_bytes_data;
+    Elf_Ehdr *ehdr = (Elf_Ehdr*)elf_bytes_data;
 
     Elf_Shdr *shdr = (Elf_Shdr *)(((uint8_t*) elf_bytes_data) + ehdr->e_shoff);
 
