@@ -6,14 +6,16 @@
 #include <unordered_map>
 #include <dex/CodeItem.h>
 #include "dpt_hook.h"
+#include "bytehook.h"
 
 extern std::unordered_map<int, std::unordered_map<int, CodeItem*>*> dexMap;
 std::map<int,uint8_t *> dexMemMap;
 int g_sdkLevel = 0;
 
 void dpt_hook() {
+    bytehook_init(BYTEHOOK_MODE_AUTOMATIC,true);
     g_sdkLevel = android_get_device_api_level();
-    hookMapFileAtAddress();
+    hook_mmap();
     hook_ClassLinker_LoadMethod();
 }
 
@@ -329,121 +331,45 @@ void hook_ClassLinker_LoadMethod() {
     }
 }
 
-const char *getMapFileAtAddressLibPath() {
+const char *getArtLibName() {
     switch (g_sdkLevel) {
         case 24:
         case 25:
         case 26:
         case 27:
         case 28:
-            return GetArtLibPath();
+            return "libart.so";
         case 29:
         case 30:
         case 31:
-            return GetArtBaseLibPath();
+            return "libartbase.so";
     }
 }
 
-const char* getMapFileAtAddressSymbol(){
-    FILE *lib_fp = fopen(getMapFileAtAddressLibPath(),"r");
-    if(lib_fp){
-        fseek(lib_fp,0L,SEEK_END);
-        size_t lib_size = ftell(lib_fp);
-        fseek(lib_fp,0L,SEEK_SET);
+void* fake_mmap(void* __addr, size_t __size, int __prot, int __flags, int __fd, off_t __offset){
+    BYTEHOOK_STACK_SCOPE();
+    int hasRead = (__prot & PROT_READ) == PROT_READ;
+    int hasWrite = (__prot & PROT_WRITE) == PROT_WRITE;
+    int prot = __prot;
 
-        char *data = (char *)calloc(lib_size,1);
-        fread(data,1,lib_size,lib_fp);
-        const char * symbol = find_symbol_in_elf((void*)data,2,"MemMap","MapFileAtAddress");
-        if(symbol != nullptr) {
-            DLOGD("getMapFileAtAddressSymbol find symbol = %s", symbol);
-            fclose(lib_fp);
-            return symbol;
-        }
-        else{
-            DLOGE("getMapFileAtAddressSymbol no found symbol!");
-        }
-
-        free(data);
+    if(hasRead && !hasWrite) {
+        prot = prot | PROT_WRITE;
+        DLOGD("fake_mmap call fd = %p,size = %d, prot = %d,flag = %d",__fd,__size, prot,__flags);
     }
 
-    return "";
+    void *addr = BYTEHOOK_CALL_PREV(fake_mmap,__addr,  __size, prot,  __flags,  __fd,  __offset);
+    return addr;
 }
 
-void* MapFileAtAddress28(uint8_t* expected_ptr,
-              size_t byte_count,
-              int prot,
-              int flags,
-              int fd,
-              off_t start,
-              bool low_4gb,
-              bool reuse,
-              const char* filename,
-              std::string* error_msg){
-    DLOGD("MemMap::MapFileAtAddress call,filename = %s,prot = %d",filename, prot);
-    return nullptr;
-}
-
-void* MapFileAtAddress29(uint8_t* addr,
-                         size_t byte_count,
-                         int prot,
-                         int flags,
-                         int fd,
-                         off_t start,
-                         bool low_4gb,
-                         const char* filename,
-                         bool reuse,
-                         void* reservation,
-                         std::string* error_msg){
-    DLOGD("MemMap::MapFileAtAddress call,filename = %s,prot = %d",filename, prot);
-    return nullptr;
-}
-
-void* MapFileAtAddress30(uint8_t* expected_ptr,
-                         size_t byte_count,
-                         int prot,
-                         int flags,
-                         int fd,
-                         off_t start,
-                         bool low_4gb,
-                         const char* filename,
-                         bool reuse,
-                         void* reservation,
-                         std::string* error_msg){
-
-    DLOGD("MemMap::MapFileAtAddress call,filename = %s,prot = %d",filename, prot);
-    return nullptr;
-}
-
-void hookMapFileAtAddress(){
-
-    switch (g_sdkLevel) {
-        case 24:
-        case 25:
-        case 26:
-        case 27:
-        case 28: {
-            void* MapFileAtAddressAddr = DobbySymbolResolver(getMapFileAtAddressLibPath(),getMapFileAtAddressSymbol());
-
-            DobbyHook(MapFileAtAddressAddr, (void *) MapFileAtAddress28,
-                      (void **) &g_originMapFileAtAddress28);
-        }
-            break;
-        case 29: {
-            void *MapFileAtAddressAddr = DobbySymbolResolver(getMapFileAtAddressLibPath(),
-                                                             getMapFileAtAddressSymbol());
-
-            DobbyHook(MapFileAtAddressAddr, (void *) MapFileAtAddress29,
-                      (void **) &g_originMapFileAtAddress29);
-        }
-            break;
-        case 30: {
-            void *MapFileAtAddressAddr = DobbySymbolResolver(getMapFileAtAddressLibPath(),
-                                                             getMapFileAtAddressSymbol());
-            DobbyHook(MapFileAtAddressAddr, (void *) MapFileAtAddress30,
-                      (void **) &g_originMapFileAtAddress30);
-        }
-            break;
-
-
+void hook_mmap(){
+    bytehook_stub_t stub = bytehook_hook_single(
+            getArtLibName(),
+            "libc.so",
+            "mmap",
+            (void*)fake_mmap,
+            nullptr,
+            nullptr);
+    if(stub != nullptr){
+        DLOGD("mmap hook success!");
     }
 }
