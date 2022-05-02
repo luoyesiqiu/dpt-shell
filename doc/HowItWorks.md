@@ -4,11 +4,11 @@
 
 函数抽取前：
 
-![](代码抽取前.png)
+![](unnop.png)
 
 函数抽取后：
 
-![](代码抽取后.png)
+![](nop.png)
 
 
 ## 0x1 项目的结构
@@ -27,7 +27,7 @@ proccessor是可以将普通apk处理成加壳apk的模块。它的主要功能�
 
 流程如下：
 
-![](proccessor流程.png)
+![](proccessor.png)
 
 shell模块最终生成的dex文件和so文件将被集成到需要加壳的apk中。它的要功能有：
 
@@ -47,7 +47,7 @@ shell模块最终生成的dex文件和so文件将被集成到需要加壳的apk�
 流程如下：
 
 
-![](shell流程.png)
+![](shell.png)
 
 ## 0x2 proccessor
 
@@ -102,7 +102,7 @@ proccessor比较重要的逻辑两点，AndroidManiest.xml的处理和Codeitem�
 
 CodeItem是dex文件中存放函数字节码相关数据的结构。下图显示的就是CodeItem大概的样子。
 
-![](codeitem结构.png)
+![](codeitem.png)
 
 说是提取CodeItem，其实我们提取的是CodeItem中的insns，它里面存放的是函数真正的字节码。提取insns，我们使用的是Android源码中的[dx](https://android.googlesource.com/platform/dalvik/+/refs/heads/master/dx/)工具，使用dx工具可以很方便的读取dex文件的各个部分。
 
@@ -239,33 +239,44 @@ extern "C" void _init(void) {
 }
 ```
 
-Hook框架使用的[Dobby](https://github.com/jmpews/Dobby)，主要Hook两个函数：MapFileAtAddress和LoadMethod。
+Hook框架使用的[Dobby](https://github.com/jmpews/Dobby)和[bhook](https://github.com/bytedance/bhook)，主要Hook两个函数：mmap和LoadMethod。
 
-Hook MapFileAtAddress函数的目的是在我们加载dex能够修改dex的属性，让加载的dex可写，这样我们才能把字节码填回dex，有大佬详细的分析过，具体参考[这篇文章](https://bbs.pediy.com/thread-266527.htm)。
+#### **mmap**
 
-```cpp
-void* MapFileAtAddressAddr = DobbySymbolResolver(GetArtLibPath(),MapFileAtAddress_Sym());
-DobbyHook(MapFileAtAddressAddr, (void *) MapFileAtAddress28,(void **) &g_originMapFileAtAddress28);
-```
-Hook到了之后，给prot参数追加PROT_WRITE属性
+Hook mmap函数的目的是在我们加载dex能够修改dex的属性，让加载的dex可写，这样我们才能把字节码填回dex，有大佬详细的分析过，具体参考[这篇文章](https://bbs.pediy.com/thread-266527.htm)。
 
 ```cpp
-void* MapFileAtAddress28(uint8_t* expected_ptr,
-              size_t byte_count,
-              int prot,
-              int flags,
-              int fd,
-              off_t start,
-              bool low_4gb,
-              bool reuse,
-              const char* filename,
-              std::string* error_msg){
-    int new_prot = (prot | PROT_WRITE);
-    if(nullptr != g_originMapFileAtAddress28) {
-        return g_originMapFileAtAddress28(expected_ptr,byte_count,new_prot,flags,fd,start,low_4gb,reuse,filename,error_msg);
-    }
+bytehook_stub_t stub = bytehook_hook_single(
+        getArtLibName(),
+        "libc.so",
+        "mmap",
+        (void*)fake_mmap,
+        nullptr,
+        nullptr);
+if(stub != nullptr){
+    DLOGD("mmap hook success!");
 }
 ```
+Hook到了之后，给__prot参数追加PROT_WRITE属性
+
+```cpp
+void* fake_mmap(void* __addr, size_t __size, int __prot, int __flags, int __fd, off_t __offset){
+    BYTEHOOK_STACK_SCOPE();
+    int hasRead = (__prot & PROT_READ) == PROT_READ;
+    int hasWrite = (__prot & PROT_WRITE) == PROT_WRITE;
+    int prot = __prot;
+
+    if(hasRead && !hasWrite) {
+        prot = prot | PROT_WRITE;
+        DLOGD("fake_mmap call fd = %p,size = %d, prot = %d,flag = %d",__fd,__size, prot,__flags);
+    }
+
+    void *addr = BYTEHOOK_CALL_PREV(fake_mmap,__addr,  __size, prot,  __flags,  __fd,  __offset);
+    return addr;
+}
+```
+
+#### **LoadMethod**
 
 在Hook LoadMethod函数之前，我们需要了解LoadMethod函数流程。为什么是这个LoadMethod函数，其他函数是否可行？
 
