@@ -356,6 +356,19 @@ void* fake_mmap(void* __addr, size_t __size, int __prot, int __flags, int __fd, 
         prot = prot | PROT_WRITE;
         DLOGD("fake_mmap call fd = %p,size = %d, prot = %d,flag = %d",__fd,__size, prot,__flags);
     }
+    if(g_sdkLevel == 30){
+        char link_path[128] = {0};
+        snprintf(link_path,sizeof(link_path),"/proc/%d/fd/%d",getpid(),__fd);
+        char fd_path[256] = {0};
+        readlink(link_path,fd_path,sizeof(fd_path));
+
+        DLOGD("fake_mmap link path = %s",fd_path);
+
+        if(strstr(fd_path,"base.vdex") ){
+            DLOGE("fake_mmap want to mmap base.vdex");
+            __flags = 0;
+        }
+    }
 
     void *addr = BYTEHOOK_CALL_PREV(fake_mmap,__addr,  __size, prot,  __flags,  __fd,  __offset);
     return addr;
