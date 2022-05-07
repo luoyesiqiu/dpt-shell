@@ -19,6 +19,7 @@ import java.util.*;
  */
 public class DexUtils {
     private static final Logger logger = LoggerFactory.getLogger(DexUtils.class.getSimpleName());
+    /* 以下为不抽取的类的规则 */
     private static final String[] excludeRule = {
       "Landroid/.*",
       "Landroidx/.*",
@@ -32,7 +33,7 @@ public class DexUtils {
       "Lcom/alibaba/.*",
       "Lcom/amap/api/.*",
       "Lcom/sina/weibo/.*",
-      "Lcom/xaiomi/.*",
+      "Lcom/xiaomi/.*",
       "Lcom/eclipsesource/.*",
       "Lcom/blankj/utilcode/.*",
       "Lcom/umeng/.*",
