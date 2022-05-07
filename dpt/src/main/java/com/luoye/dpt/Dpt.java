@@ -74,7 +74,7 @@ public class Dpt {
         ApkUtils.deleteMetaData(unzipApkFilePath);
         ApkUtils.copyShellLibs(unzipApkFilePath, new File(outputApkFileParentPath,"shell-files/libs"));
 
-        new BuildAndSignApkTask(false, unzipApkFilePath, output, apkPath).run();
+        new BuildAndSignApkTask(false, unzipApkFilePath, output).run();
 
         File unzipApkFile = new File(unzipApkFilePath);
         if (unzipApkFile.exists()) {
