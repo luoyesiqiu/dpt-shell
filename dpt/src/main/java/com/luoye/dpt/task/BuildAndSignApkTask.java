@@ -17,13 +17,10 @@ public class BuildAndSignApkTask{
 
     private String unzipApkFilePath;
 
-    private String originalApkFilePath;
-
-    public BuildAndSignApkTask(boolean keepUnsignedApkFile, String unzipApkFilePath, String signedApkPath, String originalApkFilePath) {
+    public BuildAndSignApkTask(boolean keepUnsignedApkFile, String unzipApkFilePath, String signedApkPath) {
         this.keepUnsignedApkFile = keepUnsignedApkFile;
         this.unzipApkFilePath = unzipApkFilePath;
         this.signedApkPath = signedApkPath;
-        this.originalApkFilePath = originalApkFilePath;
     }
 
     public void run() {
@@ -39,14 +36,7 @@ public class BuildAndSignApkTask{
 
         File keyStoreFile = new File(keyStoreFilePath);
         // assets/keystore分隔符不能使用File.separator，否则在windows上抛出IOException !!!
-        String keyStoreAssetPath;
-        if (ShellCmdUtil.isAndroid()) {
-            // BKS-V1 类型
-            keyStoreAssetPath = "assets/android.keystore";
-        } else {
-            // BKS 类型
-            keyStoreAssetPath = "assets/keystore";
-        }
+        String keyStoreAssetPath = "assets/keystore";
 
         WindFileUtils.copyFileFromJar(keyStoreAssetPath, keyStoreFilePath);
 
@@ -86,47 +76,14 @@ public class BuildAndSignApkTask{
         if (keyStoreFile.exists()) {
             keyStoreFile.delete();
         }
-        System.out.println("signResult: " + signResult + "\nout put apk: " + signedApkPath + "\n");
+        System.out.println("signResult: " + signResult + ",output: " + signedApkPath + "\n");
     }
 
     private boolean signApk(String apkPath, String keyStorePath, String signedApkPath) {
-        String apkParentPath = (new File(apkPath)).getParent();
-
         if (signApkUsingAndroidApksigner(apkPath, keyStorePath, signedApkPath, "123456")) {
             return true;
         }
-        if (ShellCmdUtil.isAndroid()) {
-            System.out.println(" Sign apk failed, please sign it yourself.");
-            return false;
-        }
-        try {
-            long time = System.currentTimeMillis();
-            File keystoreFile = new File(keyStorePath);
-            if (keystoreFile.exists()) {
-                StringBuilder signCmd;
-                signCmd = new StringBuilder("jarsigner ");
-                signCmd.append(" -keystore ")
-                        .append(keyStorePath)
-                        .append(" -storepass ")
-                        .append("123456")
-                        .append(" -signedjar ")
-                        .append(" " + signedApkPath + " ")
-                        .append(" " + apkPath + " ")
-                        .append(" -digestalg SHA1 -sigalg SHA1withRSA ")
-                        .append(" key0 ");
-                String result = ShellCmdUtil.execCmd(signCmd.toString(), null);
-                System.out.println(" sign apk time is :" + ((System.currentTimeMillis() - time) / 1000) +
-                        "s\n\n" + "  result=" + result);
-                return true;
-            }
-            System.out.println(" keystore not exist :" + keystoreFile.getAbsolutePath() +
-                    " please sign the apk by hand. \n");
-            return false;
-        } catch (Throwable e) {
-            System.out.println("use default jarsigner to sign apk failed, fail msg is :" +
-                    e.toString());
-            return false;
-        }
+        return false;
     }
 
     /**
@@ -149,9 +106,9 @@ public class BuildAndSignApkTask{
         commandList.add("--v1-signing-enabled");
         commandList.add("true");
         commandList.add("--v2-signing-enabled");   // v2签名不兼容android 6
-        commandList.add("true");
+        commandList.add("false");
         commandList.add("--v3-signing-enabled");   // v3签名不兼容android 6
-        commandList.add("true");
+        commandList.add("false");
         commandList.add(apkPath);
 
         int size = commandList.size();
@@ -197,7 +154,7 @@ public class BuildAndSignApkTask{
         if (zipalignFile.exists()) {
             zipalignFile.delete();
         }
-        System.out.println("zipalign apk time is :" + ((System.currentTimeMillis() - time)) +
-                "s\n\t" + "result=" + result + "\n");
+        System.out.println("zipalign apk cost: " + ((System.currentTimeMillis() - time)) +
+                "ms, " + "result: " + result + "\n");
     }
 }
