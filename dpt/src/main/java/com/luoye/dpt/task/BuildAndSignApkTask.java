@@ -106,9 +106,9 @@ public class BuildAndSignApkTask{
         commandList.add("--v1-signing-enabled");
         commandList.add("true");
         commandList.add("--v2-signing-enabled");   // v2签名不兼容android 6
-        commandList.add("false");
+        commandList.add("true");
         commandList.add("--v3-signing-enabled");   // v3签名不兼容android 6
-        commandList.add("false");
+        commandList.add("true");
         commandList.add(apkPath);
 
         int size = commandList.size();
