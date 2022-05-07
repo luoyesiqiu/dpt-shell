@@ -39,6 +39,7 @@ public class DexUtils {
       "Ljavax/.*",
       "Lorg/slf4j/.*"
     };
+    private static List<String> processedClassList = new ArrayList<>();
 
     /**
      * 抽取所有方法的代码
@@ -53,11 +54,6 @@ public class DexUtils {
         RandomAccessFile randomAccessFile = null;
         byte[] dexData = IoUtils.readFile(dexFile.getAbsolutePath());
         IoUtils.writeFile(outDexFile.getAbsolutePath(),dexData);
-
-        String processedName = String.format("%s_processed_class.log", Global.packageName);
-        File dealClassLogFile = new File(processedName);
-
-        FileUtils.deleteRecurse(dealClassLogFile);
 
         try {
             dex = new Dex(dexFile);
@@ -101,7 +97,7 @@ public class DexUtils {
                         instructionList.add(instruction);
                     }
                 }
-                IoUtils.appendFile(dealClassLogFile.getAbsolutePath(),(humanizeTypeName + "\n").getBytes());
+                processedClassList.add(humanizeTypeName);
             }
         }
         catch (Exception e){
@@ -260,6 +256,16 @@ public class DexUtils {
         }
 
         randomAccessFile.close();
+    }
+
+    public static List<String> getProcessedClassList(){
+        return processedClassList;
+    }
+
+    public static void clearProcessedClassList(){
+        if(processedClassList != null){
+            processedClassList.clear();
+        }
     }
 
 }
