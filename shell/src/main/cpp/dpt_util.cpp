@@ -4,8 +4,21 @@
 
 #include <libgen.h>
 #include <ctime>
+#include <elf.h>
 #include "dpt_util.h"
+#include "dpt_log.h"
 
+#ifdef __LP64__
+#define Elf_Ehdr Elf64_Ehdr
+#define Elf_Shdr Elf64_Shdr
+#define Elf_Sym  Elf64_Sym
+#define Elf_Off  Elf64_Off
+#else
+#define Elf_Ehdr Elf32_Ehdr
+#define Elf_Shdr Elf32_Shdr
+#define Elf_Sym  Elf32_Sym
+#define Elf_Off  Elf32_Off
+#endif
 
 jclass getContextClass(JNIEnv *env) {
     if (g_ContextClass == nullptr) {
@@ -191,6 +204,47 @@ void *read_zip_file_entry(const void* zip_addr,off_t zip_size,const char* entry_
     return nullptr;
 }
 
+const char* find_symbol_in_elf(void* elf_bytes_data,int keyword_count,...) {
+    Elf_Ehdr *ehdr = (Elf_Ehdr*)elf_bytes_data;
+
+    Elf_Shdr *shdr = (Elf_Shdr *)(((uint8_t*) elf_bytes_data) + ehdr->e_shoff);
+
+    va_list kw_list;
+    for (int i = 0; i < ehdr->e_shnum;i++) {
+
+        if(shdr->sh_type == SHT_STRTAB){
+            const char* str_base = (char *)((uint8_t*)elf_bytes_data + shdr->sh_offset);
+            char* ptr = (char *)str_base;
+
+            for(int k = 0; ptr < (str_base + shdr->sh_size);k++){
+                const char* item_value = ptr;
+                size_t item_len = strnlen(item_value,128);
+                ptr += (item_len + 1);
+
+                if(item_len == 0){
+                    continue;
+                }
+                int match_count = 0;
+                va_start(kw_list,keyword_count);
+                for(int n = 0;n < keyword_count;n++){
+                    const char *keyword = va_arg(kw_list,const char*);
+                    if(strstr(item_value,keyword)){
+                        match_count++;
+                    }
+                }
+                va_end(kw_list);
+                if(match_count == keyword_count){
+                    return item_value;
+                }
+            }
+            break;
+        }
+
+        shdr++;
+    }
+    return nullptr;
+}
+
 void hexDump(const char* name,const void* data, size_t size){
     char ascii[17];
     size_t i, j;
@@ -249,7 +303,7 @@ void appendLog(const char* log){
     }
 }
 
-void printTime(const char* msg,int start){
-    int end = clock();
+void printTime(const char* msg,clock_t start){
+    clock_t end = clock();
     DLOGD("%s %lf",msg,(double)(end - start) / CLOCKS_PER_SEC);
 }

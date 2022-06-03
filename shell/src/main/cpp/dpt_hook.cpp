@@ -6,32 +6,17 @@
 #include <unordered_map>
 #include <dex/CodeItem.h>
 #include "dpt_hook.h"
+#include "bytehook.h"
 
 extern std::unordered_map<int, std::unordered_map<int, CodeItem*>*> dexMap;
 std::map<int,uint8_t *> dexMemMap;
 int g_sdkLevel = 0;
 
 void dpt_hook() {
+    bytehook_init(BYTEHOOK_MODE_AUTOMATIC,true);
     g_sdkLevel = android_get_device_api_level();
-
-    hookMapFileAtAddress();
+    hook_mmap();
     hook_ClassLinker_LoadMethod();
-}
-
-const char *GetClassLinker_LoadMethod_Sym() {
-    switch (g_sdkLevel) {
-        case 24:
-        case 25:
-            return "_ZN3art11ClassLinker10LoadMethodEPNS_6ThreadERKNS_7DexFileERKNS_21ClassDataItemIteratorENS_6HandleINS_6mirror5ClassEEEPNS_9ArtMethodE";
-        case 27:
-        case 28:
-            return "_ZN3art11ClassLinker10LoadMethodERKNS_7DexFileERKNS_21ClassDataItemIteratorENS_6HandleINS_6mirror5ClassEEEPNS_9ArtMethodE";
-        case 29:
-        case 30:
-            return "_ZN3art11ClassLinker10LoadMethodERKNS_7DexFileERKNS_13ClassAccessor6MethodENS_6HandleINS_6mirror5ClassEEEPNS_9ArtMethodE";
-        default:
-            return "";
-    }
 }
 
 const char *GetArtLibPath() {
@@ -43,6 +28,9 @@ const char *GetArtLibPath() {
     else if(g_sdkLevel == 30){
         return "/apex/com.android.art/" LIB_DIR "/libart.so";
     }
+    else if(g_sdkLevel == 31){
+        return "/apex/com.android.art/" LIB_DIR "/libart.so";
+    }
 }
 
 const char *GetArtBaseLibPath() {
@@ -52,6 +40,38 @@ const char *GetArtBaseLibPath() {
     else if(g_sdkLevel == 30) {
         return "/apex/com.android.art/" LIB_DIR "/libartbase.so";
     }
+    else if(g_sdkLevel == 31) {
+        return "/apex/com.android.art/" LIB_DIR "/libartbase.so";
+    }
+}
+
+const char *GetClassLinkerLoadMethodLibPath(){
+    return GetArtLibPath();
+}
+
+const char *getClassLinkerLoadMethodSymbol() {
+    FILE *lib_fp = fopen(GetClassLinkerLoadMethodLibPath(),"r");
+    if(lib_fp){
+        fseek(lib_fp,0L,SEEK_END);
+        size_t lib_size = ftell(lib_fp);
+        fseek(lib_fp,0L,SEEK_SET);
+
+        char *data = (char *)calloc(lib_size,1);
+        fread(data,1,lib_size,lib_fp);
+        const char * symbol = find_symbol_in_elf((void*)data,2,"ClassLinker","LoadMethod","DexFile","ArtMethod");
+        if(symbol != nullptr) {
+            DLOGD("getClassLinkerLoadMethodSymbol find symbol = %s", symbol);
+            fclose(lib_fp);
+            return symbol;
+        }
+        else{
+            DLOGE("getClassLinkerLoadMethodSymbol no found symbol!");
+        }
+
+        free(data);
+    }
+
+    return "";
 }
 
 void callOriginLoadMethod(void *thiz, void *self, const void *dex_file, const void *it,
@@ -70,6 +90,7 @@ void callOriginLoadMethod(void *thiz, void *self, const void *dex_file, const vo
             break;
         case 29:
         case 30:
+        case 31:
             g_originLoadMethod29(thiz, dex_file, method, klass, dst);
             break;
     }
@@ -104,6 +125,7 @@ uint32_t getDexFileLocationOffset() {
             break;
         case 29:
         case 30:
+        case 31:
 #ifndef __LP64__
             location_offset = 20;
 #else
@@ -116,25 +138,11 @@ uint32_t getDexFileLocationOffset() {
 }
 
 uint32_t getDataItemCodeItemOffset() {
-    uint32_t begin_offset = 0;
-    switch (g_sdkLevel) {
-        case 23:
-        case 24:
-        case 25:
-        case 26:
-        case 27:
-        case 28:
-        case 29:
-        case 30:
-#ifndef __LP64__
-            begin_offset = 4;
-#else
-            begin_offset = 8;
-#endif
-            break;
-    }
-
-    return begin_offset;
+    #ifndef __LP64__
+        return 4;
+    #else
+        return  8;
+    #endif
 }
 
 int dexNumber(std::string *location){
@@ -194,6 +202,7 @@ ClassDataItemReader* getClassDataItemReader(const void* it,const void* method){
             return new ClassDataItemReader(it);
         case 29:
         case 30:
+        case 31:
             return new ClassDataItemReader(method);
     }
     return nullptr;
@@ -262,7 +271,6 @@ void LoadMethod(void *thiz, void *self, const void *dex_file, const void *it, co
                     changeDexProtect(begin,location->c_str(),dexSize,dexIndex);
                 }
 
-
                 auto codeItemMap = dexIt->second;
                 int methodIdx = classDataItemReader->GetMemberIndex();
                 auto codeItemIt = codeItemMap->find(methodIdx);
@@ -302,7 +310,7 @@ void LoadMethod_QR(void *thiz, const void *dex_file, const void *method, void *k
 };
 
 void hook_ClassLinker_LoadMethod() {
-    void* loadMethodAddress = DobbySymbolResolver(GetArtLibPath(),GetClassLinker_LoadMethod_Sym());
+    void* loadMethodAddress = DobbySymbolResolver(GetArtLibPath(),getClassLinkerLoadMethodSymbol());
     switch (g_sdkLevel) {
         case 23:
         case 24:
@@ -316,134 +324,65 @@ void hook_ClassLinker_LoadMethod() {
             break;
         case 29:
         case 30:
+        case 31:
             DobbyHook(loadMethodAddress, (void *) LoadMethod_QR,(void**)&g_originLoadMethod29);
             break;
 
     }
 }
 
-
-const char* MapFileAtAddress_Sym(){
+const char *getArtLibName() {
     switch (g_sdkLevel) {
         case 24:
         case 25:
         case 26:
         case 27:
         case 28:
-            return "_ZN3art6MemMap16MapFileAtAddressEPhjiiilbbPKcPNSt3__112basic_stringIcNS4_11char_traitsIcEENS4_9allocatorIcEEEE";
+            return "libart.so";
         case 29:
-            return "_ZN3art6MemMap16MapFileAtAddressEPhjiiilbPKcbPS0_PNSt3__112basic_stringIcNS5_11char_traitsIcEENS5_9allocatorIcEEEE";
         case 30:
-            return "_ZN3art6MemMap16MapFileAtAddressEPhmiiilbPKcbPS0_PNSt3__112basic_stringIcNS5_11char_traitsIcEENS5_9allocatorIcEEEE";
+        case 31:
+            return "libartbase.so";
     }
 }
 
-void* MapFileAtAddress28(uint8_t* expected_ptr,
-              size_t byte_count,
-              int prot,
-              int flags,
-              int fd,
-              off_t start,
-              bool low_4gb,
-              bool reuse,
-              const char* filename,
-              std::string* error_msg){
-    int new_prot = (prot | PROT_WRITE);
-    if(filename == nullptr) {
-        DLOGD("MemMap::MapFileAtAddress call,start = %p,new_prot = %d", start,new_prot);
-    }
-    else {
-        DLOGD("MemMap::MapFileAtAddress call,start = %p,new_prot = %d,filename = %s", start,new_prot,filename);
-    }
-    if(nullptr != g_originMapFileAtAddress28) {
-        return g_originMapFileAtAddress28(expected_ptr,byte_count,new_prot,flags,fd,start,low_4gb,reuse,filename,error_msg);
-    }
-}
+void* fake_mmap(void* __addr, size_t __size, int __prot, int __flags, int __fd, off_t __offset){
+    BYTEHOOK_STACK_SCOPE();
+    int hasRead = (__prot & PROT_READ) == PROT_READ;
+    int hasWrite = (__prot & PROT_WRITE) == PROT_WRITE;
+    int prot = __prot;
 
-void* MapFileAtAddress29(void* thiz,uint8_t* addr,
-                         size_t byte_count,
-                         int prot,
-                         int flags,
-                         int fd,
-                         off_t start,
-                         bool low_4gb,
-                         const char* filename,
-                         bool reuse,
-                         void* reservation,
-                         std::string* error_msg){
-    int new_prot = (prot | PROT_WRITE);
-    if(filename == nullptr) {
-        DLOGD("MemMap::MapFileAtAddress call,prot = %d,new_prot = %d", prot,new_prot);
+    if(hasRead && !hasWrite) {
+        prot = prot | PROT_WRITE;
+        DLOGD("fake_mmap call fd = %p,size = %d, prot = %d,flag = %d",__fd,__size, prot,__flags);
     }
-    else {
-        DLOGD("MemMap::MapFileAtAddress call,prot = %d,new_prot = %d,filename = %s", prot,new_prot,filename);
-    }
-    if(nullptr != g_originMapFileAtAddress29) {
-        return g_originMapFileAtAddress29(thiz,addr,byte_count,new_prot,flags,fd,start,low_4gb,filename,reuse,reservation,error_msg);
-    }
-}
+    if(g_sdkLevel == 30){
+        char link_path[128] = {0};
+        snprintf(link_path,sizeof(link_path),"/proc/%d/fd/%d",getpid(),__fd);
+        char fd_path[256] = {0};
+        readlink(link_path,fd_path,sizeof(fd_path));
 
-void* MapFileAtAddress30(uint8_t* expected_ptr,
-                         size_t byte_count,
-                         int prot,
-                         int flags,
-                         int fd,
-                         off_t start,
-                         bool low_4gb,
-                         const char* filename,
-                         bool reuse,
-                         void* reservation,
-                         std::string* error_msg){
-    int new_prot = (prot | PROT_WRITE);
+        DLOGD("fake_mmap link path = %s",fd_path);
 
-    if(filename == nullptr) {
-        DLOGD("MemMap::MapFileAtAddress call,prot = %d,new_prot = %d", prot,new_prot);
-    }
-    else {
-        DLOGD("MemMap::MapFileAtAddress call,prot = %d,new_prot = %d,filename = %s", prot,new_prot,filename);
-    }
-
-    if(endWith(filename,"base.vdex") == 0 || endWith(filename,"base.odex") == 0){
-        return nullptr;
-    }
-
-    if(nullptr != g_originMapFileAtAddress30) {
-        return g_originMapFileAtAddress30(expected_ptr,byte_count,new_prot,flags,fd,start,low_4gb,filename,reuse,reservation,error_msg);
-    }
-    return nullptr;
-}
-
-void hookMapFileAtAddress(){
-
-    switch (g_sdkLevel) {
-        case 24:
-        case 25:
-        case 26:
-        case 27:
-        case 28: {
-            void* MapFileAtAddressAddr = DobbySymbolResolver(GetArtLibPath(),MapFileAtAddress_Sym());
-
-            DobbyHook(MapFileAtAddressAddr, (void *) MapFileAtAddress28,
-                      (void **) &g_originMapFileAtAddress28);
+        if(strstr(fd_path,"base.vdex") ){
+            DLOGE("fake_mmap want to mmap base.vdex");
+            __flags = 0;
         }
-            break;
-        case 29: {
-            void *MapFileAtAddressAddr = DobbySymbolResolver(GetArtBaseLibPath(),
-                                                             MapFileAtAddress_Sym());
+    }
 
-            DobbyHook(MapFileAtAddressAddr, (void *) MapFileAtAddress29,
-                      (void **) &g_originMapFileAtAddress29);
-        }
-            break;
-        case 30: {
-            void *MapFileAtAddressAddr = DobbySymbolResolver(GetArtBaseLibPath(),
-                                                             MapFileAtAddress_Sym());
+    void *addr = BYTEHOOK_CALL_PREV(fake_mmap,__addr,  __size, prot,  __flags,  __fd,  __offset);
+    return addr;
+}
 
-            DobbyHook(MapFileAtAddressAddr, (void *) MapFileAtAddress30,
-                      (void **) &g_originMapFileAtAddress30);
-        }
-            break;
-
-
+void hook_mmap(){
+    bytehook_stub_t stub = bytehook_hook_single(
+            getArtLibName(),
+            "libc.so",
+            "mmap",
+            (void*)fake_mmap,
+            nullptr,
+            nullptr);
+    if(stub != nullptr){
+        DLOGD("mmap hook success!");
     }
 }
