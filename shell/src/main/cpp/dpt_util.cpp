@@ -204,45 +204,58 @@ void *read_zip_file_entry(const void* zip_addr,off_t zip_size,const char* entry_
     return nullptr;
 }
 
-const char* find_symbol_in_elf(void* elf_bytes_data,int keyword_count,...) {
-    Elf_Ehdr *ehdr = (Elf_Ehdr*)elf_bytes_data;
+const char* find_symbol_in_elf_file(const char *elf_file,int keyword_count,...){
+    FILE *elf_fp = fopen(elf_file, "r");
+    if(elf_fp) {
+        fseek(elf_fp, 0L, SEEK_END);
+        size_t lib_size = ftell(elf_fp);
+        fseek(elf_fp, 0L, SEEK_SET);
 
-    Elf_Shdr *shdr = (Elf_Shdr *)(((uint8_t*) elf_bytes_data) + ehdr->e_shoff);
+        char *data = (char *) calloc(lib_size, 1);
+        fread(data, 1, lib_size, elf_fp);
 
-    va_list kw_list;
-    for (int i = 0; i < ehdr->e_shnum;i++) {
+        char *elf_bytes_data = data;
+        Elf_Ehdr *ehdr = (Elf_Ehdr*)elf_bytes_data;
 
-        if(shdr->sh_type == SHT_STRTAB){
-            const char* str_base = (char *)((uint8_t*)elf_bytes_data + shdr->sh_offset);
-            char* ptr = (char *)str_base;
+        Elf_Shdr *shdr = (Elf_Shdr *)(((uint8_t*) elf_bytes_data) + ehdr->e_shoff);
 
-            for(int k = 0; ptr < (str_base + shdr->sh_size);k++){
-                const char* item_value = ptr;
-                size_t item_len = strnlen(item_value,128);
-                ptr += (item_len + 1);
+        va_list kw_list;
 
-                if(item_len == 0){
-                    continue;
-                }
-                int match_count = 0;
-                va_start(kw_list,keyword_count);
-                for(int n = 0;n < keyword_count;n++){
-                    const char *keyword = va_arg(kw_list,const char*);
-                    if(strstr(item_value,keyword)){
-                        match_count++;
+        for (int i = 0; i < ehdr->e_shnum;i++) {
+
+            if(shdr->sh_type == SHT_STRTAB){
+                const char* str_base = (char *)((uint8_t*)elf_bytes_data + shdr->sh_offset);
+                char* ptr = (char *)str_base;
+
+                for(int k = 0; ptr < (str_base + shdr->sh_size);k++){
+                    const char* item_value = ptr;
+                    size_t item_len = strnlen(item_value,128);
+                    ptr += (item_len + 1);
+
+                    if(item_len == 0){
+                        continue;
+                    }
+                    int match_count = 0;
+                    va_start(kw_list,keyword_count);
+                    for(int n = 0;n < keyword_count;n++){
+                        const char *keyword = va_arg(kw_list,const char*);
+                        if(strstr(item_value,keyword)){
+                            match_count++;
+                        }
+                    }
+                    va_end(kw_list);
+                    if(match_count == keyword_count){
+                        return item_value;
                     }
                 }
-                va_end(kw_list);
-                if(match_count == keyword_count){
-                    return item_value;
-                }
+                break;
             }
-            break;
-        }
 
-        shdr++;
+            shdr++;
+        }
+        fclose(elf_fp);
+        free(data);
     }
-    return nullptr;
 }
 
 void hexDump(const char* name,const void* data, size_t size){

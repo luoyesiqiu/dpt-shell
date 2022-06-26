@@ -17,6 +17,7 @@ void dpt_hook() {
     g_sdkLevel = android_get_device_api_level();
     hook_mmap();
     hook_ClassLinker_LoadMethod();
+    hook_GetOatDexFile();
 }
 
 const char *GetArtLibPath() {
@@ -50,28 +51,8 @@ const char *GetClassLinkerLoadMethodLibPath(){
 }
 
 const char *getClassLinkerLoadMethodSymbol() {
-    FILE *lib_fp = fopen(GetClassLinkerLoadMethodLibPath(),"r");
-    if(lib_fp){
-        fseek(lib_fp,0L,SEEK_END);
-        size_t lib_size = ftell(lib_fp);
-        fseek(lib_fp,0L,SEEK_SET);
-
-        char *data = (char *)calloc(lib_size,1);
-        fread(data,1,lib_size,lib_fp);
-        const char * symbol = find_symbol_in_elf((void*)data,2,"ClassLinker","LoadMethod","DexFile","ArtMethod");
-        if(symbol != nullptr) {
-            DLOGD("getClassLinkerLoadMethodSymbol find symbol = %s", symbol);
-            fclose(lib_fp);
-            return symbol;
-        }
-        else{
-            DLOGE("getClassLinkerLoadMethodSymbol no found symbol!");
-        }
-
-        free(data);
-    }
-
-    return "";
+    const char *sym = find_symbol_in_elf_file(GetClassLinkerLoadMethodLibPath(),2,"ClassLinker","LoadMethod","DexFile","ArtMethod");
+    return sym;
 }
 
 void callOriginLoadMethod(void *thiz, void *self, const void *dex_file, const void *it,
@@ -206,7 +187,6 @@ ClassDataItemReader* getClassDataItemReader(const void* it,const void* method){
             return new ClassDataItemReader(method);
     }
     return nullptr;
-
 }
 
 void LoadMethod(void *thiz, void *self, const void *dex_file, const void *it, const void *method,
@@ -220,7 +200,6 @@ void LoadMethod(void *thiz, void *self, const void *dex_file, const void *it, co
         callOriginLoadMethod(thiz, self, dex_file, it, method, klass, dst);
 
         ClassDataItemReader *classDataItemReader = getClassDataItemReader(it,method);
-
 
         uint8_t **begin_ptr = (uint8_t **) ((uint8_t *) dex_file + begin_offset);
         uint8_t *begin = *begin_ptr;
@@ -384,5 +363,23 @@ void hook_mmap(){
             nullptr);
     if(stub != nullptr){
         DLOGD("mmap hook success!");
+    }
+}
+
+void* fake_GetOatDexFile(){
+    DLOGD("fake_GetOatDexFile call!");
+    return nullptr;
+}
+
+void hook_GetOatDexFile(){
+    const char *getOatDexFileSymbol = find_symbol_in_elf_file(GetArtLibPath(),2,"OatFile","GetOatDexFile");
+    DLOGD("getOatDexFile symbol = %s",getOatDexFileSymbol);
+    void *sym = DobbySymbolResolver(getArtLibName(),getOatDexFileSymbol);
+    if(sym != nullptr){
+        switch (g_sdkLevel) {
+            case 25:
+                DobbyHook(sym,(void *)fake_GetOatDexFile,(void **)&g_GetOatDexFile);
+                break;
+        }
     }
 }
