@@ -42,6 +42,6 @@ void hexDump(const char* name,const void* data, size_t size);
 void load_zip(const char* zip_file_path,void **zip_addr,off_t *zip_size);
 void *read_zip_file_entry(const void* zip_addr,off_t zip_size,const char* entry_name,zip_uint64_t *entry_size);
 int find_in_maps(const char* find_name,pointer_t *start,pointer_t *end,char *full_path);
-const char* find_symbol_in_elf(void* elf_bytes_data,int keyword_count,...);
+const char* find_symbol_in_elf_file(const char *elf_file,int keyword_count,...);
 void printTime(const char* msg,clock_t start);
 #endif //DPT_DPT_UTIL_H
