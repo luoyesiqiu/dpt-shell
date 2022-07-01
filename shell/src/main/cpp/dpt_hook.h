@@ -32,4 +32,7 @@ uint32_t getDataItemCodeItemOffset();
 void hook_mmap();
 void hook_GetOatDexFile();
 static void* (*g_GetOatDexFile)() = nullptr;
+static void (*g_GetOatDexFile2)(const char* dex_location,
+                         const uint32_t* dex_location_checksum,
+                         std::string* error_msg) = nullptr;
 #endif //DPT_DPT_HOOK_H
