@@ -86,7 +86,10 @@ public class MultiDexCodeUtils {
             //写入每个dex的数据
             for (DexCode dexCode : multiDexCode.getDexCodes()) {
                 List<Instruction> insns = dexCode.getInsns();
-                System.out.println("insns item count:" + insns.size() + ",method count : " + dexCode.getMethodCount());
+
+                int methodCount = dexCode.getMethodCount() & 0xFFFF;
+
+                System.out.println("insns item count:" + insns.size() + ",method count : " + methodCount);
                 //写入单个dex的函数数量
                 randomAccessFile.write(Endian.makeLittleEndian(dexCode.getMethodCount()));
                 for (int i = 0; i < insns.size(); i++) {
@@ -95,7 +98,6 @@ public class MultiDexCodeUtils {
                     randomAccessFile.write(Endian.makeLittleEndian(instruction.getOffsetOfDex()));
                     randomAccessFile.write(Endian.makeLittleEndian(instruction.getInstructionDataSize()));
                     randomAccessFile.write(instruction.getInstructionsData());
-//                    System.out.println("wrote = " + instruction);
                 }
             }
 
