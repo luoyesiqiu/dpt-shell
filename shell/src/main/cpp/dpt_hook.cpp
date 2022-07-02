@@ -13,7 +13,7 @@ std::map<int,uint8_t *> dexMemMap;
 int g_sdkLevel = 0;
 
 void dpt_hook() {
-    bytehook_init(BYTEHOOK_MODE_AUTOMATIC,true);
+    bytehook_init(BYTEHOOK_MODE_AUTOMATIC,false);
     g_sdkLevel = android_get_device_api_level();
     hook_mmap();
     hook_ClassLinker_LoadMethod();
