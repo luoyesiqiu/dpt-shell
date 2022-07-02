@@ -366,15 +366,10 @@ void hook_mmap(){
     }
 }
 
-void* fake_GetOatDexFile(){
-    DLOGD("fake_GetOatDexFile call!");
-    return nullptr;
-}
-
-void *fake_GetOatDexFile2(const char* dex_location,
+void *fake_GetOatDexFile(const char* dex_location,
               const uint32_t* dex_location_checksum,
               std::string* error_msg){
-    DLOGD("fake_GetOatDexFile2 call!");
+    DLOGD("fake_GetOatDexFile call!");
 
     return nullptr;
 }
@@ -382,13 +377,11 @@ void *fake_GetOatDexFile2(const char* dex_location,
 void hook_GetOatDexFile(){
     const char *getOatDexFileSymbol = find_symbol_in_elf_file(GetArtLibPath(),2,"OatFile","GetOatDexFile");
     DLOGD("getOatDexFile symbol = %s",getOatDexFileSymbol);
-    void *sym = DobbySymbolResolver(getArtLibName(),getOatDexFileSymbol);
+    void *sym = DobbySymbolResolver(GetArtLibPath(),getOatDexFileSymbol);
     if(sym != nullptr){
         switch (g_sdkLevel) {
             case 24:
             case 25:
-                DobbyHook(sym,(void *)fake_GetOatDexFile,(void **)&g_GetOatDexFile);
-                break;
             case 26:
             case 27:
             case 28:
@@ -396,7 +389,7 @@ void hook_GetOatDexFile(){
             case 30:
             case 31:
             case 32:
-                DobbyHook(sym,(void *)fake_GetOatDexFile2,(void **)&g_GetOatDexFile2);
+                DobbyHook(sym,(void *)fake_GetOatDexFile,(void **)&g_GetOatDexFile);
                 break;
         }
     }
