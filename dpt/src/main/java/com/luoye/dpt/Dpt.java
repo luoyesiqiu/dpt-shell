@@ -68,7 +68,6 @@ public class Dpt {
         ApkUtils.saveAppComponentFactory(unzipApkFilePath);
         ApkUtils.writeProxyComponentFactoryName(unzipApkFilePath);
 
-        ApkUtils.setExtractNativeLibs(unzipApkFilePath);
         ApkUtils.addProxyDex(unzipApkFilePath);
 
         ApkUtils.deleteMetaData(unzipApkFilePath);
