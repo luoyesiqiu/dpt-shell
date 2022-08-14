@@ -218,12 +218,11 @@ void LoadMethod(void *thiz, void *self, const void *dex_file, const void *it, co
 
             uint16_t firstDvmCode = *((uint16_t*)(begin + classDataItemReader->GetMethodCodeItemOffset() + 16));
             if(firstDvmCode != 0x0012 && firstDvmCode != 0x0016 && firstDvmCode != 0x000e){
-                NLOG("this method has code no need to patch");
+                NLOG("[*] this method has code no need to patch");
                 return;
             }
 
-
-            NLOG("LoadMethod dexfile = %s,code_off = {0x%x => %02x} begin(%p) = %c,%c,%c,%c method_idx = %d",
+            NLOG("[*] LoadMethod dexfile = %s,code_off = {0x%x => %02x} begin(%p) = %c,%c,%c,%c method_idx = %d",
                   location->c_str(),
                   classDataItemReader->GetMethodCodeItemOffset(),
                   *(begin + classDataItemReader->GetMethodCodeItemOffset() + 16),
@@ -238,8 +237,7 @@ void LoadMethod(void *thiz, void *self, const void *dex_file, const void *it, co
 
             int dexIndex = dexNumber(location);
 
-            NLOG("dex size = %d",dexSize);
-
+            NLOG("[*] dex size = %d",dexSize);
 
             auto dexIt = dexMap.find(dexIndex - 1);
             if (dexIt != dexMap.end()) {
@@ -255,15 +253,13 @@ void LoadMethod(void *thiz, void *self, const void *dex_file, const void *it, co
                 auto codeItemIt = codeItemMap->find(methodIdx);
 
                 if (codeItemIt != codeItemMap->end()) {
-                    NLOG("--> codeitem find! codeItemMap size = %d,codeItemIt = %p,codeItemMapEnd = %p,methodIdx = %d",
-                         codeItemMap->size(), codeItemIt, codeItemMap->end(), methodIdx);
                     CodeItem* codeItem = codeItemIt->second;
                     uint8_t  *realCodeItemPtr = (uint8_t*)(begin +
                                                 classDataItemReader->GetMethodCodeItemOffset() +
                                                 16);
 
-                    NLOG("--> codeItem patch ,tid = %u, methodIndex = %d,insnsSize = %d >>> %p",gettid(),
-                              codeItem->getMethodIdx(), codeItem->getInsnsSize(), realCodeItemPtr
+                    NLOG("[*] codeItem patch ,tid = %u, methodIndex = %d,insnsSize = %d >>> %p(0x%lx)",gettid(),
+                              codeItem->getMethodIdx(), codeItem->getInsnsSize(), realCodeItemPtr,(realCodeItemPtr - begin)
                         );
 
                     memcpy(realCodeItemPtr,codeItem->getInsns(),codeItem->getInsnsSize());
