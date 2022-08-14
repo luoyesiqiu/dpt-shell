@@ -5,12 +5,9 @@ import com.luoye.dpt.util.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import java.io.File;
-import java.text.SimpleDateFormat;
-import java.util.Date;
 
 public class Dpt {
     private static final Logger logger = LoggerFactory.getLogger(Dpt.class.getSimpleName());
-    private static final String UNZIP_APK_FILE_NAME = "apk-unzip-files";
 
     public static void main(String[] args) {
         if(args.length < 1){
@@ -24,19 +21,17 @@ public class Dpt {
         }
     }
 
-    private static String currentTimeStr() {
-        @SuppressWarnings("SimpleDateFormat") SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd-HH-mm-ss");//设置日期格式
-        return df.format(new Date());
-    }
-
     private static void usage(){
         System.err.println("Usage:\n\tjava -jar dpt.jar [--log] <ApkFile>");
     }
 
     private static void processApk(String apkPath){
+        if(!new File("shell-files").exists()) {
+            System.err.println("Cannot find shell files!");
+            return;
+        }
         File apkFile = new File(apkPath);
         String apkFileName = apkFile.getName();
-
 
         String currentDir = new File(".").getAbsolutePath();  // 当前命令行所在的目录
         if (currentDir.endsWith("/.")){
@@ -48,41 +43,31 @@ public class Dpt {
 
         File outputFile = new File(currentDir, output);
         String outputApkFileParentPath = outputFile.getParent();
-        System.err.println("outputApkFileParentPath: " + outputApkFileParentPath);
 
-        // 中间文件临时存储的位置
-        String tempFilePath = outputApkFileParentPath + File.separator +
-                currentTimeStr() + "-tmp" + File.separator;
+        //apk文件解压的目录
+        String apkMainProcessPath = ApkUtils.getWorkspaceDir().getAbsolutePath();
 
-        // apk文件解压的目录
-        String unzipApkFilePath = tempFilePath + apkFileName + "-" + UNZIP_APK_FILE_NAME;
+        System.out.println("Apk main process path: " + apkMainProcessPath);
 
-        System.err.println("unzipApkFilePath: " + unzipApkFilePath);
+        ApkUtils.extract(apkPath,apkMainProcessPath);
+        Global.packageName = ManifestUtils.getPackageName(apkMainProcessPath + File.separator + "AndroidManifest.xml");
+        ApkUtils.extractDexCode(apkMainProcessPath);
 
-        ApkUtils.extract(apkPath,unzipApkFilePath);
-        Global.packageName = ManifestUtils.getPackageName(unzipApkFilePath + File.separator + "AndroidManifest.xml");
-        ApkUtils.extractDexCode(unzipApkFilePath);
+        ApkUtils.saveApplicationName(apkMainProcessPath);
+        ApkUtils.writeProxyAppName(apkMainProcessPath);
+        ApkUtils.saveAppComponentFactory(apkMainProcessPath);
+        ApkUtils.writeProxyComponentFactoryName(apkMainProcessPath);
 
-        ApkUtils.saveApplicationName(unzipApkFilePath);
-        ApkUtils.writeProxyAppName(unzipApkFilePath);
-        ApkUtils.saveAppComponentFactory(unzipApkFilePath);
-        ApkUtils.writeProxyComponentFactoryName(unzipApkFilePath);
+        ApkUtils.addProxyDex(apkMainProcessPath);
 
-        ApkUtils.addProxyDex(unzipApkFilePath);
+        ApkUtils.deleteMetaData(apkMainProcessPath);
+        ApkUtils.copyShellLibs(apkMainProcessPath, new File(outputApkFileParentPath,"shell-files/libs"));
 
-        ApkUtils.deleteMetaData(unzipApkFilePath);
-        ApkUtils.copyShellLibs(unzipApkFilePath, new File(outputApkFileParentPath,"shell-files/libs"));
+        new BuildAndSignApkTask(false, apkMainProcessPath, output).run();
 
-        new BuildAndSignApkTask(false, unzipApkFilePath, output).run();
-
-        File unzipApkFile = new File(unzipApkFilePath);
-        if (unzipApkFile.exists()) {
-            WindFileUtils.deleteDir(unzipApkFile);
-        }
-
-        File tempFile = new File(tempFilePath.replaceAll("\\.",""));
-        if (tempFile.exists()) {
-            FileUtils.deleteRecurse(tempFile);
+        File apkMainProcessFile = new File(apkMainProcessPath);
+        if (apkMainProcessFile.exists()) {
+            FileUtils.deleteRecurse(apkMainProcessFile);
         }
     }
 }
