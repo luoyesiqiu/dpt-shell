@@ -30,4 +30,8 @@ void callOriginLoadMethod(void *thiz, void *self, const void *dex_file, const vo
 uint32_t getDexFileLocationOffset();
 uint32_t getDataItemCodeItemOffset();
 void hook_mmap();
+void hook_GetOatDexFile();
+static void (*g_GetOatDexFile)(const char* dex_location,
+                         const uint32_t* dex_location_checksum,
+                         std::string* error_msg) = nullptr;
 #endif //DPT_DPT_HOOK_H

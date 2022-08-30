@@ -9,7 +9,6 @@ import com.wind.meditor.property.ModificationProperty;
 import net.lingala.zip4j.ZipFile;
 import net.lingala.zip4j.exception.ZipException;
 import net.lingala.zip4j.model.ZipParameters;
-import net.lingala.zip4j.model.enums.CompressionLevel;
 import net.lingala.zip4j.model.enums.CompressionMethod;
 
 import java.io.File;
@@ -148,16 +147,24 @@ public class ApkUtils {
      * 获取工作目录
      * @return
      */
-    public static File getOutDir(){
+    public static File getWorkspaceDir(){
         return FileUtils.getDir(Const.ROOT_OF_OUT_DIR,"dptOut");
     }
 
     /**
      * 删除工作目录
      */
-    public static void deleteOutDir(){
-        File outDir = getOutDir();
+    public static void deleteWorkspaceDir(){
+        File outDir = getWorkspaceDir();
         FileUtils.deleteRecurse(outDir);
+    }
+
+    /**
+     * 获取最后处理（对齐，签名）目录
+     * @return
+     */
+    public static File getLastProcessDir(){
+        return FileUtils.getDir(Const.ROOT_OF_OUT_DIR,"dptLastProcess");
     }
 
     /**

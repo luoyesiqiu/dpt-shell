@@ -13,10 +13,11 @@ std::map<int,uint8_t *> dexMemMap;
 int g_sdkLevel = 0;
 
 void dpt_hook() {
-    bytehook_init(BYTEHOOK_MODE_AUTOMATIC,true);
+    bytehook_init(BYTEHOOK_MODE_AUTOMATIC,false);
     g_sdkLevel = android_get_device_api_level();
     hook_mmap();
     hook_ClassLinker_LoadMethod();
+    hook_GetOatDexFile();
 }
 
 const char *GetArtLibPath() {
@@ -50,28 +51,8 @@ const char *GetClassLinkerLoadMethodLibPath(){
 }
 
 const char *getClassLinkerLoadMethodSymbol() {
-    FILE *lib_fp = fopen(GetClassLinkerLoadMethodLibPath(),"r");
-    if(lib_fp){
-        fseek(lib_fp,0L,SEEK_END);
-        size_t lib_size = ftell(lib_fp);
-        fseek(lib_fp,0L,SEEK_SET);
-
-        char *data = (char *)calloc(lib_size,1);
-        fread(data,1,lib_size,lib_fp);
-        const char * symbol = find_symbol_in_elf((void*)data,2,"ClassLinker","LoadMethod","DexFile","ArtMethod");
-        if(symbol != nullptr) {
-            DLOGD("getClassLinkerLoadMethodSymbol find symbol = %s", symbol);
-            fclose(lib_fp);
-            return symbol;
-        }
-        else{
-            DLOGE("getClassLinkerLoadMethodSymbol no found symbol!");
-        }
-
-        free(data);
-    }
-
-    return "";
+    const char *sym = find_symbol_in_elf_file(GetClassLinkerLoadMethodLibPath(),2,"ClassLinker","LoadMethod","DexFile","ArtMethod");
+    return sym;
 }
 
 void callOriginLoadMethod(void *thiz, void *self, const void *dex_file, const void *it,
@@ -206,7 +187,6 @@ ClassDataItemReader* getClassDataItemReader(const void* it,const void* method){
             return new ClassDataItemReader(method);
     }
     return nullptr;
-
 }
 
 void LoadMethod(void *thiz, void *self, const void *dex_file, const void *it, const void *method,
@@ -220,7 +200,6 @@ void LoadMethod(void *thiz, void *self, const void *dex_file, const void *it, co
         callOriginLoadMethod(thiz, self, dex_file, it, method, klass, dst);
 
         ClassDataItemReader *classDataItemReader = getClassDataItemReader(it,method);
-
 
         uint8_t **begin_ptr = (uint8_t **) ((uint8_t *) dex_file + begin_offset);
         uint8_t *begin = *begin_ptr;
@@ -239,12 +218,11 @@ void LoadMethod(void *thiz, void *self, const void *dex_file, const void *it, co
 
             uint16_t firstDvmCode = *((uint16_t*)(begin + classDataItemReader->GetMethodCodeItemOffset() + 16));
             if(firstDvmCode != 0x0012 && firstDvmCode != 0x0016 && firstDvmCode != 0x000e){
-                NLOG("this method has code no need to patch");
+                NLOG("[*] this method has code no need to patch");
                 return;
             }
 
-
-            NLOG("LoadMethod dexfile = %s,code_off = {0x%x => %02x} begin(%p) = %c,%c,%c,%c method_idx = %d",
+            NLOG("[*] LoadMethod dexfile = %s,code_off = {0x%x => %02x} begin(%p) = %c,%c,%c,%c method_idx = %d",
                   location->c_str(),
                   classDataItemReader->GetMethodCodeItemOffset(),
                   *(begin + classDataItemReader->GetMethodCodeItemOffset() + 16),
@@ -259,8 +237,7 @@ void LoadMethod(void *thiz, void *self, const void *dex_file, const void *it, co
 
             int dexIndex = dexNumber(location);
 
-            NLOG("dex size = %d",dexSize);
-
+            NLOG("[*] dex size = %d",dexSize);
 
             auto dexIt = dexMap.find(dexIndex - 1);
             if (dexIt != dexMap.end()) {
@@ -276,15 +253,13 @@ void LoadMethod(void *thiz, void *self, const void *dex_file, const void *it, co
                 auto codeItemIt = codeItemMap->find(methodIdx);
 
                 if (codeItemIt != codeItemMap->end()) {
-                    NLOG("--> codeitem find! codeItemMap size = %d,codeItemIt = %p,codeItemMapEnd = %p,methodIdx = %d",
-                         codeItemMap->size(), codeItemIt, codeItemMap->end(), methodIdx);
                     CodeItem* codeItem = codeItemIt->second;
                     uint8_t  *realCodeItemPtr = (uint8_t*)(begin +
                                                 classDataItemReader->GetMethodCodeItemOffset() +
                                                 16);
 
-                    NLOG("--> codeItem patch ,tid = %u, methodIndex = %d,insnsSize = %d >>> %p",gettid(),
-                              codeItem->getMethodIdx(), codeItem->getInsnsSize(), realCodeItemPtr
+                    NLOG("[*] codeItem patch ,tid = %u, methodIndex = %d,insnsSize = %d >>> %p(0x%lx)",gettid(),
+                              codeItem->getMethodIdx(), codeItem->getInsnsSize(), realCodeItemPtr,(realCodeItemPtr - begin)
                         );
 
                     memcpy(realCodeItemPtr,codeItem->getInsns(),codeItem->getInsnsSize());
@@ -384,5 +359,34 @@ void hook_mmap(){
             nullptr);
     if(stub != nullptr){
         DLOGD("mmap hook success!");
+    }
+}
+
+void *fake_GetOatDexFile(const char* dex_location,
+              const uint32_t* dex_location_checksum,
+              std::string* error_msg){
+    DLOGD("fake_GetOatDexFile call!");
+
+    return nullptr;
+}
+
+void hook_GetOatDexFile(){
+    const char *getOatDexFileSymbol = find_symbol_in_elf_file(GetArtLibPath(),2,"OatFile","GetOatDexFile");
+    DLOGD("getOatDexFile symbol = %s",getOatDexFileSymbol);
+    void *sym = DobbySymbolResolver(GetArtLibPath(),getOatDexFileSymbol);
+    if(sym != nullptr){
+        switch (g_sdkLevel) {
+            case 24:
+            case 25:
+            case 26:
+            case 27:
+            case 28:
+            case 29:
+            case 30:
+            case 31:
+            case 32:
+                DobbyHook(sym,(void *)fake_GetOatDexFile,(void **)&g_GetOatDexFile);
+                break;
+        }
     }
 }

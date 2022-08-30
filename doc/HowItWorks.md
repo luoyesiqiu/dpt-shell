@@ -13,21 +13,21 @@
 
 ## 0x1 项目的结构
 
-dpt代码分为两个部分，一个是proccessor，另一个是shell。
+dpt代码分为两个部分，一个是processor，另一个是shell。
 
-proccessor是可以将普通apk处理成加壳apk的模块。它的主要功能有：
+processor是可以将普通apk处理成加壳apk的模块。它的主要功能有：
 
 - 解压apk
 
-- 提取apk中的dex的codeitem保存起来
+- 提取apk中的dex的CodeItem保存起来
 
-- 修改Androidmanifest.xml中的Application类名
+- 修改AndroidManifest.xml中的Application类名
 
 - 生成新的apk
 
 流程如下：
 
-![](proccessor.png)
+![](processor.png)
 
 shell模块最终生成的dex文件和so文件将被集成到需要加壳的apk中。它的要功能有：
 
@@ -39,9 +39,9 @@ shell模块最终生成的dex文件和so文件将被集成到需要加壳的apk�
 
 - 调用目标Application
 
-- codeitem文件读取
+- CodeItem文件读取
 
-- codeitem填回
+- CodeItem填回
 
 
 流程如下：
@@ -49,15 +49,15 @@ shell模块最终生成的dex文件和so文件将被集成到需要加壳的apk�
 
 ![](shell.png)
 
-## 0x2 proccessor
+## 0x2 processor
 
-proccessor比较重要的逻辑两点，AndroidManiest.xml的处理和Codeitem的提取
+processor比较重要的逻辑两点，AndroidManifest.xml的处理和CodeItem的提取
 
-### （1）处理Androidmanifest.xml
+### （1）处理AndroidManifest.xml
 
 我们处理AndroidManifest.xml的操作主要是备份原Application的类名和写入壳的代理Application的类名。备份原Application类名目的是在壳的流程执行完成后，调用我们原APK的Application。写入壳的代理Application类名的目的是在app启动时尽早的启动我们的代理Application，这样我们就可以做一些准备工作，比如自定义加载dex,Hook一些函数等。我们知道，AndroidManifest.xml在生成apk后它不是以普通xml文件的格式来存放的，而是以axml格式来存放的。不过幸运的是，已经有许多大佬写了对axml解析和编辑的库，我们直接拿来用就行。这里用到的axml处理的库是[ManifestEditor](https://github.com/WindySha/ManifestEditor)。
 
-提取原Androidmanifest.xml Application完整类名代码如下，直接调用getApplicationName函数即可
+提取原AndroidManifest.xml Application完整类名代码如下，直接调用getApplicationName函数即可
 
 ```java
 

@@ -1,6 +1,7 @@
 package com.luoye.dpt.task;
 
 import com.android.apksigner.ApkSignerTool;
+import com.luoye.dpt.util.ApkUtils;
 import com.luoye.dpt.util.WindFileUtils;
 import com.luoye.dpt.util.ShellCmdUtil;
 import java.io.File;
@@ -24,15 +25,13 @@ public class BuildAndSignApkTask{
     }
 
     public void run() {
-
-        File unzipApkFile = new File(unzipApkFilePath);
-
-        // 将文件压缩到当前apk文件的上一级目录上
-        String unsignedApkPath = unzipApkFile.getParent() + File.separator + "unsigned.apk";
+        String apkLastProcessDir = ApkUtils.getLastProcessDir().getAbsolutePath();
+        //将文件压缩到当前apk文件的上一级目录上
+        String unsignedApkPath = apkLastProcessDir + File.separator + "unsigned.apk";
         WindFileUtils.compressToZip(unzipApkFilePath, unsignedApkPath);
 
-        // 将签名文件复制从assets目录下复制出来
-        String keyStoreFilePath = unzipApkFile.getParent() + File.separator + "keystore";
+        //将签名文件复制从assets目录下复制出来
+        String keyStoreFilePath = apkLastProcessDir + File.separator + "keystore";
 
         File keyStoreFile = new File(keyStoreFilePath);
         // assets/keystore分隔符不能使用File.separator，否则在windows上抛出IOException !!!
@@ -40,17 +39,17 @@ public class BuildAndSignApkTask{
 
         WindFileUtils.copyFileFromJar(keyStoreAssetPath, keyStoreFilePath);
 
-        String unsignedZipalignedApkPath = unzipApkFile.getParent() + File.separator + "unsigned_zipaligned.apk";
+        String unsignedZipAlignedApkPath = apkLastProcessDir + File.separator + "unsigned_zipaligned.apk";
         try {
-            zipalignApk(unsignedApkPath, unsignedZipalignedApkPath);
+            zipalignApk(unsignedApkPath, unsignedZipAlignedApkPath);
         } catch (Exception e) {
             e.printStackTrace();
         }
 
-        String apkPath = unsignedZipalignedApkPath;
+        String apkPath = unsignedZipAlignedApkPath;
         if (!(new File(apkPath).exists())) {
             apkPath = unsignedApkPath;
-            System.out.println(" zipalign apk failed, just sign not zipaligned apk !!!");
+            System.out.println("zipalign apk failed, just sign not zipaligned apk !!!");
         }
 
         boolean signResult = signApk(apkPath, keyStoreFilePath, signedApkPath);
@@ -62,7 +61,7 @@ public class BuildAndSignApkTask{
             unsignedApkFile.delete();
         }
 
-        File unsign_zipaligned_file = new File(unsignedZipalignedApkPath);
+        File unsign_zipaligned_file = new File(unsignedZipAlignedApkPath);
         if (!keepUnsignedApkFile && unsign_zipaligned_file.exists() && signedApkFile.exists() && signResult) {
             unsign_zipaligned_file.delete();
         }
