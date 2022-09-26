@@ -15,7 +15,7 @@ public class JniBridge {
     public static native String rcf(ClassLoader classLoader);
     public static native void mde(ClassLoader oldClassLoader,ClassLoader newClassLoader);
     public static native void rde(ClassLoader oldClassLoader,ClassLoader newClassLoader);
-    public static native String gap(ClassLoader classLoader);
+    public static native String gap();
 
     static {
         try {

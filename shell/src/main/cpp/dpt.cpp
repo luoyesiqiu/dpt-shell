@@ -18,7 +18,7 @@ static JNINativeMethod gMethods[] = {
         {"craoc", "(Ljava/lang/String;)V",                               (void *) callRealApplicationOnCreate},
         {"craa",  "(Landroid/content/Context;Ljava/lang/String;)V",      (void *) callRealApplicationAttach},
         {"ia",    "(Landroid/content/Context;Ljava/lang/ClassLoader;)V", (void *) init_app},
-        {"gap",   "(Ljava/lang/ClassLoader;)Ljava/lang/String;",         (void *) getApkPath},
+        {"gap",   "()Ljava/lang/String;",         (void *) getApkPath},
         {"rcf",   "(Ljava/lang/ClassLoader;)Ljava/lang/String;",         (void *) readAppComponentFactory},
         {"mde",   "(Ljava/lang/ClassLoader;Ljava/lang/ClassLoader;)V",        (void *) mergeDexElements},
         {"rde",   "(Ljava/lang/ClassLoader;Ljava/lang/ClassLoader;)V",        (void *) replaceDexElements}
@@ -147,7 +147,7 @@ void replaceDexElements(JNIEnv* env,jclass klass,jobject oldClassLoader,jobject 
 jstring readAppComponentFactory(JNIEnv *env, jclass klass, jobject classLoader) {
     zip_uint64_t entry_size;
     if(zip_addr == nullptr){
-        jstring apkPath = getApkPath(env,klass,classLoader);
+        jstring apkPath = getApkPath(env,klass);
         const char *apkPathChs = env->GetStringUTFChars(apkPath,nullptr);
         load_zip(apkPathChs,&zip_addr,&zip_size);
     }
@@ -295,7 +295,7 @@ void init_app(JNIEnv *env, jclass klass, jobject context, jobject classLoader) {
         zip_uint64_t entry_size;
 
         if(zip_addr == nullptr){
-            jstring apkPath = getApkPath(env,klass,classLoader);
+            jstring apkPath = getApkPath(env,klass);
             const char *apkPathChs = env->GetStringUTFChars(apkPath,nullptr);
             load_zip(apkPathChs,&zip_addr,&zip_size);
         }
