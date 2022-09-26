@@ -35,7 +35,7 @@ static jclass g_ContextClass = nullptr;
 jclass getContextClass(JNIEnv *env);
 AAssetManager *getAssetMgr(JNIEnv *env, jobject assetManager);
 AAsset *getAsset(JNIEnv *env, jobject context, const char *filename);
-jstring getApkPath(JNIEnv *env,jclass ,jobject classLoader);
+jstring getApkPath(JNIEnv *env,jclass);
 int endWith(const char *str,const char* sub);
 void appendLog(const char* log);
 void hexDump(const char* name,const void* data, size_t size);

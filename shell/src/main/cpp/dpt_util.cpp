@@ -52,77 +52,32 @@ AAsset *getAsset(JNIEnv *env, jobject context, const char *filename) {
     return nullptr;
 }
 
-jstring getApkPath(JNIEnv *env,jclass ,jobject classLoader) {
-    jstring emptyStr = env->NewStringUTF("");
-    jclass BaseDexClassLoaderClass = env->FindClass("dalvik/system/BaseDexClassLoader");
-    jfieldID  pathList = env->GetFieldID(BaseDexClassLoaderClass,"pathList","Ldalvik/system/DexPathList;");
-    jobject DexPathListObj = env->GetObjectField(classLoader,pathList);
-    if(env->ExceptionCheck() || nullptr == DexPathListObj ){
-        env->ExceptionClear();
-        W_DeleteLocalRef(env,BaseDexClassLoaderClass);
-        DLOGW("getApkPath pathList get fail.");
-        return emptyStr;
-    }
+jstring getApkPath(JNIEnv *env,jclass) {
+    jclass ActivityThreadClass = env->FindClass("android/app/ActivityThread");
+    jfieldID sActivityThreadField = env->GetStaticFieldID(ActivityThreadClass,
+                                                          "sCurrentActivityThread",
+                                                          "Landroid/app/ActivityThread;");
 
-    jclass DexPathListClass = env->FindClass("dalvik/system/DexPathList");
-    jfieldID  dexElementField = env->GetFieldID(DexPathListClass,"dexElements","[Ldalvik/system/DexPathList$Element;");
-    jobjectArray Elements = (jobjectArray)env->GetObjectField(DexPathListObj,dexElementField);
-    if(env->ExceptionCheck() || nullptr == Elements){
-        env->ExceptionClear();
-        W_DeleteLocalRef(env,BaseDexClassLoaderClass);
-        W_DeleteLocalRef(env,DexPathListClass);
-        DLOGW("getApkPath Elements get fail.");
+    jobject sActivityThreadObj = env->GetStaticObjectField(ActivityThreadClass,sActivityThreadField);
 
-        return emptyStr;
-    }
-    jsize len = env->GetArrayLength(Elements);
-    if(len == 0) {
-        DLOGW("getApkPath len ==0.");
-        return emptyStr;
-    }
+    jfieldID mBoundApplicationField = env->GetFieldID(ActivityThreadClass,
+                                                          "mBoundApplication",
+                                                          "Landroid/app/ActivityThread$AppBindData;");
+    jobject mBoundApplicationObj = env->GetObjectField(sActivityThreadObj,mBoundApplicationField);
 
-    for(int i = 0;i < len;i++) {
-        jobject elementObj = env->GetObjectArrayElement(Elements, i);
-        if (env->ExceptionCheck() || nullptr == elementObj) {
-            env->ExceptionClear();
-            DLOGW("getApkPath get Elements item fail");
-            continue;
-        }
-        jclass ElementClass = env->FindClass("dalvik/system/DexPathList$Element");
+    jclass AppBindDataClass = env->GetObjectClass(mBoundApplicationObj);
 
-        jfieldID pathFieldId = env->GetFieldID(ElementClass, "path", "Ljava/io/File;");
-        jobject fileObj = env->GetObjectField(elementObj, pathFieldId);
-        if (env->ExceptionCheck() || nullptr == fileObj) {
-            env->ExceptionClear();
-            W_DeleteLocalRef(env, BaseDexClassLoaderClass);
-            W_DeleteLocalRef(env, DexPathListClass);
-            W_DeleteLocalRef(env, ElementClass);
-            DLOGW("getApkPath get path fail");
-            return emptyStr;
-        }
-        jclass FileClass = env->FindClass("java/io/File");
-        jmethodID getAbsolutePathMethodId = env->GetMethodID(FileClass, "getAbsolutePath",
-                                                             "()Ljava/lang/String;");
-        jstring absolutePath = static_cast<jstring>(env->CallObjectMethod(fileObj,
-                                                                          getAbsolutePathMethodId));
-        if (env->ExceptionCheck() || nullptr == absolutePath) {
-            env->ExceptionClear();
-            W_DeleteLocalRef(env, BaseDexClassLoaderClass);
-            W_DeleteLocalRef(env, DexPathListClass);
-            W_DeleteLocalRef(env, ElementClass);
-            W_DeleteLocalRef(env, FileClass);
-            DLOGW("getApkPath get absolutePath fail");
-            return emptyStr;
-        }
+    jfieldID appInfoField = env->GetFieldID(AppBindDataClass,"appInfo","Landroid/content/pm/ApplicationInfo;");
 
-        const char* absolutePathChs = env->GetStringUTFChars(absolutePath,nullptr);
-        if(endWith(absolutePathChs,"base.apk") == 0){
-            return absolutePath;
-        }
+    jobject appInfoObj = env->GetObjectField(mBoundApplicationObj,appInfoField);
 
-    }
+    jclass ApplicationInfoClass = env->GetObjectClass(appInfoObj);
 
-    return emptyStr;
+    jfieldID sourceDirField = env->GetFieldID(ApplicationInfoClass,"sourceDir","Ljava/lang/String;");
+
+    jstring sourceDir = (jstring)env->GetObjectField(appInfoObj,sourceDirField);
+
+    return sourceDir;
 
 }
 

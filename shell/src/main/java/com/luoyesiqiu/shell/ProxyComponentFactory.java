@@ -50,7 +50,8 @@ public class ProxyComponentFactory extends AppComponentFactory {
             ProxyApplication.initialized = true;
 
             JniBridge.ia(null,cl);
-            String apkPath = JniBridge.gap(cl);
+            String apkPath = JniBridge.gap();
+            Log.d(TAG, "init apkPath: " + apkPath);
             ClassLoader classLoader = ShellClassLoader.loadDex(apkPath);
             JniBridge.mde(cl,classLoader);
 
