@@ -28,13 +28,7 @@ public class ProxyApplication extends Application {
         if (!TextUtils.isEmpty(realApplicationName)) {
             Log.d(TAG, "onCreate: " + realApplicationName);
             JniBridge.ra(realApplicationName);
-        }
-
-        if (!TextUtils.isEmpty(realApplicationName)) {
             JniBridge.craa(getApplicationContext(), realApplicationName);
-        }
-
-        if (!TextUtils.isEmpty(realApplicationName)) {
             JniBridge.craoc(realApplicationName);
         }
     }
