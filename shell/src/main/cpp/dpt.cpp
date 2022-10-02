@@ -13,7 +13,6 @@ off_t zip_size;
 char *appComponentFactoryChs = nullptr;
 void *codeItemFilePtr = nullptr;
 
-
 static JNINativeMethod gMethods[] = {
         {"craoc", "(Ljava/lang/String;)V",                               (void *) callRealApplicationOnCreate},
         {"craa",  "(Landroid/content/Context;Ljava/lang/String;)V",      (void *) callRealApplicationAttach},
@@ -21,7 +20,7 @@ static JNINativeMethod gMethods[] = {
         {"gap",   "()Ljava/lang/String;",         (void *) getApkPath},
         {"rcf",   "(Ljava/lang/ClassLoader;)Ljava/lang/String;",         (void *) readAppComponentFactory},
         {"mde",   "(Ljava/lang/ClassLoader;Ljava/lang/ClassLoader;)V",        (void *) mergeDexElements},
-        {"rde",   "(Ljava/lang/ClassLoader;Ljava/lang/ClassLoader;)V",        (void *) replaceDexElements}
+        {"ra", "(Ljava/lang/String;)V",                               (void *) replaceApplication}
 };
 
 void mergeDexElements(JNIEnv* env,jclass klass,jobject oldClassLoader,jobject newClassLoader){
@@ -97,52 +96,6 @@ void mergeDexElements(JNIEnv* env,jclass klass,jobject oldClassLoader,jobject ne
     DLOGD("mergeDexElements success");
 }
 
-void replaceDexElements(JNIEnv* env,jclass klass,jobject oldClassLoader,jobject newClassLoader){
-    jclass BaseDexClassLoaderClass = env->FindClass("dalvik/system/BaseDexClassLoader");
-    jfieldID  pathList = env->GetFieldID(BaseDexClassLoaderClass,"pathList","Ldalvik/system/DexPathList;");
-    jobject oldDexPathListObj = env->GetObjectField(oldClassLoader,pathList);
-    if(env->ExceptionCheck() || nullptr == oldDexPathListObj ){
-        env->ExceptionClear();
-        W_DeleteLocalRef(env,BaseDexClassLoaderClass);
-        DLOGW("replaceDexElements oldDexPathListObj get fail");
-        return;
-    }
-    jobject newDexPathListObj = env->GetObjectField(newClassLoader,pathList);
-    if(env->ExceptionCheck() || nullptr == newDexPathListObj){
-        env->ExceptionClear();
-        W_DeleteLocalRef(env,BaseDexClassLoaderClass);
-        W_DeleteLocalRef(env,oldDexPathListObj);
-        DLOGW("replaceDexElements newDexPathListObj get fail");
-        return;
-    }
-
-    jclass DexPathListClass = env->FindClass("dalvik/system/DexPathList");
-    jfieldID  dexElementField = env->GetFieldID(DexPathListClass,"dexElements","[Ldalvik/system/DexPathList$Element;");
-    jobject newClassLoaderDexElements = env->GetObjectField(newDexPathListObj,dexElementField);
-    if(env->ExceptionCheck() || nullptr == newClassLoaderDexElements){
-        env->ExceptionClear();
-        W_DeleteLocalRef(env,BaseDexClassLoaderClass);
-        W_DeleteLocalRef(env,oldDexPathListObj);
-        W_DeleteLocalRef(env,newDexPathListObj);
-        W_DeleteLocalRef(env,DexPathListClass);
-        DLOGW("replaceDexElements dexElements get fail");
-        return;
-    }
-
-    env->SetObjectField(oldDexPathListObj,dexElementField,newClassLoaderDexElements);
-    if(env->ExceptionCheck()){
-        env->ExceptionClear();
-        W_DeleteLocalRef(env,BaseDexClassLoaderClass);
-        W_DeleteLocalRef(env,oldDexPathListObj);
-        W_DeleteLocalRef(env,newDexPathListObj);
-        W_DeleteLocalRef(env,DexPathListClass);
-        W_DeleteLocalRef(env,newClassLoaderDexElements);
-        DLOGW("replaceDexElements dexElements set fail");
-
-        return;
-    }
-    DLOGD("replaceDexElements success");
-}
 
 jstring readAppComponentFactory(JNIEnv *env, jclass klass, jobject classLoader) {
     zip_uint64_t entry_size;
@@ -192,17 +145,6 @@ jobject getApplicationInstance(JNIEnv *env, const char *applicationClassName) {
 
     }
     return g_realApplicationInstance;
-}
-
-void parseClassName(const char *src, char *dest) {
-
-    for (int i = 0; *(src + i) != '\0'; i++) {
-        if (*(src + i) == '.') {
-            dest[i] = '/';
-        } else {
-            *(dest + i) = *(src + i);
-        }
-    }
 }
 
 //
@@ -276,6 +218,120 @@ JNIEXPORT void callRealApplicationAttach(JNIEnv *env, jclass, jobject context,
 
     free(appNameChs);
 
+}
+
+void replaceApplication(JNIEnv *env, jclass klass, jstring realApplicationClassName){
+    const char *applicationClassName = env->GetStringUTFChars(realApplicationClassName, nullptr);
+
+    char *appNameChs = static_cast<char *>(calloc(strlen(applicationClassName) + 1, 1));
+    parseClassName(applicationClassName, appNameChs);
+
+    jobject appInstance = getApplicationInstance(env, appNameChs);
+    if (appInstance == nullptr) {
+        DLOGW("replaceApplication getApplicationInstance fail!");
+        env->ReleaseStringUTFChars(realApplicationClassName, applicationClassName);
+        free(appNameChs);
+        return;
+    }
+
+    replaceApplicationOnActivityThread(env,klass,appInstance);
+
+    char pkgChs[128] = {0};
+    readPackageName(pkgChs);
+    DLOGD("replaceApplication = %s",pkgChs);
+    jstring packageName = env->NewStringUTF(pkgChs);
+    replaceApplicationOnLoadedApk(env,klass,packageName,appInstance);
+
+    DLOGD("replace application success");
+}
+
+void replaceApplicationOnActivityThread(JNIEnv *env,jclass klass, jobject realApplication){
+    jclass ActivityThreadClass = env->FindClass("android/app/ActivityThread");
+    jfieldID sActivityThreadField = env->GetStaticFieldID(ActivityThreadClass,
+                                                          "sCurrentActivityThread",
+                                                          "Landroid/app/ActivityThread;");
+
+    jobject sActivityThreadObj = env->GetStaticObjectField(ActivityThreadClass,sActivityThreadField);
+
+    jfieldID  mInitialApplicationField = env->GetFieldID(ActivityThreadClass,
+                                                         "mInitialApplication",
+                                                         "Landroid/app/Application;");
+    env->SetObjectField(sActivityThreadObj,mInitialApplicationField,realApplication);
+    DLOGD("replaceApplicationOnActivityThread success");
+
+}
+
+void replaceApplicationOnLoadedApk(JNIEnv *env, jclass klass,jobject proxyApplication, jobject realApplication) {
+    jobject ActivityThreadObj = getActivityThreadInstance(env);
+    jclass ActivityThreadClass = env->GetObjectClass(ActivityThreadObj);
+
+    jfieldID mBoundApplicationField = env->GetFieldID(ActivityThreadClass,
+                                                      "mBoundApplication",
+                                                      "Landroid/app/ActivityThread$AppBindData;");
+    jobject mBoundApplicationObj = env->GetObjectField(ActivityThreadObj,mBoundApplicationField);
+
+    jclass AppBindDataClass = env->GetObjectClass(mBoundApplicationObj);
+
+    jfieldID infoField = env->GetFieldID(AppBindDataClass,
+                                         "info",
+                                         "Landroid/app/LoadedApk;");
+
+    jobject loadedApkObj = env->GetObjectField(mBoundApplicationObj,infoField);
+
+    jclass LoadedApkClass = env->GetObjectClass(loadedApkObj);
+
+    jfieldID mApplicationField = env->GetFieldID(LoadedApkClass,
+                                                 "mApplication",
+                                                 "Landroid/app/Application;");
+
+    //make it null
+    env->SetObjectField(loadedApkObj,mApplicationField,nullptr);
+
+    jfieldID mAllApplicationsField = env->GetFieldID(ActivityThreadClass,
+                                                    "mAllApplications",
+                                                    "Ljava/util/ArrayList;");
+
+    jobject mAllApplicationsObj = env->GetObjectField(ActivityThreadObj,mAllApplicationsField);
+
+    jclass ArrayListClass = env->GetObjectClass(mAllApplicationsObj);
+
+    jmethodID removeMethodId = env->GetMethodID(ArrayListClass,
+                                                "remove",
+                                                "(Ljava/lang/Object;)Z");
+
+    jmethodID addMethodId = env->GetMethodID(ArrayListClass,
+                                             "add",
+                                             "(Ljava/lang/Object;)Z");
+
+    env->CallBooleanMethod(mAllApplicationsObj,removeMethodId,proxyApplication);
+
+    env->CallBooleanMethod(mAllApplicationsObj,addMethodId,realApplication);
+
+    jfieldID mApplicationInfoField = env->GetFieldID(LoadedApkClass,
+                                                     "mApplicationInfo",
+                                                     "Landroid/content/pm/ApplicationInfo;");
+
+    jobject ApplicationInfoObj = env->GetObjectField(loadedApkObj,mApplicationInfoField);
+
+    jclass ApplicationInfoClass = env->GetObjectClass(ApplicationInfoObj);
+
+    char applicationName[128] = {0};
+    getClassName(env,realApplication,applicationName);
+    char realApplicationNameChs[128] = {0};
+    parseClassName(applicationName,realApplicationNameChs);
+    jstring realApplicationName = env->NewStringUTF(realApplicationNameChs);
+    jstring realApplicationNameGlobal = (jstring)env->NewGlobalRef(realApplicationName);
+
+    jfieldID classNameField = env->GetFieldID(ApplicationInfoClass,"className","Ljava/lang/String;");
+
+    //replace class name
+    env->SetObjectField(ApplicationInfoObj,classNameField,realApplicationNameGlobal);
+
+    jmethodID makeApplicationMethodId = env->GetMethodID(LoadedApkClass,"makeApplication","(ZLandroid/app/Instrumentation;)Landroid/app/Application;");
+    // call make application
+    env->CallObjectMethod(loadedApkObj,makeApplicationMethodId,false,nullptr);
+
+    DLOGD("replaceApplicationOnLoadedApk success!");
 }
 
 bool registerNativeMethods(JNIEnv *env) {
