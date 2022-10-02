@@ -16,6 +16,7 @@ public class JniBridge {
     public static native void mde(ClassLoader oldClassLoader,ClassLoader newClassLoader);
     public static native void rde(ClassLoader oldClassLoader,ClassLoader newClassLoader);
     public static native String gap();
+    public static native void ra(String originApplicationClassName);
 
     static {
         try {

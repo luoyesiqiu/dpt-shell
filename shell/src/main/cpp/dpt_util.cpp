@@ -20,6 +20,62 @@
 #define Elf_Off  Elf32_Off
 #endif
 
+void parseClassName(const char *src, char *dest) {
+    for (int i = 0; *(src + i) != '\0'; i++) {
+        if (*(src + i) == '.') {
+            dest[i] = '/';
+        } else {
+            *(dest + i) = *(src + i);
+        }
+    }
+}
+
+void getClassName(JNIEnv *env,jobject obj,char *destClassName){
+    jclass objCls = env->GetObjectClass(obj);
+    jclass ClassCls = env->GetObjectClass(objCls);
+    jmethodID getNameMethodId = env->GetMethodID(ClassCls,"getName","()Ljava/lang/String;");
+    jstring classNameInner = (jstring)env->CallObjectMethod(ClassCls,getNameMethodId);
+
+    const char *classNameInnerChs = env->GetStringUTFChars(classNameInner,nullptr);
+
+    strcpy(destClassName,classNameInnerChs);
+
+    env->ReleaseStringUTFChars(classNameInner,classNameInnerChs);
+}
+
+void readPackageName(char *packageName){
+    if(packageName == nullptr){
+        return;
+    }
+    char cmdline_path[128] = {0};
+    snprintf(cmdline_path,128,"/proc/%d/cmdline",getpid());
+    FILE *fp = fopen(cmdline_path,"rb");
+    if(nullptr == fp){
+        return;
+    }
+    fgets(packageName,128,fp);
+    fclose(fp);
+
+}
+
+jobject getActivityThreadInstance(JNIEnv *env) {
+    jclass ActivityThreadClass = env->FindClass("android/app/ActivityThread");
+
+    jmethodID currentActivityThread = env->GetStaticMethodID(ActivityThreadClass,
+                                                             "currentActivityThread",
+                                                             "()Landroid/app/ActivityThread;");
+    jobject activityThreadInstance = env->CallStaticObjectMethod(ActivityThreadClass,
+                                                                 currentActivityThread);
+    if (env->ExceptionCheck() || nullptr == activityThreadInstance) {
+        env->ExceptionClear();
+        W_DeleteLocalRef(env, ActivityThreadClass);
+        DLOGW("currentActivityThread call fail.");
+        return nullptr;
+    }
+
+    return activityThreadInstance;
+}
+
 jclass getContextClass(JNIEnv *env) {
     if (g_ContextClass == nullptr) {
         jclass ContextClass = env->FindClass("android/content/Context");
@@ -53,12 +109,10 @@ AAsset *getAsset(JNIEnv *env, jobject context, const char *filename) {
 }
 
 jstring getApkPath(JNIEnv *env,jclass) {
-    jclass ActivityThreadClass = env->FindClass("android/app/ActivityThread");
-    jfieldID sActivityThreadField = env->GetStaticFieldID(ActivityThreadClass,
-                                                          "sCurrentActivityThread",
-                                                          "Landroid/app/ActivityThread;");
 
-    jobject sActivityThreadObj = env->GetStaticObjectField(ActivityThreadClass,sActivityThreadField);
+    jobject sActivityThreadObj = getActivityThreadInstance(env);
+
+    jclass ActivityThreadClass = env->GetObjectClass(sActivityThreadObj);
 
     jfieldID mBoundApplicationField = env->GetFieldID(ActivityThreadClass,
                                                           "mBoundApplication",
