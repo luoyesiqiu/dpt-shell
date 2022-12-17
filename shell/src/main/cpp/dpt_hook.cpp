@@ -258,9 +258,14 @@ void LoadMethod(void *thiz, void *self, const void *dex_file, const void *it, co
                                                 classDataItemReader->GetMethodCodeItemOffset() +
                                                 16);
 
-                    NLOG("[*] codeItem patch ,tid = %u, methodIndex = %d,insnsSize = %d >>> %p(0x%lx)",gettid(),
-                              codeItem->getMethodIdx(), codeItem->getInsnsSize(), realCodeItemPtr,(realCodeItemPtr - begin)
+#ifdef NOICE_LOG
+                    char threadName[128] = {0};
+                    getThreadName(threadName);
+                    NLOG("[*] LoadMethod codeItem patch ,thread = %s, methodIndex = %d,insnsSize = %d >>> %p(0x%lx)",
+                         threadName,codeItem->getMethodIdx(), codeItem->getInsnsSize(), realCodeItemPtr,(realCodeItemPtr - begin)
                         );
+
+#endif
 
                     memcpy(realCodeItemPtr,codeItem->getInsns(),codeItem->getInsnsSize());
                 }

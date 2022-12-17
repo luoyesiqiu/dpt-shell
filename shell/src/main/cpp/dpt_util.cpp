@@ -329,3 +329,7 @@ void printTime(const char* msg,clock_t start){
     clock_t end = clock();
     DLOGD("%s %lf",msg,(double)(end - start) / CLOCKS_PER_SEC);
 }
+
+void getThreadName(char *threadName){
+    prctl(PR_GET_NAME, (unsigned long)threadName);
+}

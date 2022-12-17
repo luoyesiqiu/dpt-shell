@@ -18,6 +18,7 @@
 #include <libzip/zip.h>
 #include <libzip/zipint.h>
 #include <stdlib.h>
+#include <sys/prctl.h>
 #include "dpt_log.h"
 #include "JniWrapper.h"
 
@@ -48,4 +49,5 @@ jobject getActivityThreadInstance(JNIEnv *env);
 void getClassName(JNIEnv *env,jobject obj,char *destClassName);
 void parseClassName(const char *src, char *dest);
 void printTime(const char* msg,clock_t start);
+void getThreadName(char *threadName);
 #endif //DPT_DPT_UTIL_H
