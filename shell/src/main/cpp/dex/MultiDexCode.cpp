@@ -34,24 +34,11 @@ uint32_t* MultiDexCode::readDexCodeIndex(int* count){
 
 
 CodeItem* MultiDexCode::nextCodeItem(uint32_t* offset) {
-//    DLOGD("nextCodeItem start = %d",*offset);
-
     uint32_t methodIdx = readUInt32(*offset);
-//    DLOGD("offset = %d,methodIdx = %d",*offset,methodIdx);
-
     uint32_t offsetOfDex = readUInt32(*offset + 4);
-//    DLOGD("offset = %d,offsetOfDex = %d",*offset,offsetOfDex);
-
     uint32_t insnsSize = readUInt32(*offset + 8);
-//    DLOGD("offset = %d,insnsSize = %d",*offset,insnsSize);
-
-
     uint8_t* insns = (uint8_t*)(m_buffer + *offset + 12);
-//    DLOGD("offset = %d,insns = %p",*offset,insns);
-
     *offset = (*offset + 12 + insnsSize);
-//    DLOGD("*offset = %d",*offset);
-
     CodeItem* codeItem = new CodeItem(methodIdx,offsetOfDex,insnsSize,insns);
 
     return codeItem;
