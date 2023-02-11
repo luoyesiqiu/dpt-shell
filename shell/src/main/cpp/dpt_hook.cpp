@@ -26,10 +26,7 @@ const char *GetArtLibPath() {
     else if(g_sdkLevel == 29) {
         return "/apex/com.android.runtime/" LIB_DIR "/libart.so";
     }
-    else if(g_sdkLevel == 30){
-        return "/apex/com.android.art/" LIB_DIR "/libart.so";
-    }
-    else if(g_sdkLevel == 31){
+    else {
         return "/apex/com.android.art/" LIB_DIR "/libart.so";
     }
 }
@@ -38,10 +35,7 @@ const char *GetArtBaseLibPath() {
     if(g_sdkLevel == 29) {
         return "/apex/com.android.runtime/" LIB_DIR "/libartbase.so";
     }
-    else if(g_sdkLevel == 30) {
-        return "/apex/com.android.art/" LIB_DIR "/libartbase.so";
-    }
-    else if(g_sdkLevel == 31) {
+    else {
         return "/apex/com.android.art/" LIB_DIR "/libartbase.so";
     }
 }
@@ -72,6 +66,8 @@ void callOriginLoadMethod(void *thiz, void *self, const void *dex_file, const vo
         case 29:
         case 30:
         case 31:
+        case 32:
+        case 33:
             g_originLoadMethod29(thiz, dex_file, method, klass, dst);
             break;
     }
@@ -107,6 +103,8 @@ uint32_t getDexFileLocationOffset() {
         case 29:
         case 30:
         case 31:
+        case 32:
+        case 33:
 #ifndef __LP64__
             location_offset = 20;
 #else
@@ -184,6 +182,8 @@ ClassDataItemReader* getClassDataItemReader(const void* it,const void* method){
         case 29:
         case 30:
         case 31:
+        case 32:
+        case 33:
             return new ClassDataItemReader(method);
     }
     return nullptr;
@@ -305,6 +305,8 @@ void hook_ClassLinker_LoadMethod() {
         case 29:
         case 30:
         case 31:
+        case 32:
+        case 33:
             DobbyHook(loadMethodAddress, (void *) LoadMethod_QR,(void**)&g_originLoadMethod29);
             break;
 
@@ -322,6 +324,8 @@ const char *getArtLibName() {
         case 29:
         case 30:
         case 31:
+        case 32:
+        case 33:
             return "libartbase.so";
     }
 }
@@ -390,6 +394,7 @@ void hook_GetOatDexFile(){
             case 30:
             case 31:
             case 32:
+            case 33:
                 DobbyHook(sym,(void *)fake_GetOatDexFile,(void **)&g_GetOatDexFile);
                 break;
         }
