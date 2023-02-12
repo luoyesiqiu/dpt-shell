@@ -34,3 +34,4 @@ java -jar dpt.jar /path/to/apk
 - [ManifestEditor](https://github.com/WindySha/ManifestEditor)
 - [Xpatch](https://github.com/WindySha/Xpatch)
 - [bhook](https://github.com/bytedance/bhook)
+- [zipalign-java](https://github.com/Iyxan23/zipalign-java)

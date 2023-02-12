@@ -1,11 +1,15 @@
 package com.luoye.dpt.task;
 
 import com.android.apksigner.ApkSignerTool;
+import com.iyxan23.zipalignjava.ZipAlign;
 import com.luoye.dpt.util.ApkUtils;
 import com.luoye.dpt.util.WindFileUtils;
 import com.luoye.dpt.util.ShellCmdUtil;
 import java.io.File;
 import java.util.ArrayList;
+import java.io.RandomAccessFile;
+import java.io.FileOutputStream;
+import java.io.IOException;
 
 /**
  * Created by Wind
@@ -123,37 +127,10 @@ public class BuildAndSignApkTask{
         return true;
     }
 
-    private void zipalignApk(String inputApkPath, String outputApkPath) {
-        long time = System.currentTimeMillis();
-
-        String os = System.getProperty("os.name");
-        String zipalignAssetPath = "assets/zipalign";
-        if (os.toLowerCase().startsWith("win")) {
-            System.out.println(" The running os is " + os);
-            zipalignAssetPath = "assets/win/zipalign.exe";
-        }
-
-        String zipalignPath = (new File(inputApkPath)).getParent() + File.separator + "zipalign";
-        WindFileUtils.copyFileFromJar(zipalignAssetPath, zipalignPath);
-        StringBuilder signCmd = new StringBuilder(zipalignPath + " ");
-
-        signCmd.append(" -f ")
-                .append(" -p ")
-                .append(" 4 ")
-                .append(" " + inputApkPath + " ")
-                .append(" " + outputApkPath + " ");
-        System.out.println("\n" + signCmd + "\n");
-        String result = null;
-        try {
-            result = ShellCmdUtil.execCmd(signCmd.toString(), null);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        File zipalignFile = new File(zipalignPath);
-        if (zipalignFile.exists()) {
-            zipalignFile.delete();
-        }
-        System.out.println("zipalign apk cost: " + ((System.currentTimeMillis() - time)) +
-                "ms, " + "result: " + result + "\n");
+    private void zipalignApk(String inputApkPath, String outputApkPath) throws Exception{
+        RandomAccessFile in = new RandomAccessFile(inputApkPath, "r");
+        FileOutputStream out = new FileOutputStream(outputApkPath);
+        ZipAlign.alignZip(in, out);
     }
+
 }
