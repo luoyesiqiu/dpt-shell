@@ -55,8 +55,5 @@ sourceSets.main.resources {
 dependencies {
     implementation fileTree(dir:'libs',include:['*.jar'])
     implementation 'de.upb.cs.swt:axml:2.1.1'
-    implementation 'org.slf4j:slf4j-api:1.7.30'
-    implementation 'org.slf4j:slf4j-simple:1.7.30'
     implementation group: 'net.lingala.zip4j', name: 'zip4j', version: '2.6.4'
-    implementation group: 'org.bouncycastle', name: 'bcprov-ext-jdk16', version: '1.46'
 }

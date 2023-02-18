@@ -1,19 +1,13 @@
 package com.luoye.dpt.util;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.io.File;
 import java.util.LinkedList;
 import java.util.Queue;
-
 
 /**
  * @author luoyesiqiu
  */
 public class FileUtils {
-    private static Logger logger = LoggerFactory.getLogger("FileUtils");
-
     /**
      * 复制一个文件或目录到其他位置
      * @param src
