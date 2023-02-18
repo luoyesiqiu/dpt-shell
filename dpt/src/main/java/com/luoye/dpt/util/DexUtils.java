@@ -4,11 +4,7 @@ import com.android.dex.ClassData;
 import com.android.dex.ClassDef;
 import com.android.dex.Code;
 import com.android.dex.Dex;
-import com.luoye.dpt.Global;
 import com.luoye.dpt.model.Instruction;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
@@ -18,7 +14,6 @@ import java.util.*;
  * @author luoyesiqiu
  */
 public class DexUtils {
-    private static final Logger logger = LoggerFactory.getLogger(DexUtils.class.getSimpleName());
     /* 以下为不抽取的类的规则 */
     private static final String[] excludeRule = {
       "Landroid/.*",
@@ -73,8 +68,7 @@ public class DexUtils {
                     continue;
                 }
                 if(classDef.getClassDataOffset() == 0){
-                    String log = String.format("class '%s' data offset is zero",classDef.toString());
-                    logger.warn(log);
+                    LogUtils.warn("class '%s' data offset is zero",classDef.toString());
                     continue;
                 }
 
@@ -126,11 +120,10 @@ public class DexUtils {
         String className = dex.typeNames().get(classDef.getTypeIndex());
         //native函数,abstract函数
         if(method.getCodeOffset() == 0){
-            String log = String.format("method code offset is zero,name =  %s.%s , returnType = %s",
+            LogUtils.warn("method code offset is zero,name =  %s.%s , returnType = %s",
                     TypeUtils.getHumanizeTypeName(className),
                     methodName,
                     TypeUtils.getHumanizeTypeName(returnTypeName));
-            logger.warn(log);
             return null;
         }
         Instruction instruction = new Instruction();
@@ -139,18 +132,17 @@ public class DexUtils {
         Code code = dex.readCode(method);
         //容错处理
         if(code.getInstructions().length == 0){
-            String log = String.format("method has no code,name =  %s.%s , returnType = %s",
+            LogUtils.warn("method has no code,name =  %s.%s , returnType = %s",
                     TypeUtils.getHumanizeTypeName(className),
                     methodName,
                     TypeUtils.getHumanizeTypeName(returnTypeName));
-            logger.warn(log);
             return null;
         }
         int insnsCapacity = code.getInstructions().length;
         //insns容量不足以存放return语句，跳过
         byte[] returnByteCodes = getReturnByteCodes(returnTypeName);
         if(insnsCapacity * 2 < returnByteCodes.length){
-            logger.warn("The capacity of insns is not enough to store the return statement. {}.{}() ClassIndex = {}-> {} insnsCapacity = {}byte(s) but returnByteCodes = {}byte(s)",
+            LogUtils.warn("The capacity of insns is not enough to store the return statement. %s.%s() ClassIndex = %d -> %s insnsCapacity = %d byte(s) but returnByteCodes = %d byte(s)",
                     TypeUtils.getHumanizeTypeName(className),
                     methodName,
                     classDef.getTypeIndex(),

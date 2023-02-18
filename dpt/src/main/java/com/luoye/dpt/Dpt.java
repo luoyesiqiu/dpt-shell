@@ -2,12 +2,9 @@ package com.luoye.dpt;
 
 import com.luoye.dpt.task.BuildAndSignApkTask;
 import com.luoye.dpt.util.*;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import java.io.File;
 
 public class Dpt {
-    private static final Logger logger = LoggerFactory.getLogger(Dpt.class.getSimpleName());
 
     public static void main(String[] args) {
         if(args.length < 1){
