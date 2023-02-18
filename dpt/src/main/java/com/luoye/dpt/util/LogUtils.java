@@ -13,23 +13,15 @@ public class LogUtils {
     private static volatile boolean openLog = true;
 
     private enum LogType{
-        DEBUG,WARN,ERROR
+        DEBUG,INFO,WARN,ERROR
     }
 
     public static void setOpenLog(boolean open){
         openLog = open;
     }
 
-    public static void debug(String msg){
-        println(LogType.DEBUG,TAG,msg);
-    }
-
-    public static void warn(String msg){
-        println(LogType.WARN,TAG,msg);
-    }
-
-    public static void error(String msg){
-        println(LogType.ERROR,TAG,msg);
+    public static void info(String fmt,Object... args){
+        println(LogType.INFO,TAG,String.format(fmt,args));
     }
 
     public static void debug(String fmt,Object... args){
@@ -54,7 +46,7 @@ public class LogUtils {
         String timeOut = simpleDateFormat.format(new Date());
         switch (type){
             case DEBUG:
-                System.out.println(timeOut + "\t" + threadName + "\t" + tag + "\t" + msg);
+            case INFO:
             case WARN:
                 System.out.println(timeOut + "\t" + threadName + "\t" +  tag + "\t" + msg);
                 break;
