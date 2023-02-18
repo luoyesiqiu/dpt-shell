@@ -19,12 +19,12 @@ public class Dpt {
     }
 
     private static void usage(){
-        System.err.println("Usage:\n\tjava -jar dpt.jar [--log] <ApkFile>");
+        LogUtils.error("Usage:\n\tjava -jar dpt.jar [--log] <ApkFile>");
     }
 
     private static void processApk(String apkPath){
         if(!new File("shell-files").exists()) {
-            System.err.println("Cannot find shell files!");
+            LogUtils.error("Cannot find shell files!");
             return;
         }
         File apkFile = new File(apkPath);
@@ -35,7 +35,7 @@ public class Dpt {
             currentDir = currentDir.substring(0, currentDir.lastIndexOf("/."));
         }
         String output = FileUtils.getNewFileName(apkFileName,"signed");
-        System.err.println("output: " + output);
+        LogUtils.info("output: " + output);
 
 
         File outputFile = new File(currentDir, output);
@@ -44,7 +44,7 @@ public class Dpt {
         //apk文件解压的目录
         String apkMainProcessPath = ApkUtils.getWorkspaceDir().getAbsolutePath();
 
-        System.out.println("Apk main process path: " + apkMainProcessPath);
+        LogUtils.info("Apk main process path: " + apkMainProcessPath);
 
         ApkUtils.extract(apkPath,apkMainProcessPath);
         Global.packageName = ManifestUtils.getPackageName(apkMainProcessPath + File.separator + "AndroidManifest.xml");
