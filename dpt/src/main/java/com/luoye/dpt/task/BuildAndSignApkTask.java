@@ -4,12 +4,10 @@ import com.android.apksigner.ApkSignerTool;
 import com.iyxan23.zipalignjava.ZipAlign;
 import com.luoye.dpt.util.ApkUtils;
 import com.luoye.dpt.util.WindFileUtils;
-import com.luoye.dpt.util.ShellCmdUtil;
 import java.io.File;
 import java.util.ArrayList;
 import java.io.RandomAccessFile;
 import java.io.FileOutputStream;
-import java.io.IOException;
 
 /**
  * Created by Wind
