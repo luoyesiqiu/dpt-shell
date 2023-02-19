@@ -92,7 +92,7 @@ public class FileUtils {
             close(byteArrayOutputStream);
             close(in);
         }
-        return new String(byteArrayOutputStream.toByteArray());
+        return byteArrayOutputStream.toString();
     }
 
     public static String readMaps(Context context){
