@@ -15,6 +15,7 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Locale;
 
 /**
  * @author luoyesiqiu
@@ -207,7 +208,7 @@ public class ApkUtils {
         File dexFile = new File(dexFilePath);
         List<File> dexFiles = getDexFiles(apkDir);
         int newDexNameNumber = dexFiles.size() + 1;
-        String newDexPath = apkDir + File.separator + String.format("classes%d.dex",newDexNameNumber);
+        String newDexPath = apkDir + File.separator + String.format(Locale.US,"classes%d.dex",newDexNameNumber);
         byte[] dexData = IoUtils.readFile(dexFile.getAbsolutePath());
         IoUtils.writeFile(newDexPath,dexData);
     }

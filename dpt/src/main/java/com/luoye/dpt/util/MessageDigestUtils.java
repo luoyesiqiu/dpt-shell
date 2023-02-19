@@ -2,6 +2,7 @@ package com.luoye.dpt.util;
 
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.Locale;
 
 /**
  * @author luoyesiqiu
@@ -17,7 +18,7 @@ public class MessageDigestUtils {
                 if(val < 0){
                     val += 256;
                 }
-                String hex = String.format("%02x",val);
+                String hex = String.format(Locale.US,"%02x",val);
                 ret.append(hex);
             }
         } catch (NoSuchAlgorithmException e) {
