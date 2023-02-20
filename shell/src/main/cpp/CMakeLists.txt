@@ -14,6 +14,7 @@ set(DPT_NATIVE_SOURCE
 
 include_directories(./ )
 include_directories(./libzip/)
+include_directories(./common)
 include_directories(./bhook/include)
 
 # 添加库

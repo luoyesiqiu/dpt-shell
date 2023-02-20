@@ -16,7 +16,7 @@
 #include <android/asset_manager.h>
 #include <android/asset_manager_jni.h>
 #include "dex/CodeItem.h"
-#include "dpt_log.h"
+#include "common/dpt_log.h"
 #include "dpt_hook.h"
 #include "dex/MultiDexCode.h"
 #include "JniWrapper.h"

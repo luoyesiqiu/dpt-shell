@@ -6,7 +6,7 @@
 #define DPT_JNIWRAPPER_H
 
 #include <jni.h>
-#include "dpt_log.h"
+#include "common/dpt_log.h"
 
 jobject W_NewObject(JNIEnv* env,jclass klass,const char* sig,...);
 jobject W_CallObjectMethod(JNIEnv* env,jobject obj,const char* name,const char* sig,...);

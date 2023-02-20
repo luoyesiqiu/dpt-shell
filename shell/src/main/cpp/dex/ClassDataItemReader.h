@@ -10,7 +10,7 @@
 #include "dex/ClassDataItemIteratorO.h"
 #include "dex/ClassDataItemIteratorP.h"
 #include "dex/ClassDataItemIteratorQ.h"
-#include "dpt_log.h"
+#include "common/dpt_log.h"
 class ClassDataItemReader {
 private:
     const void* it = nullptr;

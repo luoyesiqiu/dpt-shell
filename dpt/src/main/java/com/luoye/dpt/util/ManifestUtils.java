@@ -35,6 +35,17 @@ public class ManifestUtils {
     }
 
     /**
+     * 写入debuggable属性
+     */
+    public static void writeDebuggable(String inManifestFile, String outManifestFile, String debuggable){
+        ModificationProperty property = new ModificationProperty();
+        property.addApplicationAttribute(new AttributeItem("debuggable",debuggable));
+
+        FileProcesser.processManifestFile(inManifestFile, outManifestFile, property);
+
+    }
+
+    /**
      * 获取AndroidManifest.xml中属性的值
      * @param file AndroidManifest.xml文件
      * @param tag 标签

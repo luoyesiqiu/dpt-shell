@@ -6,7 +6,7 @@
 #include <ctime>
 #include <elf.h>
 #include "dpt_util.h"
-#include "dpt_log.h"
+#include "common/dpt_log.h"
 
 #ifdef __LP64__
 #define Elf_Ehdr Elf64_Ehdr
@@ -108,15 +108,14 @@ AAsset *getAsset(JNIEnv *env, jobject context, const char *filename) {
     return nullptr;
 }
 
-jstring getApkPath(JNIEnv *env,jclass) {
-
+void getApkPath(JNIEnv *env,char *apkPathOut,size_t max_out_len){
     jobject sActivityThreadObj = getActivityThreadInstance(env);
 
     jclass ActivityThreadClass = env->GetObjectClass(sActivityThreadObj);
 
     jfieldID mBoundApplicationField = env->GetFieldID(ActivityThreadClass,
-                                                          "mBoundApplication",
-                                                          "Landroid/app/ActivityThread$AppBindData;");
+                                                      "mBoundApplication",
+                                                      "Landroid/app/ActivityThread$AppBindData;");
     jobject mBoundApplicationObj = env->GetObjectField(sActivityThreadObj,mBoundApplicationField);
 
     jclass AppBindDataClass = env->GetObjectClass(mBoundApplicationObj);
@@ -131,8 +130,27 @@ jstring getApkPath(JNIEnv *env,jclass) {
 
     jstring sourceDir = (jstring)env->GetObjectField(appInfoObj,sourceDirField);
 
-    return sourceDir;
+    const char *sourceDirChs = env->GetStringUTFChars(sourceDir,nullptr);
+    strncpy(apkPathOut,sourceDirChs,max_out_len);
+}
 
+jstring getApkPathExport(JNIEnv *env,jclass) {
+    char apkPathChs[256] = {0};
+    getApkPath(env,apkPathChs,256);
+
+    return env->NewStringUTF(apkPathChs);
+}
+
+void getCompressedDexesPath(char *outDexZipPath,size_t max_len) {
+    char packageName[256] = {0};
+    readPackageName(packageName);
+    snprintf(outDexZipPath,max_len,"/data/data/%s/cache/%s",packageName,DEXES_ZIP_NAME);
+}
+
+jstring getCompressedDexesPathExport(JNIEnv *env,jclass klass){
+    char dexesPath[256] = {0};
+    getCompressedDexesPath(dexesPath,256);
+    return env->NewStringUTF(dexesPath);
 }
 
 int endWith(const char *str,const char* sub){

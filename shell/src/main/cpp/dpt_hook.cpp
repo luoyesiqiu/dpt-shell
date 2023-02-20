@@ -206,11 +206,10 @@ void LoadMethod(void *thiz, void *self, const void *dex_file, const void *it, co
         // vtable(4|8) + prev_fields_size
         std::string *location = (reinterpret_cast<std::string *>((uint8_t *) dex_file +
                                                                  location_offset));
-        if (location->find("base.apk") != std::string::npos) {
-
-            //code_item_offset == 0说明是native方法或者没有代码
+        if (location->find(DEXES_ZIP_NAME) != std::string::npos) {
+            //code_item_offset == 0说明是native方法或者抽象方法
             if (classDataItemReader->GetMethodCodeItemOffset() == 0) {
-                DLOGW("native method? = %s code_item_offset = 0x%x",
+                DLOGW("native or abstract method? = %s code_item_offset = 0x%x",
                       classDataItemReader->MemberIsNative() ? "true" : "false",
                       classDataItemReader->GetMethodCodeItemOffset());
                 return;

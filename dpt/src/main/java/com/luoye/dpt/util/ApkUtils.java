@@ -145,6 +145,22 @@ public class ApkUtils {
     }
 
     /**
+     * 设置debuggable标志
+     */
+    public static void setDebuggable(String filePath,boolean debuggable){
+        String inManifestPath = filePath + File.separator + "AndroidManifest.xml";
+        String outManifestPath = filePath + File.separator + "AndroidManifest_new.xml";
+        ManifestUtils.writeDebuggable(inManifestPath,outManifestPath, debuggable ? "true" : "false");
+
+        File inManifestFile = new File(inManifestPath);
+        File outManifestFile = new File(outManifestPath);
+
+        inManifestFile.delete();
+
+        outManifestFile.renameTo(inManifestFile);
+    }
+
+    /**
      * 获取工作目录
      * @return
      */
@@ -208,7 +224,10 @@ public class ApkUtils {
         File dexFile = new File(dexFilePath);
         List<File> dexFiles = getDexFiles(apkDir);
         int newDexNameNumber = dexFiles.size() + 1;
-        String newDexPath = apkDir + File.separator + String.format(Locale.US,"classes%d.dex",newDexNameNumber);
+        String newDexPath = apkDir + File.separator + "classes.dex";
+        if(newDexNameNumber > 1) {
+            newDexPath = apkDir + File.separator + String.format(Locale.US, "classes%d.dex", newDexNameNumber);
+        }
         byte[] dexData = IoUtils.readFile(dexFile.getAbsolutePath());
         IoUtils.writeFile(newDexPath,dexData);
     }
