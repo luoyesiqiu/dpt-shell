@@ -11,9 +11,9 @@
 #include <cstdint>
 #include "dpt_util.h"
 #include "dex/ClassDataItemReader.h"
-#include "dpt_log.h"
+#include "common/dpt_log.h"
+#include "common/dpt_macro.h"
 #include "dobby.h"
-#define PAGE_START(addr) ((addr) & PAGE_MASK)
 
 void dpt_hook();
 

@@ -7,7 +7,7 @@
 
 #include <stdint.h>
 #include "CodeItem.h"
-#include "dpt_log.h"
+#include "common/dpt_log.h"
 class MultiDexCode {
 
 private:

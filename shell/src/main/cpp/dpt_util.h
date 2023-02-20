@@ -19,16 +19,9 @@
 #include <libzip/zipint.h>
 #include <stdlib.h>
 #include <sys/prctl.h>
-#include "dpt_log.h"
+#include "common/dpt_log.h"
+#include "common/dpt_macro.h"
 #include "JniWrapper.h"
-
-#ifdef __LP64__
-#define LIB_DIR "lib64"
-#define pointer_t uint64_t
-#else
-#define LIB_DIR "lib"
-#define pointer_t uint32_t
-#endif
 
 static AAssetManager *g_AssetMgrInstance = nullptr;
 static jclass g_ContextClass = nullptr;
@@ -36,7 +29,10 @@ static jclass g_ContextClass = nullptr;
 jclass getContextClass(JNIEnv *env);
 AAssetManager *getAssetMgr(JNIEnv *env, jobject assetManager);
 AAsset *getAsset(JNIEnv *env, jobject context, const char *filename);
-jstring getApkPath(JNIEnv *env,jclass);
+void getApkPath(JNIEnv *env,char *apkPathOut,size_t max_out_len);
+jstring getApkPathExport(JNIEnv *env,jclass);
+void getCompressedDexesPath(char *outDexZipPath,size_t max_len);
+jstring getCompressedDexesPathExport(JNIEnv *,jclass);
 int endWith(const char *str,const char* sub);
 void appendLog(const char* log);
 void hexDump(const char* name,const void* data, size_t size);

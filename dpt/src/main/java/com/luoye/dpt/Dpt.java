@@ -50,10 +50,15 @@ public class Dpt {
         Global.packageName = ManifestUtils.getPackageName(apkMainProcessPath + File.separator + "AndroidManifest.xml");
         ApkUtils.extractDexCode(apkMainProcessPath);
 
+        ApkUtils.compressDexFiles(apkMainProcessPath);
+        ApkUtils.deleteAllDexFiles(apkMainProcessPath);
+
         ApkUtils.saveApplicationName(apkMainProcessPath);
         ApkUtils.writeProxyAppName(apkMainProcessPath);
         ApkUtils.saveAppComponentFactory(apkMainProcessPath);
         ApkUtils.writeProxyComponentFactoryName(apkMainProcessPath);
+
+        //ApkUtils.setDebuggable(apkMainProcessPath,true);
 
         ApkUtils.addProxyDex(apkMainProcessPath);
 

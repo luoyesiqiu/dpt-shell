@@ -17,7 +17,7 @@ static JNINativeMethod gMethods[] = {
         {"craoc", "(Ljava/lang/String;)V",                               (void *) callRealApplicationOnCreate},
         {"craa",  "(Landroid/content/Context;Ljava/lang/String;)V",      (void *) callRealApplicationAttach},
         {"ia",    "(Landroid/content/Context;Ljava/lang/ClassLoader;)V", (void *) init_app},
-        {"gap",   "()Ljava/lang/String;",         (void *) getApkPath},
+        {"gap",   "()Ljava/lang/String;",         (void *) getCompressedDexesPathExport},
         {"rcf",   "(Ljava/lang/ClassLoader;)Ljava/lang/String;",         (void *) readAppComponentFactory},
         {"mde",   "(Ljava/lang/ClassLoader;Ljava/lang/ClassLoader;)V",        (void *) mergeDexElements},
         {"ra", "(Ljava/lang/String;)V",                               (void *) replaceApplication}
@@ -100,8 +100,8 @@ void mergeDexElements(JNIEnv* env,jclass klass,jobject oldClassLoader,jobject ne
 jstring readAppComponentFactory(JNIEnv *env, jclass klass, jobject classLoader) {
     zip_uint64_t entry_size;
     if(zip_addr == nullptr){
-        jstring apkPath = getApkPath(env,klass);
-        const char *apkPathChs = env->GetStringUTFChars(apkPath,nullptr);
+        char apkPathChs[256] = {0};
+        getApkPath(env,apkPathChs,256);
         load_zip(apkPathChs,&zip_addr,&zip_size);
     }
 
@@ -350,10 +350,28 @@ void init_app(JNIEnv *env, jclass klass, jobject context, jobject classLoader) {
         clock_t start = clock();
         zip_uint64_t entry_size;
 
+        char apkPathChs[256] = {0};
+        getApkPath(env,apkPathChs,256);
+
         if(zip_addr == nullptr){
-            jstring apkPath = getApkPath(env,klass);
-            const char *apkPathChs = env->GetStringUTFChars(apkPath,nullptr);
             load_zip(apkPathChs,&zip_addr,&zip_size);
+        }
+
+        char compressedDexesPathChs[256] = {0};
+        getCompressedDexesPath(compressedDexesPathChs, 256);
+
+        if(access(compressedDexesPathChs, F_OK) == -1){
+            zip_uint64_t dex_files_size = 0;
+            void *dexFilesData = read_zip_file_entry(zip_addr,zip_size,"i11111i111",&dex_files_size);
+            DLOGD("zipCode open = %s",compressedDexesPathChs);
+            int fd = open(compressedDexesPathChs, O_CREAT | O_WRONLY  ,S_IRWXU);
+            if(fd > 0){
+                write(fd,dexFilesData,dex_files_size);
+                close(fd);
+            }
+            else {
+                DLOGE("zipCode write fail: %s", strerror(fd));
+            }
         }
 
         if(codeItemFilePtr == nullptr) {
