@@ -3,6 +3,7 @@ package com.luoye.dpt.util;
 import com.luoye.dpt.Const;
 import com.luoye.dpt.model.Instruction;
 import com.luoye.dpt.model.MultiDexCode;
+import com.luoye.dpt.task.ThreadPool;
 import com.wind.meditor.core.FileProcesser;
 import com.wind.meditor.property.AttributeItem;
 import com.wind.meditor.property.ModificationProperty;
@@ -16,6 +17,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
+import java.util.concurrent.CountDownLatch;
 
 /**
  * @author luoyesiqiu
@@ -285,19 +287,32 @@ public class ApkUtils {
         List<List<Instruction>> instructionList = new ArrayList<>();
         String appNameNew = "OoooooOooo";
         String dataOutputPath = getOutAssetsDir(apkOutDir).getAbsolutePath() + File.separator + appNameNew;
-        for(File dexFile : dexFiles) {
-            String newName = dexFile.getName().endsWith(".dex") ? dexFile.getName().replaceAll("\\.dex$", "_tmp.dex") : "_tmp.dex";
-            File dexFileNew = new File(dexFile.getParent(), newName);
-            //抽取dex的代码
-            List<Instruction> ret = DexUtils.extractAllMethods(dexFile, dexFileNew);
-            instructionList.add(ret);
-            //更新dex的hash
-            File dexFileRightHashes = new File(dexFile.getParent(),FileUtils.getNewFileName(dexFile.getName(),"new"));
-            DexUtils.writeHashes(dexFileNew,dexFileRightHashes);
-            dexFile.delete();
-            dexFileNew.delete();
-            dexFileRightHashes.renameTo(dexFile);
 
+        CountDownLatch countDownLatch = new CountDownLatch(dexFiles.size());
+        for(File dexFile : dexFiles) {
+            ThreadPool.getInstance().execute(() -> {
+                String newName = dexFile.getName().endsWith(".dex") ? dexFile.getName().replaceAll("\\.dex$", "_tmp.dex") : "_tmp.dex";
+                File dexFileNew = new File(dexFile.getParent(), newName);
+                //抽取dex的代码
+                List<Instruction> ret = DexUtils.extractAllMethods(dexFile, dexFileNew);
+                instructionList.add(ret);
+                //更新dex的hash
+                File dexFileRightHashes = new File(dexFile.getParent(),FileUtils.getNewFileName(dexFile.getName(),"new"));
+                DexUtils.writeHashes(dexFileNew,dexFileRightHashes);
+                dexFile.delete();
+                dexFileNew.delete();
+                dexFileRightHashes.renameTo(dexFile);
+                countDownLatch.countDown();
+            });
+
+        }
+
+        ThreadPool.getInstance().shutdown();
+
+        try {
+            countDownLatch.await();
+        }
+        catch (Exception ignored){
         }
 
         MultiDexCode multiDexCode = MultiDexCodeUtils.makeMultiDexCode(instructionList);

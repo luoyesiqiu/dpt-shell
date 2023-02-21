@@ -71,5 +71,6 @@ public class Dpt {
         if (apkMainProcessFile.exists()) {
             FileUtils.deleteRecurse(apkMainProcessFile);
         }
+        LogUtils.info("All done.");
     }
 }
