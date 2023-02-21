@@ -27,4 +27,4 @@ jobs:
     - name: Build dpt module
       run: ./gradlew dpt:build
     - name: compress files
-      run: zip --junk-paths executable
+      run: zip --junk-paths executable.zip executable/
