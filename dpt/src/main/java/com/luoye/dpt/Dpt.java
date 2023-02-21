@@ -28,6 +28,11 @@ public class Dpt {
             return;
         }
         File apkFile = new File(apkPath);
+
+        if(!apkFile.exists()){
+            LogUtils.error("Apk not exists!");
+            return;
+        }
         String apkFileName = apkFile.getName();
 
         String currentDir = new File(".").getAbsolutePath();  // 当前命令行所在的目录
