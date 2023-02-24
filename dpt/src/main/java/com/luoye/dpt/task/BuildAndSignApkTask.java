@@ -3,6 +3,7 @@ package com.luoye.dpt.task;
 import com.android.apksigner.ApkSignerTool;
 import com.iyxan23.zipalignjava.ZipAlign;
 import com.luoye.dpt.util.ApkUtils;
+import com.luoye.dpt.util.LogUtils;
 import com.luoye.dpt.util.WindFileUtils;
 import java.io.File;
 import java.util.ArrayList;
@@ -51,7 +52,7 @@ public class BuildAndSignApkTask{
         String apkPath = unsignedZipAlignedApkPath;
         if (!(new File(apkPath).exists())) {
             apkPath = unsignedApkPath;
-            System.out.println("zipalign apk failed, just sign not zipaligned apk !!!");
+            LogUtils.info("zipalign apk failed, just sign not zipaligned apk !!!");
         }
 
         boolean signResult = signApk(apkPath, keyStoreFilePath, signedApkPath);
@@ -77,7 +78,7 @@ public class BuildAndSignApkTask{
         if (keyStoreFile.exists()) {
             keyStoreFile.delete();
         }
-        System.out.println("signResult: " + signResult + ",output: " + signedApkPath + "\n");
+        LogUtils.info("signResult: " + signResult + ",output: " + signedApkPath + "\n");
     }
 
     private boolean signApk(String apkPath, String keyStorePath, String signedApkPath) {

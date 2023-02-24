@@ -160,7 +160,6 @@ public class WindFileUtils {
     // copy an asset file into a path
     public static void copyFileFromJar(String inJarPath, String distPath) {
 
-//        System.out.println("start copyFile  inJarPath =" + inJarPath + "  distPath = " + distPath);
         InputStream inputStream = getInputStreamFromFile(inJarPath);
 
         BufferedInputStream in = null;
@@ -231,7 +230,7 @@ public class WindFileUtils {
         File srcFile = new File(srcPath);
         File dstFile = new File(dstPath);
         if (!srcFile.exists()) {
-            System.out.println(srcPath + " does not exist ！");
+            LogUtils.info(srcPath + " does not exist!");
             return;
         }
 
@@ -244,7 +243,7 @@ public class WindFileUtils {
             String baseDir = "";
             compress(srcFile, zipOut, baseDir, true);
         } catch (IOException e) {
-            System.out.println(" compress exception = " + e.getMessage());
+            LogUtils.warn("compress exception: " + e.getMessage());
         } finally {
             try {
                 if (zipOut != null) {
