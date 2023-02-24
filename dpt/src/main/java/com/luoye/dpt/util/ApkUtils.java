@@ -15,9 +15,13 @@ import net.lingala.zip4j.model.enums.CompressionMethod;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.concurrent.CountDownLatch;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * @author luoyesiqiu
@@ -279,12 +283,28 @@ public class ApkUtils {
     }
 
     /**
+     * 获取dex文件的序号
+     * 例如：classes2.dex返回1
+     */
+    public static int getDexNumber(String dexName){
+        Pattern pattern = Pattern.compile("classes(\\d*)\\.dex$");
+        Matcher matcher = pattern.matcher(dexName);
+        if(matcher.find()){
+            String dexNo = matcher.group(1);
+            return (dexNo == null || "".equals(dexNo)) ? 0 : Integer.parseInt(dexNo) - 1;
+        }
+        else{
+            throw new IllegalArgumentException("dex name format illegal: " + dexName);
+        }
+    }
+
+    /**
      * 提取apk里的dex的代码
      * @param apkOutDir
      */
     public static void  extractDexCode(String apkOutDir){
         List<File> dexFiles = getDexFiles(apkOutDir);
-        List<List<Instruction>> instructionList = new ArrayList<>();
+        Map<Integer,List<Instruction>> instructionMap = new HashMap<>();
         String appNameNew = "OoooooOooo";
         String dataOutputPath = getOutAssetsDir(apkOutDir).getAbsolutePath() + File.separator + appNameNew;
 
@@ -295,7 +315,8 @@ public class ApkUtils {
                 File dexFileNew = new File(dexFile.getParent(), newName);
                 //抽取dex的代码
                 List<Instruction> ret = DexUtils.extractAllMethods(dexFile, dexFileNew);
-                instructionList.add(ret);
+                int dexNo = getDexNumber(dexFile.getName());
+                instructionMap.put(dexNo,ret);
                 //更新dex的hash
                 File dexFileRightHashes = new File(dexFile.getParent(),FileUtils.getNewFileName(dexFile.getName(),"new"));
                 DexUtils.writeHashes(dexFileNew,dexFileRightHashes);
@@ -315,12 +336,11 @@ public class ApkUtils {
         catch (Exception ignored){
         }
 
-        MultiDexCode multiDexCode = MultiDexCodeUtils.makeMultiDexCode(instructionList);
+        MultiDexCode multiDexCode = MultiDexCodeUtils.makeMultiDexCode(instructionMap);
 
         MultiDexCodeUtils.writeMultiDexCode(dataOutputPath,multiDexCode);
 
     }
-
     /**
      * 获取某个目录下的所有dex文件
      * @param dir
