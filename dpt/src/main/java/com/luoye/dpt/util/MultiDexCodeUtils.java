@@ -31,7 +31,7 @@ public class MultiDexCodeUtils {
         List<Integer> insnsIndexList = new ArrayList<>();
 
         for (int index = 0;index < multiDexInsns.size(); index++ ) {
-            System.out.println("DexCode offset = " + fileOffset);
+            LogUtils.info("DexCode offset = " + fileOffset);
             List<Instruction> insns = multiDexInsns.get(index);
             dexCodeIndex.add(fileOffset);
             DexCode dexCode = new DexCode();
@@ -53,7 +53,7 @@ public class MultiDexCodeUtils {
 
             dexCodeList.add(dexCode);
         }
-        System.out.println("fileOffset = " + fileOffset);
+        LogUtils.info("fileOffset = " + fileOffset);
 
         multiDexCode.setDexCodes(dexCodeList);
 
@@ -87,7 +87,7 @@ public class MultiDexCodeUtils {
 
                 int methodCount = dexCode.getMethodCount() & 0xFFFF;
 
-                System.out.println("insns item count:" + insns.size() + ",method count : " + methodCount);
+                LogUtils.info("insns item count:" + insns.size() + ",method count : " + methodCount);
                 //写入单个dex的函数数量
                 randomAccessFile.write(Endian.makeLittleEndian(dexCode.getMethodCount()));
                 for (int i = 0; i < insns.size(); i++) {
