@@ -17,26 +17,6 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
 public class FileUtils {
-    public static byte[] readFile(String file){
-        FileInputStream fileInputStream = null;
-        ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
-        try {
-            fileInputStream = new FileInputStream(file);
-            int len = -1;
-            byte[] buf = new byte[4096];
-            while((len = fileInputStream.read(buf)) != -1){
-                byteArrayOutputStream.write(buf,0,len);
-            }
-        }
-        catch (Exception e){
-            e.printStackTrace();
-        }
-        finally {
-            close(fileInputStream);
-            close(byteArrayOutputStream);
-        }
-        return byteArrayOutputStream.toByteArray();
-    }
 
     public static void close(Closeable closeable){
         if(closeable != null){
@@ -46,33 +26,6 @@ public class FileUtils {
                 e.printStackTrace();
             }
         }
-    }
-
-    public static byte[] readFromZip(String apkPath,String fileName){
-
-        ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
-        ZipInputStream zipInputStream = null;
-        try {
-            zipInputStream =  new ZipInputStream(new FileInputStream(apkPath));
-            ZipEntry entry = null;
-            while((entry = zipInputStream.getNextEntry())!= null){
-
-                if(entry.getName().equals(fileName)){
-                    byte[] buf = new byte[1024];
-                    int len = -1;
-                    while ((len = zipInputStream.read(buf)) != -1){
-                        byteArrayOutputStream.write(buf,0,len);
-                    }
-                }
-            }
-        }
-        catch (Exception e) {
-        }
-        finally {
-            close(zipInputStream);
-        }
-
-        return byteArrayOutputStream.toByteArray();
     }
 
     public static String readAppName(Context context){
@@ -94,28 +47,5 @@ public class FileUtils {
         }
         return byteArrayOutputStream.toString();
     }
-
-    public static String readMaps(Context context){
-        StringWriter stringWriter = new StringWriter();
-        BufferedReader in = null;
-        try {
-            in = new BufferedReader(new FileReader("/proc/" + Process.myPid() + "/maps"));
-            String line = null;
-            while((line = in.readLine()) != null){
-                if(line.contains(context.getPackageName())) {
-                    stringWriter.write(line + "\n");
-                }
-            }
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        finally {
-            close(stringWriter);
-            close(in);
-        }
-        return stringWriter.toString();
-    }
-
-
 
 }
