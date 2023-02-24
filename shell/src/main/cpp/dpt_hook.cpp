@@ -124,33 +124,7 @@ uint32_t getDataItemCodeItemOffset() {
     #endif
 }
 
-int dexNumber(std::string *location){
-    char buf[3] = {0};
-    if (location->find(".dex") != std::string::npos) {
-        const char *chs = strchr(location->c_str(), '!');
-
-        if(nullptr != chs) {
-            sscanf(chs, "%*[^0-9]%[^.]", buf);
-        }
-        else{
-            const char* chs2 = strchr(location->c_str(), ':');
-            if(nullptr != chs2) {
-                sscanf(chs2, "%*[^0-9]%[^.]", buf);
-            }
-            else{
-                sprintf(buf, "%s", "1");
-            }
-        }
-    } else {
-        sprintf(buf, "%s", "1");
-    }
-
-    int dexIndex = 0;
-    sscanf(buf, "%d", &dexIndex);
-    return dexIndex;
-}
-
-void changeDexProtect(uint8_t * begin,const char* name,int dexSize,int dexIndex){
+void change_dex_protective(uint8_t * begin,const char* name,int dexSize,int dexIndex){
     uintptr_t start = PAGE_START((uintptr_t) (begin));
     uint32_t block = sysconf(_SC_PAGE_SIZE);
     int n = (dexSize / block) + (dexSize % block != 0);
@@ -234,17 +208,17 @@ void LoadMethod(void *thiz, void *self, const void *dex_file, const void *it, co
             );
             uint32_t dexSize = *((uint32_t*)(begin + 0x20));
 
-            int dexIndex = dexNumber(location);
+            int dexIndex = parse_dex_number(location);
 
             NLOG("[*] dex size = %d",dexSize);
 
-            auto dexIt = dexMap.find(dexIndex - 1);
+            auto dexIt = dexMap.find(dexIndex);
             if (dexIt != dexMap.end()) {
 
                 auto dexMemIt = dexMemMap.find(dexIndex);
                 //没有放进去过，则放进去
                 if(dexMemIt == dexMemMap.end()){
-                    changeDexProtect(begin,location->c_str(),dexSize,dexIndex);
+                    change_dex_protective(begin,location->c_str(),dexSize,dexIndex);
                 }
 
                 auto codeItemMap = dexIt->second;
@@ -265,9 +239,15 @@ void LoadMethod(void *thiz, void *self, const void *dex_file, const void *it, co
                         );
 
 #endif
-
                     memcpy(realCodeItemPtr,codeItem->getInsns(),codeItem->getInsnsSize());
                 }
+                else{
+                    DLOGE("[*] LoadMethod cannot find methodId: %d in dex: %d(%s)",methodIdx,dexIndex,location->c_str());
+
+                }
+            }
+            else{
+                DLOGE("[*] LoadMethod cannot find dex: %d",dexIndex);
             }
         }
 

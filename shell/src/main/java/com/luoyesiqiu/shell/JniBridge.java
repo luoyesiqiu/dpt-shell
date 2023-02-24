@@ -8,7 +8,6 @@ import android.util.Log;
  */
 public class JniBridge {
     private static final String TAG = JniBridge.class.getSimpleName();
-
     public static native void craoc(String applicationClassName);
     public static native void craa(Context context, String applicationClassName);
     public static native void ia(Context context,ClassLoader classLoader);
@@ -16,7 +15,9 @@ public class JniBridge {
     public static native void mde(ClassLoader oldClassLoader,ClassLoader newClassLoader);
     public static native void rde(ClassLoader oldClassLoader,ClassLoader newClassLoader);
     public static native String gap();
+    public static native String gdp();
     public static native void ra(String originApplicationClassName);
+    public static native String rapn(ClassLoader classLoader);
 
     static {
         try {

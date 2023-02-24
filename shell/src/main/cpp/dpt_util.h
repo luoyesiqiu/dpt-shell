@@ -4,6 +4,7 @@
 
 #ifndef DPT_DPT_UTIL_H
 #define DPT_DPT_UTIL_H
+#include <string>
 #include <jni.h>
 #include <stdio.h>
 #include <sys/stat.h>
@@ -26,6 +27,7 @@
 static AAssetManager *g_AssetMgrInstance = nullptr;
 static jclass g_ContextClass = nullptr;
 
+int parse_dex_number(std::string *location);
 jclass getContextClass(JNIEnv *env);
 AAssetManager *getAssetMgr(JNIEnv *env, jobject assetManager);
 AAsset *getAsset(JNIEnv *env, jobject context, const char *filename);
