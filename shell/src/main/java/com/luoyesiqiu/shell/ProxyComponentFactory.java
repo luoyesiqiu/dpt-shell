@@ -22,18 +22,25 @@ import java.lang.reflect.Method;
 public class ProxyComponentFactory extends AppComponentFactory {
     private static final String TAG = "dpt " + ProxyComponentFactory.class.getSimpleName();
     private static AppComponentFactory sAppComponentFactory;
+    private ClassLoader originalClassLoader;
+    private ClassLoader newClassLoader;
 
     private String getTargetClassName(ClassLoader classLoader){
         return JniBridge.rcf(classLoader);
     }
 
-    private AppComponentFactory getTargetAppComponentFactory(ClassLoader classLoader){
+    /**
+     * 使用App的ClassLoader来加载目标AppComponentFactory.
+     * @param appClassLoader App的ClassLoader
+     * @return 目标AppComponentFactory
+     */
+    private AppComponentFactory getTargetAppComponentFactory(ClassLoader appClassLoader){
         if(sAppComponentFactory == null){
-            String targetClassName = getTargetClassName(classLoader);
+            String targetClassName = getTargetClassName(appClassLoader);
             Log.d(TAG,"targetClassName = " + targetClassName);
             if(!StringUtils.isEmpty(targetClassName)) {
                 try {
-                    sAppComponentFactory = (AppComponentFactory) Class.forName(targetClassName).newInstance();
+                    sAppComponentFactory = (AppComponentFactory) Class.forName(targetClassName,true,appClassLoader).newInstance();
                     return sAppComponentFactory;
                 } catch (Exception e) {
                 }
@@ -43,21 +50,22 @@ public class ProxyComponentFactory extends AppComponentFactory {
         return sAppComponentFactory;
     }
 
-    private void init(ClassLoader cl){
-
+    private ClassLoader init(ClassLoader cl){
         if(!ProxyApplication.initialized){
-
             ProxyApplication.initialized = true;
 
             JniBridge.ia(null,cl);
             String apkPath = JniBridge.gap();
-            Log.d(TAG, "init apkPath: " + apkPath);
-            ClassLoader classLoader = ShellClassLoader.loadDex(apkPath);
-            JniBridge.mde(cl,classLoader);
-
-            Log.d(TAG,"ProxyComponentFactory init() classLoader = " + classLoader);
-
+            String dexPath = JniBridge.gdp();
+            Log.d(TAG, "init dexPath: " + dexPath + ",apkPath: " + apkPath);
+            newClassLoader = ShellClassLoader.loadDex(apkPath,dexPath);
+            Log.d(TAG,"ProxyComponentFactory init() shell classLoader = " + cl);
+            Log.d(TAG,"ProxyComponentFactory init() app classLoader = " + newClassLoader);
+            return newClassLoader;
         }
+        Log.d(TAG,"ProxyComponentFactory init() tail shell classLoader = " + cl);
+        Log.d(TAG,"ProxyComponentFactory init() tail app classLoader = " + newClassLoader);
+        return newClassLoader;
     }
 
     @Override
@@ -79,37 +87,67 @@ public class ProxyComponentFactory extends AppComponentFactory {
     @Override
     public Application instantiateApplication(ClassLoader cl, String className) throws ClassNotFoundException, IllegalAccessException, InstantiationException {
         Log.d(TAG, "instantiateApplication() called with: cl = [" + cl + "], className = [" + className + "]");
-        init(cl);
+        ClassLoader appClassLoader = init(cl);
 
-        AppComponentFactory targetAppComponentFactory = getTargetAppComponentFactory(cl);
+        AppComponentFactory targetAppComponentFactory = getTargetAppComponentFactory(appClassLoader);
+
+        String applicationName = JniBridge.rapn(null);
+        if(originalClassLoader == null){
+            JniBridge.mde(cl, appClassLoader);
+        }
         if(targetAppComponentFactory != null) {
             try {
-                Method method = AppComponentFactory.class.getDeclaredMethod("instantiateApplication", ClassLoader.class, String.class);
-                return (Application) method.invoke(targetAppComponentFactory, cl, className);
+                Method method = targetAppComponentFactory.getClass().getDeclaredMethod("instantiateApplication", ClassLoader.class, String.class);
+                Log.d(TAG, "instantiateApplication target applicationName = " + applicationName);
+
+                if(!StringUtils.isEmpty(applicationName)) {
+                    Log.d(TAG, "instantiateApplication application name and AppComponentFactory specified");
+
+                    return (Application) method.invoke(targetAppComponentFactory, cl, applicationName);
+                }
+                else{
+                    Log.d(TAG, "instantiateApplication app does not specify application name");
+
+                    return (Application) method.invoke(targetAppComponentFactory, cl, className);
+                }
 
             } catch (Exception e) {
+                Log.e(TAG,"instantiateApplication",e);
             }
         }
-        return super.instantiateApplication(cl, ThisApplication.class.getName());
+        // AppComponentFactory no specified
+        if(!StringUtils.isEmpty(applicationName)) {
 
+            Log.d(TAG, "instantiateApplication application name specified but AppComponentFactory no specified");
+            return super.instantiateApplication(cl, applicationName);
+        }
+        else{
+
+            Log.d(TAG, "instantiateApplication application name and AppComponentFactory no specified");
+            return super.instantiateApplication(cl, className);
+        }
     }
 
+    /**
+     * This method add in Android 10
+     */
     @Override
     public ClassLoader instantiateClassLoader(ClassLoader cl, ApplicationInfo aInfo) {
         Log.d(TAG, "instantiateClassLoader() called with: cl = [" + cl + "], aInfo = [" + aInfo + "]");
-        init(cl);
+        originalClassLoader = cl;
+        ClassLoader classLoader = init(cl);
 
-        AppComponentFactory targetAppComponentFactory = getTargetAppComponentFactory(cl);
+        AppComponentFactory targetAppComponentFactory = getTargetAppComponentFactory(classLoader);
 
         if(targetAppComponentFactory != null) {
             try {
                 Method method = AppComponentFactory.class.getDeclaredMethod("instantiateClassLoader", ClassLoader.class, ApplicationInfo.class);
-                return (ClassLoader) method.invoke(targetAppComponentFactory, cl, aInfo);
+                return (ClassLoader) method.invoke(targetAppComponentFactory, classLoader, aInfo);
 
             } catch (Exception e) {
             }
         }
-        return super.instantiateClassLoader(cl, aInfo);
+        return super.instantiateClassLoader(classLoader, aInfo);
     }
 
     @Override
@@ -129,13 +167,14 @@ public class ProxyComponentFactory extends AppComponentFactory {
     }
 
     @Override
-    public Service instantiateService(ClassLoader cl, String className, Intent intent) throws ClassNotFoundException, IllegalAccessException, InstantiationException {
+    public Service instantiateService(ClassLoader cl, String className, Intent intent)
+            throws ClassNotFoundException, IllegalAccessException, InstantiationException {
         Log.d(TAG, "instantiateService() called with: cl = [" + cl + "], className = [" + className + "], intent = [" + intent + "]");
         AppComponentFactory targetAppComponentFactory = getTargetAppComponentFactory(cl);
 
         if(targetAppComponentFactory != null) {
             try {
-                Method method = AppComponentFactory.class.getDeclaredMethod("instantiateReceiver", ClassLoader.class, String.class, Intent.class);
+                Method method = AppComponentFactory.class.getDeclaredMethod("instantiateService", ClassLoader.class, String.class, Intent.class);
                 return (Service) method.invoke(targetAppComponentFactory, cl, className, intent);
 
             } catch (Exception e) {

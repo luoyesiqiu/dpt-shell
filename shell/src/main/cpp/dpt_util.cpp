@@ -20,6 +20,36 @@
 #define Elf_Off  Elf32_Off
 #endif
 
+/**
+ * location中提取dex的索引
+ * 比如：base.apk!classes2.dex会转成1
+ */
+int parse_dex_number(std::string *location) {
+    char buf[3] = {0};
+    if (location->find(".dex") != std::string::npos) {
+        const char *chs = strchr(location->c_str(), '!');
+
+        if(nullptr != chs) {
+            sscanf(chs, "%*[^0-9]%[^.]", buf);
+        }
+        else{
+            const char* chs2 = strchr(location->c_str(), ':');
+            if(nullptr != chs2) {
+                sscanf(chs2, "%*[^0-9]%[^.]", buf);
+            }
+            else{
+                sprintf(buf, "%s", "1");
+            }
+        }
+    } else {
+        sprintf(buf, "%s", "1");
+    }
+
+    int dexIndex = 0;
+    sscanf(buf, "%d", &dexIndex);
+    return dexIndex - 1;
+}
+
 void parseClassName(const char *src, char *dest) {
     for (int i = 0; *(src + i) != '\0'; i++) {
         if (*(src + i) == '.') {
@@ -132,6 +162,7 @@ void getApkPath(JNIEnv *env,char *apkPathOut,size_t max_out_len){
 
     const char *sourceDirChs = env->GetStringUTFChars(sourceDir,nullptr);
     strncpy(apkPathOut,sourceDirChs,max_out_len);
+    DLOGD("getApkPath: %s",apkPathOut);
 }
 
 jstring getApkPathExport(JNIEnv *env,jclass) {

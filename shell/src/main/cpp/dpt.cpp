@@ -11,14 +11,17 @@ static jobject g_context = nullptr;
 void* zip_addr = nullptr;
 off_t zip_size;
 char *appComponentFactoryChs = nullptr;
+char *applicationNameChs = nullptr;
 void *codeItemFilePtr = nullptr;
 
 static JNINativeMethod gMethods[] = {
         {"craoc", "(Ljava/lang/String;)V",                               (void *) callRealApplicationOnCreate},
         {"craa",  "(Landroid/content/Context;Ljava/lang/String;)V",      (void *) callRealApplicationAttach},
         {"ia",    "(Landroid/content/Context;Ljava/lang/ClassLoader;)V", (void *) init_app},
-        {"gap",   "()Ljava/lang/String;",         (void *) getCompressedDexesPathExport},
+        {"gap",   "()Ljava/lang/String;",         (void *) getApkPathExport},
+        {"gdp",   "()Ljava/lang/String;",         (void *) getCompressedDexesPathExport},
         {"rcf",   "(Ljava/lang/ClassLoader;)Ljava/lang/String;",         (void *) readAppComponentFactory},
+        {"rapn",   "(Ljava/lang/ClassLoader;)Ljava/lang/String;",         (void *) readApplicationName},
         {"mde",   "(Ljava/lang/ClassLoader;Ljava/lang/ClassLoader;)V",        (void *) mergeDexElements},
         {"ra", "(Ljava/lang/String;)V",                               (void *) replaceApplication}
 };
@@ -110,6 +113,21 @@ jstring readAppComponentFactory(JNIEnv *env, jclass klass, jobject classLoader) 
     }
     DLOGD("readAppComponentFactory = %s", appComponentFactoryChs);
     return env->NewStringUTF((appComponentFactoryChs));
+}
+
+jstring readApplicationName(JNIEnv *env, jclass klass, jobject classLoader) {
+    zip_uint64_t entry_size;
+    if(zip_addr == nullptr){
+        char apkPathChs[256] = {0};
+        getApkPath(env,apkPathChs,256);
+        load_zip(apkPathChs,&zip_addr,&zip_size);
+    }
+
+    if(applicationNameChs == nullptr) {
+        applicationNameChs = (char*)read_zip_file_entry(zip_addr, zip_size,"app_name", &entry_size);
+    }
+    DLOGD("readApplicationName = %s", applicationNameChs);
+    return env->NewStringUTF((applicationNameChs));
 }
 
 void init_dpt(JNIEnv *env) {
@@ -425,7 +443,6 @@ void readCodeItem(JNIEnv *env, jclass klass,uint8_t *data,size_t data_len) {
         DLOGD("readCodeItem map size = %ld", dexMap.size());
     }
 }
-
 
 JNIEXPORT jint JNI_OnLoad(JavaVM *vm, void *reserved) {
 

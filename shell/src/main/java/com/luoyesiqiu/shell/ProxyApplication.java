@@ -14,7 +14,7 @@ import com.luoyesiqiu.shell.util.ShellClassLoader;
 public class ProxyApplication extends Application {
     private static final String TAG = ProxyApplication.class.getSimpleName();
 
-    public static boolean initialized = false;
+    public volatile static boolean initialized = false;
 
     @Override
     public void onCreate() {
@@ -25,7 +25,7 @@ public class ProxyApplication extends Application {
 
         String realApplicationName = FileUtils.readAppName(getApplicationContext());
 
-        if (!TextUtils.isEmpty(realApplicationName)) {
+        if (!initialized && !TextUtils.isEmpty(realApplicationName)) {
             Log.d(TAG, "onCreate: " + realApplicationName);
             JniBridge.ra(realApplicationName);
             JniBridge.craa(getApplicationContext(), realApplicationName);
