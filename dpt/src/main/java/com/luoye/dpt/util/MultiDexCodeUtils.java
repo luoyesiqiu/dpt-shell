@@ -9,16 +9,14 @@ import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 /**
  * @author luoyesiqiu
  */
 public class MultiDexCodeUtils {
 
-    /**
-     * 生成MultiDexCode结构
-     */
-    public static MultiDexCode makeMultiDexCode(List<List<Instruction>> multiDexInsns){
+    public static MultiDexCode makeMultiDexCode(Map<Integer,List<Instruction>> multiDexInsns){
         int fileOffset = 0;
         MultiDexCode multiDexCode = new MultiDexCode();
         multiDexCode.setVersion(Const.MULTI_DEX_CODE_VERSION);
@@ -32,10 +30,11 @@ public class MultiDexCodeUtils {
         List<DexCode> dexCodeList = new ArrayList<>();
         List<Integer> insnsIndexList = new ArrayList<>();
 
-        for (List<Instruction> insns : multiDexInsns) {
+        for (int index = 0;index < multiDexInsns.size(); index++ ) {
             System.out.println("DexCode offset = " + fileOffset);
+            List<Instruction> insns = multiDexInsns.get(index);
             dexCodeIndex.add(fileOffset);
-             DexCode dexCode = new DexCode();
+            DexCode dexCode = new DexCode();
 
             dexCode.setMethodCount((short)insns.size());
             fileOffset += 2;
@@ -60,7 +59,6 @@ public class MultiDexCodeUtils {
 
         return multiDexCode;
     }
-
 
     /**
      * 写出MultiDexCode结构
