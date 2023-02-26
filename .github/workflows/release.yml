@@ -31,6 +31,5 @@ jobs:
       with:
         repo_token: "${{ secrets.ACCESS_TOKEN }}"
         prerelease: true
-        automatic_release_tag: "latest"
         files: |
           executable.zip
