@@ -18,11 +18,11 @@
 void dpt_hook();
 
 //android M,N
-static void (*g_originLoadMethod25)(void* thiz, void* self, const void* dex_file, const void* it, void* klass, void* dst) = nullptr;
+static void (*g_originLoadMethodM)(void* thiz, void* self, const void* dex_file, const void* it, void* klass, void* dst) = nullptr;
 //android O,P
-static void (*g_originLoadMethod28)(void* thiz, const void* dex_file, const void* it, void* klass,void *dst) = nullptr;
-//android Q,R
-static void (*g_originLoadMethod29)(void* thiz, const void* dex_file, const void* method, void* klass,void *dst) = nullptr;
+static void (*g_originLoadMethodO)(void* thiz, const void* dex_file, const void* it, void* klass,void *dst) = nullptr;
+//android Q,R,S...
+static void (*g_originLoadMethodQ)(void* thiz, const void* dex_file, const void* method, void* klass,void *dst) = nullptr;
 
 void hook_ClassLinker_LoadMethod();
 void callOriginLoadMethod(void *thiz, void *self, const void *dex_file, const void *it, const void *method,
