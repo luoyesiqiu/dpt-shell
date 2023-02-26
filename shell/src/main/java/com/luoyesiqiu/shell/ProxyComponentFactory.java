@@ -23,6 +23,7 @@ public class ProxyComponentFactory extends AppComponentFactory {
     private static final String TAG = "dpt " + ProxyComponentFactory.class.getSimpleName();
     private static AppComponentFactory sAppComponentFactory;
     private ClassLoader newClassLoader;
+    private ClassLoader shellClassLoader;
 
     private String getTargetClassName(ClassLoader classLoader){
         return JniBridge.rcf(classLoader);
@@ -94,6 +95,7 @@ public class ProxyComponentFactory extends AppComponentFactory {
         if(!Global.sIsReplacedClassLoader){
             JniBridge.mde(cl, appClassLoader);
             Global.sIsReplacedClassLoader = true;
+            shellClassLoader = cl;
         }
         Global.sNeedCalledApplication = false;
         if(targetAppComponentFactory != null) {
@@ -109,14 +111,15 @@ public class ProxyComponentFactory extends AppComponentFactory {
                 else{
                     Log.d(TAG, "instantiateApplication app does not specify application name");
 
-                    return (Application) method.invoke(targetAppComponentFactory, cl, className);
+                    return (Application) method.invoke(targetAppComponentFactory, shellClassLoader,className);
                 }
 
             } catch (Exception e) {
                 Log.e(TAG,"instantiateApplication",e);
             }
         }
-        // AppComponentFactory no specified
+
+        //AppComponentFactory no specified
         if(!StringUtils.isEmpty(applicationName)) {
 
             Log.d(TAG, "instantiateApplication application name specified but AppComponentFactory no specified");
@@ -125,7 +128,7 @@ public class ProxyComponentFactory extends AppComponentFactory {
         else{
 
             Log.d(TAG, "instantiateApplication application name and AppComponentFactory no specified");
-            return super.instantiateApplication(cl, className);
+            return super.instantiateApplication(shellClassLoader, className);
         }
     }
 
@@ -136,6 +139,8 @@ public class ProxyComponentFactory extends AppComponentFactory {
     public ClassLoader instantiateClassLoader(ClassLoader cl, ApplicationInfo aInfo) {
         Log.d(TAG, "instantiateClassLoader() called with: cl = [" + cl + "], aInfo = [" + aInfo + "]");
         ClassLoader classLoader = init(cl);
+
+        shellClassLoader = cl;
 
         AppComponentFactory targetAppComponentFactory = getTargetAppComponentFactory(classLoader);
 
