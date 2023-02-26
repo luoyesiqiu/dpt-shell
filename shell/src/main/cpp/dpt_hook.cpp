@@ -56,19 +56,19 @@ void callOriginLoadMethod(void *thiz, void *self, const void *dex_file, const vo
         case 23:
         case 24:
         case 25:
-            g_originLoadMethod25(thiz, self, dex_file, it, klass, dst);
+            g_originLoadMethodM(thiz, self, dex_file, it, klass, dst);
             break;
         case 26:
         case 27:
         case 28:
-            g_originLoadMethod28(thiz, dex_file, it, klass, dst);
+            g_originLoadMethodO(thiz, dex_file, it, klass, dst);
             break;
         case 29:
         case 30:
         case 31:
         case 32:
         case 33:
-            g_originLoadMethod29(thiz, dex_file, method, klass, dst);
+            g_originLoadMethodQ(thiz, dex_file, method, klass, dst);
             break;
     }
 }
@@ -166,9 +166,9 @@ ClassDataItemReader* getClassDataItemReader(const void* it,const void* method){
 void LoadMethod(void *thiz, void *self, const void *dex_file, const void *it, const void *method,
                 void *klass, void *dst) {
 
-    if (g_originLoadMethod25 != nullptr
-        || g_originLoadMethod28 != nullptr
-        || g_originLoadMethod29 != nullptr) {
+    if (g_originLoadMethodM != nullptr
+        || g_originLoadMethodO != nullptr
+        || g_originLoadMethodQ != nullptr) {
         uint32_t location_offset = getDexFileLocationOffset();
         uint32_t begin_offset = getDataItemCodeItemOffset();
         callOriginLoadMethod(thiz, self, dex_file, it, method, klass, dst);
@@ -189,7 +189,9 @@ void LoadMethod(void *thiz, void *self, const void *dex_file, const void *it, co
                 return;
             }
 
-            uint16_t firstDvmCode = *((uint16_t*)(begin + classDataItemReader->GetMethodCodeItemOffset() + 16));
+            uintptr_t insnsPtr = (uintptr_t)(begin + classDataItemReader->GetMethodCodeItemOffset() + 16);
+
+            uint16_t firstDvmCode = *((uint16_t*)insnsPtr);
             if(firstDvmCode != 0x0012 && firstDvmCode != 0x0016 && firstDvmCode != 0x000e){
                 NLOG("[*] this method has code no need to patch");
                 return;
@@ -227,9 +229,7 @@ void LoadMethod(void *thiz, void *self, const void *dex_file, const void *it, co
 
                 if (codeItemIt != codeItemMap->end()) {
                     CodeItem* codeItem = codeItemIt->second;
-                    uint8_t  *realCodeItemPtr = (uint8_t*)(begin +
-                                                classDataItemReader->GetMethodCodeItemOffset() +
-                                                16);
+                    uint8_t  *realCodeItemPtr = (uint8_t *)(insnsPtr);
 
 #ifdef NOICE_LOG
                     char threadName[128] = {0};
@@ -243,7 +243,6 @@ void LoadMethod(void *thiz, void *self, const void *dex_file, const void *it, co
                 }
                 else{
                     DLOGE("[*] LoadMethod cannot find methodId: %d in dex: %d(%s)",methodIdx,dexIndex,location->c_str());
-
                 }
             }
             else{
@@ -255,16 +254,16 @@ void LoadMethod(void *thiz, void *self, const void *dex_file, const void *it, co
     }
 }
 
-void LoadMethod_MN(void *thiz, void *self, const void *dex_file, const void *it, void *klass,
+void LoadMethodM(void *thiz, void *self, const void *dex_file, const void *it, void *klass,
                    void *dst) {
     LoadMethod(thiz, self, dex_file, it, nullptr, klass, dst);
 }
 
-void LoadMethod_OP(void *thiz, const void *dex_file, const void *it, void *klass, void *dst) {
+void LoadMethodO(void *thiz, const void *dex_file, const void *it, void *klass, void *dst) {
     LoadMethod(thiz, nullptr, dex_file, it, nullptr, klass, dst);
 }
 
-void LoadMethod_QR(void *thiz, const void *dex_file, const void *method, void *klass, void *dst) {
+void LoadMethodQ(void *thiz, const void *dex_file, const void *method, void *klass, void *dst) {
     LoadMethod(thiz, nullptr, dex_file, nullptr, method, klass, dst);
 };
 
@@ -274,19 +273,19 @@ void hook_ClassLinker_LoadMethod() {
         case 23:
         case 24:
         case 25:
-            DobbyHook(loadMethodAddress, (void *) LoadMethod_MN,(void**)&g_originLoadMethod25);
+            DobbyHook(loadMethodAddress, (void *) LoadMethodM,(void**)&g_originLoadMethodM);
             break;
         case 26:
         case 27:
         case 28:
-            DobbyHook(loadMethodAddress, (void *) LoadMethod_OP,(void**)&g_originLoadMethod28);
+            DobbyHook(loadMethodAddress, (void *) LoadMethodO,(void**)&g_originLoadMethodO);
             break;
         case 29:
         case 30:
         case 31:
         case 32:
         case 33:
-            DobbyHook(loadMethodAddress, (void *) LoadMethod_QR,(void**)&g_originLoadMethod29);
+            DobbyHook(loadMethodAddress, (void *) LoadMethodQ,(void**)&g_originLoadMethodQ);
             break;
 
     }
