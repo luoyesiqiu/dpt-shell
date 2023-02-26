@@ -22,7 +22,6 @@ import java.lang.reflect.Method;
 public class ProxyComponentFactory extends AppComponentFactory {
     private static final String TAG = "dpt " + ProxyComponentFactory.class.getSimpleName();
     private static AppComponentFactory sAppComponentFactory;
-    private ClassLoader originalClassLoader;
     private ClassLoader newClassLoader;
 
     private String getTargetClassName(ClassLoader classLoader){
@@ -51,8 +50,8 @@ public class ProxyComponentFactory extends AppComponentFactory {
     }
 
     private ClassLoader init(ClassLoader cl){
-        if(!ProxyApplication.initialized){
-            ProxyApplication.initialized = true;
+        if(!Global.sLoadedDexes){
+            Global.sLoadedDexes = true;
 
             JniBridge.ia(null,cl);
             String apkPath = JniBridge.gap();
@@ -92,9 +91,11 @@ public class ProxyComponentFactory extends AppComponentFactory {
         AppComponentFactory targetAppComponentFactory = getTargetAppComponentFactory(appClassLoader);
 
         String applicationName = JniBridge.rapn(null);
-        if(originalClassLoader == null){
+        if(!Global.sIsReplacedClassLoader){
             JniBridge.mde(cl, appClassLoader);
+            Global.sIsReplacedClassLoader = true;
         }
+        Global.sNeedCalledApplication = false;
         if(targetAppComponentFactory != null) {
             try {
                 Method method = targetAppComponentFactory.getClass().getDeclaredMethod("instantiateApplication", ClassLoader.class, String.class);
@@ -134,10 +135,11 @@ public class ProxyComponentFactory extends AppComponentFactory {
     @Override
     public ClassLoader instantiateClassLoader(ClassLoader cl, ApplicationInfo aInfo) {
         Log.d(TAG, "instantiateClassLoader() called with: cl = [" + cl + "], aInfo = [" + aInfo + "]");
-        originalClassLoader = cl;
         ClassLoader classLoader = init(cl);
 
         AppComponentFactory targetAppComponentFactory = getTargetAppComponentFactory(classLoader);
+
+        Global.sIsReplacedClassLoader = true;
 
         if(targetAppComponentFactory != null) {
             try {
