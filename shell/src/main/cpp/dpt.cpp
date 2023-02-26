@@ -7,7 +7,6 @@
 //缓存变量
 static jobject g_realApplicationInstance = nullptr;
 static jclass g_realApplicationClass = nullptr;
-static jobject g_context = nullptr;
 void* zip_addr = nullptr;
 off_t zip_size;
 char *appComponentFactoryChs = nullptr;
@@ -352,7 +351,7 @@ void replaceApplicationOnLoadedApk(JNIEnv *env, jclass klass,jobject proxyApplic
     DLOGD("replaceApplicationOnLoadedApk success!");
 }
 
-bool registerNativeMethods(JNIEnv *env) {
+static bool registerNativeMethods(JNIEnv *env) {
     jclass JniBridgeClass = env->FindClass("com/luoyesiqiu/shell/JniBridge");
     if (env->RegisterNatives(JniBridgeClass, gMethods, sizeof(gMethods) / sizeof(gMethods[0])) ==
         0) {
@@ -361,55 +360,60 @@ bool registerNativeMethods(JNIEnv *env) {
     return JNI_FALSE;
 }
 
+static void loadApk(JNIEnv *env){
+    char apkPathChs[256] = {0};
+    getApkPath(env,apkPathChs,256);
+
+    if(zip_addr == nullptr){
+        load_zip(apkPathChs,&zip_addr,&zip_size);
+    }
+}
+static void extractDexes(){
+    char compressedDexesPathChs[256] = {0};
+    getCompressedDexesPath(compressedDexesPathChs, 256);
+
+    if(access(compressedDexesPathChs, F_OK) == -1){
+        zip_uint64_t dex_files_size = 0;
+        void *dexFilesData = read_zip_file_entry(zip_addr,zip_size,"i11111i111",&dex_files_size);
+        DLOGD("zipCode open = %s",compressedDexesPathChs);
+        int fd = open(compressedDexesPathChs, O_CREAT | O_WRONLY  ,S_IRWXU);
+        if(fd > 0){
+            write(fd,dexFilesData,dex_files_size);
+            close(fd);
+        }
+        else {
+            DLOGE("zipCode write fail: %s", strerror(fd));
+        }
+    }
+}
 
 void init_app(JNIEnv *env, jclass klass, jobject context, jobject classLoader) {
     DLOGD("init_app!");
+    clock_t start = clock();
     if (nullptr == context) {
-        clock_t start = clock();
+
+        loadApk(env);
+        extractDexes();
+
         zip_uint64_t entry_size;
-
-        char apkPathChs[256] = {0};
-        getApkPath(env,apkPathChs,256);
-
-        if(zip_addr == nullptr){
-            load_zip(apkPathChs,&zip_addr,&zip_size);
-        }
-
-        char compressedDexesPathChs[256] = {0};
-        getCompressedDexesPath(compressedDexesPathChs, 256);
-
-        if(access(compressedDexesPathChs, F_OK) == -1){
-            zip_uint64_t dex_files_size = 0;
-            void *dexFilesData = read_zip_file_entry(zip_addr,zip_size,"i11111i111",&dex_files_size);
-            DLOGD("zipCode open = %s",compressedDexesPathChs);
-            int fd = open(compressedDexesPathChs, O_CREAT | O_WRONLY  ,S_IRWXU);
-            if(fd > 0){
-                write(fd,dexFilesData,dex_files_size);
-                close(fd);
-            }
-            else {
-                DLOGE("zipCode write fail: %s", strerror(fd));
-            }
-        }
-
         if(codeItemFilePtr == nullptr) {
             codeItemFilePtr = read_zip_file_entry(zip_addr,zip_size,"OoooooOooo",&entry_size);
         }
-        //hexDump("read_zip_file_item item hexdump", (char *) codeItemFilePtr, 1024);
         readCodeItem(env, klass,(uint8_t*)codeItemFilePtr,entry_size);
 
-        printTime("readCodeItem took =" , start);
     } else {
+        loadApk(env);
+
+        extractDexes();
+
         AAsset *aAsset = getAsset(env, context, "OoooooOooo");
-
-        g_context = env->NewGlobalRef(context);
-
         if (aAsset != nullptr) {
             int len = AAsset_getLength(aAsset);
             auto buf = (uint8_t *) AAsset_getBuffer(aAsset);
             readCodeItem(env, klass,buf,len);
         }
     }
+    printTime("read apk data took =" , start);
 }
 
 void readCodeItem(JNIEnv *env, jclass klass,uint8_t *data,size_t data_len) {

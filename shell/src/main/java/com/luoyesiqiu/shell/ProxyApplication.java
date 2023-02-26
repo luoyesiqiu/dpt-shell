@@ -14,8 +14,6 @@ import com.luoyesiqiu.shell.util.ShellClassLoader;
 public class ProxyApplication extends Application {
     private static final String TAG = ProxyApplication.class.getSimpleName();
 
-    public volatile static boolean initialized = false;
-
     @Override
     public void onCreate() {
         super.onCreate();
@@ -25,11 +23,11 @@ public class ProxyApplication extends Application {
 
         String realApplicationName = FileUtils.readAppName(getApplicationContext());
 
-        if (!initialized && !TextUtils.isEmpty(realApplicationName)) {
+        if (Global.sNeedCalledApplication && !TextUtils.isEmpty(realApplicationName)) {
             Log.d(TAG, "onCreate: " + realApplicationName);
-            JniBridge.ra(realApplicationName);
             JniBridge.craa(getApplicationContext(), realApplicationName);
             JniBridge.craoc(realApplicationName);
+            Global.sNeedCalledApplication = false;
         }
     }
 
@@ -40,8 +38,7 @@ public class ProxyApplication extends Application {
 
         Log.d(TAG,"attachBaseContext classloader = " + base.getClassLoader());
 
-
-        if(!initialized) {
+        if(!Global.sIsReplacedClassLoader) {
 
             Log.d(TAG,"ProxyApplication init");
             JniBridge.ia(base,base.getClassLoader());
@@ -51,8 +48,7 @@ public class ProxyApplication extends Application {
             ClassLoader shellClassLoader = ShellClassLoader.loadDex(base);
 
             JniBridge.mde(oldClassLoader,shellClassLoader);
-            initialized = true;
-
+            Global.sIsReplacedClassLoader = true;
         }
     }
 

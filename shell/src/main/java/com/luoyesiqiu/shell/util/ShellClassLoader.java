@@ -6,7 +6,6 @@ import android.util.Log;
 import com.luoyesiqiu.shell.JniBridge;
 
 import java.io.File;
-import java.net.URL;
 
 import dalvik.system.PathClassLoader;
 
@@ -48,7 +47,6 @@ public class ShellClassLoader extends PathClassLoader {
         return clazz;
     }
 
-
     public static ClassLoader loadDex(String apkPath,String dexPath){
         String nativePath = apkPath.substring(0,apkPath.lastIndexOf("/")) + File.separator + "lib" + File.separator + (SystemUtils.is64Bits() ? "arm64":"arm");
         Log.d(TAG, "loadDex() called with: sourcePath = [" + apkPath + "]");
@@ -61,6 +59,4 @@ public class ShellClassLoader extends PathClassLoader {
     public static ClassLoader loadDex(Context context){
         return new ShellClassLoader(JniBridge.gdp(),context.getApplicationInfo().nativeLibraryDir,ClassLoader.getSystemClassLoader());
     }
-
-
 }
