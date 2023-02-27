@@ -186,6 +186,7 @@ void LoadMethod(void *thiz, void *self, const void *dex_file, const void *it, co
                 DLOGW("native or abstract method? = %s code_item_offset = 0x%x",
                       classDataItemReader->MemberIsNative() ? "true" : "false",
                       classDataItemReader->GetMethodCodeItemOffset());
+                delete classDataItemReader;
                 return;
             }
 
@@ -194,6 +195,7 @@ void LoadMethod(void *thiz, void *self, const void *dex_file, const void *it, co
             uint16_t firstDvmCode = *((uint16_t*)insnsPtr);
             if(firstDvmCode != 0x0012 && firstDvmCode != 0x0016 && firstDvmCode != 0x000e){
                 NLOG("[*] this method has code no need to patch");
+                delete classDataItemReader;
                 return;
             }
 
