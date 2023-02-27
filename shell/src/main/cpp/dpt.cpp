@@ -253,8 +253,8 @@ void replaceApplication(JNIEnv *env, jclass klass, jstring realApplicationClassN
 
     replaceApplicationOnActivityThread(env,klass,appInstance);
 
-    char pkgChs[128] = {0};
-    readPackageName(pkgChs);
+    char pkgChs[256] = {0};
+    readPackageName(pkgChs,256);
     DLOGD("replaceApplication = %s",pkgChs);
     jstring packageName = env->NewStringUTF(pkgChs);
     replaceApplicationOnLoadedApk(env,klass,packageName,appInstance);
