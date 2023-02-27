@@ -73,7 +73,7 @@ void getClassName(JNIEnv *env,jobject obj,char *destClassName){
     env->ReleaseStringUTFChars(classNameInner,classNameInnerChs);
 }
 
-void readPackageName(char *packageName){
+void readPackageName(char *packageName,size_t max_len){
     if(packageName == nullptr){
         return;
     }
@@ -83,8 +83,14 @@ void readPackageName(char *packageName){
     if(nullptr == fp){
         return;
     }
-    fgets(packageName,128,fp);
+    fgets(packageName,max_len,fp);
     fclose(fp);
+    for(int i = 0;i < max_len;i++){
+        if(packageName[i] == ':'){
+            packageName[i] = '\0';
+            break;
+        }
+    }
 
 }
 
@@ -174,7 +180,7 @@ jstring getApkPathExport(JNIEnv *env,jclass) {
 
 void getCompressedDexesPath(char *outDexZipPath,size_t max_len) {
     char packageName[256] = {0};
-    readPackageName(packageName);
+    readPackageName(packageName,256);
     snprintf(outDexZipPath,max_len,"/data/data/%s/cache/%s",packageName,DEXES_ZIP_NAME);
 }
 
