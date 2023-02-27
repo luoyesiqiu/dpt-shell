@@ -166,9 +166,9 @@ ClassDataItemReader* getClassDataItemReader(const void* it,const void* method){
 void LoadMethod(void *thiz, void *self, const void *dex_file, const void *it, const void *method,
                 void *klass, void *dst) {
 
-    if (g_originLoadMethodM != nullptr
+    if (LIKELY(g_originLoadMethodM != nullptr
         || g_originLoadMethodO != nullptr
-        || g_originLoadMethodQ != nullptr) {
+        || g_originLoadMethodQ != nullptr)) {
         uint32_t location_offset = getDexFileLocationOffset();
         uint32_t begin_offset = getDataItemCodeItemOffset();
         callOriginLoadMethod(thiz, self, dex_file, it, method, klass, dst);
@@ -215,11 +215,10 @@ void LoadMethod(void *thiz, void *self, const void *dex_file, const void *it, co
             NLOG("[*] dex size = %d",dexSize);
 
             auto dexIt = dexMap.find(dexIndex);
-            if (dexIt != dexMap.end()) {
-
+            if (LIKELY(dexIt != dexMap.end())) {
                 auto dexMemIt = dexMemMap.find(dexIndex);
                 //没有放进去过，则放进去
-                if(dexMemIt == dexMemMap.end()){
+                if(UNLIKELY(dexMemIt == dexMemMap.end())){
                     change_dex_protective(begin,location->c_str(),dexSize,dexIndex);
                 }
 
@@ -227,7 +226,7 @@ void LoadMethod(void *thiz, void *self, const void *dex_file, const void *it, co
                 int methodIdx = classDataItemReader->GetMemberIndex();
                 auto codeItemIt = codeItemMap->find(methodIdx);
 
-                if (codeItemIt != codeItemMap->end()) {
+                if (LIKELY(codeItemIt != codeItemMap->end())) {
                     CodeItem* codeItem = codeItemIt->second;
                     uint8_t  *realCodeItemPtr = (uint8_t *)(insnsPtr);
 

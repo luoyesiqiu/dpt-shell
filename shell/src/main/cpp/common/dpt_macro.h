@@ -17,4 +17,11 @@
 #define pointer_t uint32_t
 #endif
 
+#ifndef LIKELY
+#define LIKELY(x)   __builtin_expect(!!(x), 1)
+#endif
+#ifndef UNLIKELY
+#define UNLIKELY(x) __builtin_expect(!!(x), 0)
+#endif
+
 #endif //DPT_DPT_MACRO_H
