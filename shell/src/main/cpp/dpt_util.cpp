@@ -181,7 +181,7 @@ jstring getApkPathExport(JNIEnv *env,jclass) {
 void getCompressedDexesPath(char *outDexZipPath,size_t max_len) {
     char packageName[256] = {0};
     readPackageName(packageName,256);
-    snprintf(outDexZipPath,max_len,"/data/data/%s/cache/%s",packageName,DEXES_ZIP_NAME);
+    snprintf(outDexZipPath,max_len,"/data/data/%s/%s/%s",packageName,CACHE_DIR,DEXES_ZIP_NAME);
 }
 
 jstring getCompressedDexesPathExport(JNIEnv *env,jclass klass){

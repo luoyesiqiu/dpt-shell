@@ -6,6 +6,7 @@
 #define DPT_DPT_MACRO_H
 
 #define DEXES_ZIP_NAME "i11111i111"
+#define CACHE_DIR "code_cache"
 
 #define PAGE_START(addr) ((addr) & PAGE_MASK)
 
