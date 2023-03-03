@@ -250,7 +250,7 @@ void *read_zip_file_entry(const void* zip_addr,off_t zip_size,const char* entry_
                 if(endWith(entry_name_tmp,entry_name) == 0){
                     DLOGD("read_zip_file_item entry name = %s,size = %u",entry_name_tmp,zst.size);
 
-                    void *entry_data = calloc(zst.size, 1);
+                    void *entry_data = calloc(zst.size + 1, 1);
                     zip_uint64_t entry_size_tmp = zip_fread(file, entry_data, zst.size);
                     *entry_size = entry_size_tmp;
 
