@@ -1,12 +1,10 @@
 # dpt-shell
 
-[![](https://img.shields.io/github/license/luoyesiqiu/dpt-shell)](https://github.com/luoyesiqiu/dpt-shell/blob/main/LICENSE) [![](https://img.shields.io/github/downloads/luoyesiqiu/dpt-shell/total?color=blue)](https://github.com/luoyesiqiu/dpt-shell/releases/latest) [![](https://img.shields.io/github/issues-raw/luoyesiqiu/dpt-shell?color=red)](https://github.com/luoyesiqiu/dpt-shell/issues)
+[![](https://img.shields.io/github/license/luoyesiqiu/dpt-shell)](https://github.com/luoyesiqiu/dpt-shell/blob/main/LICENSE) [![](https://img.shields.io/github/downloads/luoyesiqiu/dpt-shell/total?color=blue)](https://github.com/luoyesiqiu/dpt-shell/releases/latest) [![](https://img.shields.io/github/issues-raw/luoyesiqiu/dpt-shell?color=red)](https://github.com/luoyesiqiu/dpt-shell/issues) ![](https://img.shields.io/badge/Android-6.0%2B-brightgreen)
 
 ## 介绍
 
-函数抽取壳是一种将dex文件中的函数代码抽空，然后在程序运行时将函数代码填回的那么一种壳。
-
-dpt目前已适配Android6~13。想要了解实现原理，可以查看[文档](doc/HowItWorks.md)
+dpt-shell是函数抽取壳的实现。一种将dex文件中的函数代码抽空，然后在程序运行时将函数代码填回的那么一种壳。
 
 ## 用法
 
@@ -28,6 +26,10 @@ gradlew shell:assemble
 cd executable
 java -jar dpt.jar /path/to/apk
 ```
+
+## 原理解析
+
+[How it works](doc/HowItWorks.md)
 
 ## 感谢
 
