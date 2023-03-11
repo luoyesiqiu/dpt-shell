@@ -8,11 +8,10 @@ import android.content.BroadcastReceiver;
 import android.content.ContentProvider;
 import android.content.Intent;
 import android.content.pm.ApplicationInfo;
+import android.text.TextUtils;
 import android.util.Log;
 
-import com.luoye.dpt.ThisApplication;
 import com.luoyesiqiu.shell.util.ShellClassLoader;
-import com.luoyesiqiu.shell.util.StringUtils;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.RequiresApi;
@@ -38,7 +37,7 @@ public class ProxyComponentFactory extends AppComponentFactory {
         if(sAppComponentFactory == null){
             String targetClassName = getTargetClassName(appClassLoader);
             Log.d(TAG,"targetClassName = " + targetClassName);
-            if(!StringUtils.isEmpty(targetClassName)) {
+            if(!TextUtils.isEmpty(targetClassName)) {
                 try {
                     sAppComponentFactory = (AppComponentFactory) Class.forName(targetClassName,true,appClassLoader).newInstance();
                     return sAppComponentFactory;
@@ -103,7 +102,7 @@ public class ProxyComponentFactory extends AppComponentFactory {
                 Method method = targetAppComponentFactory.getClass().getDeclaredMethod("instantiateApplication", ClassLoader.class, String.class);
                 Log.d(TAG, "instantiateApplication target applicationName = " + applicationName);
 
-                if(!StringUtils.isEmpty(applicationName)) {
+                if(!TextUtils.isEmpty(applicationName)) {
                     Log.d(TAG, "instantiateApplication application name and AppComponentFactory specified");
 
                     return (Application) method.invoke(targetAppComponentFactory, cl, applicationName);
@@ -120,7 +119,7 @@ public class ProxyComponentFactory extends AppComponentFactory {
         }
 
         //AppComponentFactory no specified
-        if(!StringUtils.isEmpty(applicationName)) {
+        if(!TextUtils.isEmpty(applicationName)) {
 
             Log.d(TAG, "instantiateApplication application name specified but AppComponentFactory no specified");
             return super.instantiateApplication(cl, applicationName);
