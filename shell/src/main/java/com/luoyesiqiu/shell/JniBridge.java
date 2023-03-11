@@ -13,7 +13,7 @@ public class JniBridge {
     public static native void ia(Context context,ClassLoader classLoader);
     public static native String rcf(ClassLoader classLoader);
     public static native void mde(ClassLoader oldClassLoader,ClassLoader newClassLoader);
-    public static native void rde(ClassLoader oldClassLoader,ClassLoader newClassLoader);
+    public static native void rde(ClassLoader classLoader,String elementName);
     public static native String gap();
     public static native String gdp();
     public static native void ra(String originApplicationClassName);

@@ -22,6 +22,7 @@ static JNINativeMethod gMethods[] = {
         {"rcf",   "(Ljava/lang/ClassLoader;)Ljava/lang/String;",         (void *) readAppComponentFactory},
         {"rapn",   "(Ljava/lang/ClassLoader;)Ljava/lang/String;",         (void *) readApplicationName},
         {"mde",   "(Ljava/lang/ClassLoader;Ljava/lang/ClassLoader;)V",        (void *) mergeDexElements},
+        {"rde",   "(Ljava/lang/ClassLoader;Ljava/lang/String;)V",        (void *) removeDexElements},
         {"ra", "(Ljava/lang/String;)V",                               (void *) replaceApplication}
 };
 
@@ -98,6 +99,83 @@ void mergeDexElements(JNIEnv* env,jclass klass,jobject oldClassLoader,jobject ne
     DLOGD("mergeDexElements success");
 }
 
+void removeDexElements(JNIEnv* env,jclass klass,jobject classLoader,jstring elementName){
+    jclass BaseDexClassLoaderClass = env->FindClass("dalvik/system/BaseDexClassLoader");
+    jfieldID  pathListFieldId = env->GetFieldID(BaseDexClassLoaderClass,"pathList","Ldalvik/system/DexPathList;");
+    jobject oldDexPathListObj = env->GetObjectField(classLoader,pathListFieldId);
+    if(env->ExceptionCheck() || nullptr == oldDexPathListObj ){
+        env->ExceptionClear();
+        W_DeleteLocalRef(env,BaseDexClassLoaderClass);
+        DLOGW("removeDexElements oldDexPathListObj get fail");
+        return;
+    }
+
+    jclass DexPathListClass = env->FindClass("dalvik/system/DexPathList");
+    jfieldID  dexElementField = env->GetFieldID(DexPathListClass,"dexElements","[Ldalvik/system/DexPathList$Element;");
+
+
+    jobjectArray oldClassLoaderDexElements = static_cast<jobjectArray>(env->GetObjectField(
+            oldDexPathListObj, dexElementField));
+    if(env->ExceptionCheck() || nullptr == oldClassLoaderDexElements){
+        env->ExceptionClear();
+        W_DeleteLocalRef(env,BaseDexClassLoaderClass);
+        W_DeleteLocalRef(env,oldDexPathListObj);
+        W_DeleteLocalRef(env,DexPathListClass);
+        DLOGW("removeDexElements old dexElements get fail");
+        return;
+    }
+
+    jclass ElementClass = env->FindClass("dalvik/system/DexPathList$Element");
+
+    jint oldLen = env->GetArrayLength(oldClassLoaderDexElements);
+
+    jfieldID pathFieldId = env->GetFieldID(ElementClass, "path", "Ljava/io/File;");
+
+    jclass FileClass = env->FindClass("java/io/File");
+    jmethodID getNameMethodId = env->GetMethodID(FileClass, "getName",
+                                                 "()Ljava/lang/String;");
+    jint newLen = oldLen;
+    const char *removeElementNameChs = env->GetStringUTFChars(elementName,nullptr);
+    //推导需要移除的项
+    for(int i = 0;i < oldLen;i++) {
+        jobject elementObj = env->GetObjectArrayElement(oldClassLoaderDexElements, i);
+        jobject fileObj = env->GetObjectField(elementObj,pathFieldId);
+        jstring fileName = (jstring)env->CallObjectMethod(fileObj,getNameMethodId);
+        const char* fileNameChs = env->GetStringUTFChars(fileName,nullptr);
+        DLOGD("removeDexElements[%d] old path = %s",i,fileNameChs);
+
+        if(strncmp(fileNameChs,removeElementNameChs,256) == 0){
+            newLen--;
+        }
+        env->ReleaseStringUTFChars(fileName,fileNameChs);
+    }
+
+    jobjectArray newElementArray = env->NewObjectArray(newLen,ElementClass,nullptr);
+
+    DLOGD("removeDexElements oldlen = %d , newlen = %d",oldLen,newLen);
+
+    jint newArrayIndex = 0;
+    //填充新数组
+    for(int i = 0;i < oldLen;i++) {
+        jobject elementObj = env->GetObjectArrayElement(oldClassLoaderDexElements, i);
+        jobject fileObj = env->GetObjectField(elementObj,pathFieldId);
+        jstring fileName = (jstring)env->CallObjectMethod(fileObj,getNameMethodId);
+        const char* fileNameChs = env->GetStringUTFChars(fileName,nullptr);
+        DLOGD("removeDexElements[%d] old path = %s",i,fileNameChs);
+
+        if(strncmp(fileNameChs,removeElementNameChs,256) == 0){
+            env->ReleaseStringUTFChars(fileName,fileNameChs);
+            continue;
+        }
+        env->ReleaseStringUTFChars(fileName,fileNameChs);
+
+        env->SetObjectArrayElement(newElementArray,newArrayIndex++,elementObj);
+    }
+
+    env->SetObjectField(oldDexPathListObj, dexElementField,newElementArray);
+
+    DLOGD("removeDexElements success");
+}
 
 jstring readAppComponentFactory(JNIEnv *env, jclass klass, jobject classLoader) {
     zip_uint64_t entry_size;
