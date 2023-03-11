@@ -325,7 +325,7 @@ void ClassLinker::LoadMethod(const DexFile& dex_file,
 };
 ```
 
-其中最重要的字段就是`code_off_`它的值是当前加载的函数的CodeItem相对于DexFile的偏移，当相应的函数被加载，我们就可以直接访问到它的CodeItem。其他函数是否也可以？在上面的流程中没有比LoadMethod更适合我们Hook的函数，所以它是最佳的Hook点。
+其中最重要的字段就是`code_off_`它的值是当前加载的函数的CodeItem相对于DexFile的偏移，当相应的函数被加载，我们就可以直接访问到它的CodeItem。其他函数是否也可以？在上面的流程中没有比LoadMethod更适合我们Hook的函数，所以它是相对较好的填充点。
 
 Hook LoadMethod稍微复杂一些，倒不是Hook代码复杂，而是Hook触发后处理的代码比较复杂，我们要适配多个Android版本，每个版本LoadMethod函数的参数都可能有改变，幸运的是，LoadMethod改动也不是很大。那么，我们如何读取ClassDataItemIterator类中的`code_off_`呢？比较直接的做法是计算偏移，然后在代码中维护一份偏移。不过这样的做法不易阅读很容易出错。dpt的做法是把ClassDataItemIterator类拷过来，然后将ClassDataItemIterator引用直接转换为我们自定义的ClassDataItemIterator引用，这样就可以方便的读取字段的值。
 
@@ -398,7 +398,7 @@ void LoadMethod(void *thiz, void *self, const void *dex_file, const void *it, co
 
 ### (2) 加载dex
 
-其实dex在App启动的时候已经被加载过一次了，但是，我们为什么还要再加载一次？因为系统加载的dex是以只读方式加载的，我们没办法去修改那一部分的内存。而且App的dex加载早于我们Application的启动，这样，我们在代码根本没法感知到，所以我们要重新加载dex。
+所有apk中的dex在处理阶段把它放到了单独的zip文件中，不存在apk中了，所以启动时不会被主动系统加载。而且系统加载的dex是以只读方式加载的，我们没办法去修改dex那一部分的内存，所以我们要手动加载apk中的dex文件。
 
 ```java
     private ClassLoader loadDex(Context context){
@@ -427,9 +427,9 @@ public class ShellClassLoader extends PathClassLoader {
 }
 ```
 
-### (3) 替换dexElements
+### (3) 合并dexElements
 
-这一步也非常重要，这一步的目的是使ClassLoader从我们新加载的dex文件中加载类。代码如下：
+这一步也非常重要。我们加载apk，dex或者jar，它是以Element方式存放在内存中的，合并dexElements目的是把我们新加载的dex放到dexElements数组开头，这样ClassLoader加载类时就会优先从我们的dex中查找。代码如下：
 
 ```cpp
 void mergeDexElements(JNIEnv* env,jclass klass,jobject oldClassLoader,jobject newClassLoader){
