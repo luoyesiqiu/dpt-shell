@@ -47,6 +47,10 @@ public class ShellClassLoader extends PathClassLoader {
         return clazz;
     }
 
+    public static ClassLoader loadDex(String dexPath){
+        return new ShellClassLoader(dexPath ,null,ClassLoader.getSystemClassLoader());
+    }
+
     public static ClassLoader loadDex(String apkPath,String dexPath){
         File nativePath64 = new File(apkPath.substring(0,apkPath.lastIndexOf("/")) + File.separator + "lib" + File.separator + "arm64");
         String nativePath = nativePath64.exists() ? nativePath64.getAbsolutePath() : nativePath64.getParent() + File.separator + "arm";

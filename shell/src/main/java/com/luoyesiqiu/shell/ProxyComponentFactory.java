@@ -96,6 +96,10 @@ public class ProxyComponentFactory extends AppComponentFactory {
             Global.sIsReplacedClassLoader = true;
             shellClassLoader = cl;
         }
+        else{
+            ClassLoader apacheHttpLibLoader = ShellClassLoader.loadDex(Global.APACHE_HTTP_LIB);
+            JniBridge.mde(cl, apacheHttpLibLoader);
+        }
         Global.sNeedCalledApplication = false;
         if(targetAppComponentFactory != null) {
             try {
