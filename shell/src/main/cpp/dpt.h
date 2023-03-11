@@ -33,6 +33,7 @@ void readCodeItem(JNIEnv *env, jclass klass,uint8_t *data,size_t data_len);
 jstring readAppComponentFactory(JNIEnv *env,jclass,jobject classLoader);
 jstring readApplicationName(JNIEnv *env, jclass klass, jobject classLoader);
 void mergeDexElements(JNIEnv* env,jclass klass,jobject oldClassLoader,jobject newClassLoader);
+void removeDexElements(JNIEnv* env,jclass klass,jobject classLoader,jstring elementName);
 void replaceApplication(JNIEnv *env, jclass klass, jstring originApplication);
 void replaceApplicationOnActivityThread(JNIEnv *env,jclass klass, jobject realApplication);
 void replaceApplicationOnLoadedApk(JNIEnv *env, jclass klass,jobject proxyApplication, jobject realApplication);

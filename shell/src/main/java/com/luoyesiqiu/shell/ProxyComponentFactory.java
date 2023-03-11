@@ -88,19 +88,23 @@ public class ProxyComponentFactory extends AppComponentFactory {
         Log.d(TAG, "instantiateApplication() called with: cl = [" + cl + "], className = [" + className + "]");
         ClassLoader appClassLoader = init(cl);
 
-        AppComponentFactory targetAppComponentFactory = getTargetAppComponentFactory(appClassLoader);
-
+        AppComponentFactory targetAppComponentFactory = null;
         String applicationName = JniBridge.rapn(null);
         if(!Global.sIsReplacedClassLoader){
             JniBridge.mde(cl, appClassLoader);
             Global.sIsReplacedClassLoader = true;
             shellClassLoader = cl;
+            targetAppComponentFactory = getTargetAppComponentFactory(cl);
         }
         else{
-            ClassLoader apacheHttpLibLoader = ShellClassLoader.loadDex(Global.APACHE_HTTP_LIB);
-            JniBridge.mde(cl, apacheHttpLibLoader);
+            targetAppComponentFactory = getTargetAppComponentFactory(appClassLoader);
         }
+
+        ClassLoader apacheHttpLibLoader = ShellClassLoader.loadDex(Global.APACHE_HTTP_LIB);
+        JniBridge.mde(cl, apacheHttpLibLoader);
+        JniBridge.rde(cl, "base.apk");
         Global.sNeedCalledApplication = false;
+
         if(targetAppComponentFactory != null) {
             try {
                 Method method = targetAppComponentFactory.getClass().getDeclaredMethod("instantiateApplication", ClassLoader.class, String.class);
