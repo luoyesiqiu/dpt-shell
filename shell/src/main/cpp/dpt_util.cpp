@@ -216,11 +216,14 @@ int endWith(const char *str,const char* sub){
 void load_zip(const char* zip_file_path,void **zip_addr,off_t *zip_size){
     int fd = open(zip_file_path,O_RDONLY);
     if(fd < 0){
+        DLOGD("load_zip cannot open file!");
         return;
     }
     struct stat fst;
     fstat(fd,&fst);
-    *zip_addr = mmap(nullptr, fst.st_size, PROT_READ, MAP_PRIVATE, fd, 0);
+    const off_t need_zip_size = (fst.st_size / 4096) * 4096 + 4096;
+    DLOGD("load_zip fst.st_size = %lu,need size = %lu",fst.st_size,need_zip_size);
+    *zip_addr = mmap(nullptr, need_zip_size, PROT_READ, MAP_PRIVATE, fd, 0);
     *zip_size = fst.st_size;
 }
 
@@ -235,7 +238,9 @@ void *read_zip_file_entry(const void* zip_addr,off_t zip_size,const char* entry_
     }
 
     zip_source_keep(zip_src);
-    zip_t *achieve = zip_open_from_source(zip_src,ZIP_RDONLY,&err);
+
+    zip_error_t  open_source_err;
+    zip_t *achieve = zip_open_from_source(zip_src,ZIP_RDONLY,&open_source_err);
 
     if(achieve != nullptr) {
         size_t entry_number = zip_get_num_files(achieve);
@@ -262,7 +267,8 @@ void *read_zip_file_entry(const void* zip_addr,off_t zip_size,const char* entry_
         }
     }
     else{
-        DLOGE("read_zip_file_item read from mem fail");
+        DLOGE("read_zip_file_item read from mem fail: %s",
+              zip_error_strerror(&open_source_err));
     }
 
     return nullptr;
