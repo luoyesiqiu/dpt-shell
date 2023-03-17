@@ -245,8 +245,7 @@ jobject getApplicationInstance(JNIEnv *env, const char *applicationClassName) {
 //
 // 调用原始apk Application类的onCreate方法
 //
-JNIEXPORT void
-callRealApplicationOnCreate(JNIEnv *env, jclass, jstring realApplicationClassName) {
+void callRealApplicationOnCreate(JNIEnv *env, jclass, jstring realApplicationClassName) {
     const char *applicationClassName = env->GetStringUTFChars(realApplicationClassName, nullptr);
 
     char *appNameChs = static_cast<char *>(calloc(strlen(applicationClassName) + 1, 1));
@@ -279,7 +278,7 @@ callRealApplicationOnCreate(JNIEnv *env, jclass, jstring realApplicationClassNam
 //
 // 调用原始apk Application类的attach方法
 //
-JNIEXPORT void callRealApplicationAttach(JNIEnv *env, jclass, jobject context,
+void callRealApplicationAttach(JNIEnv *env, jclass, jobject context,
                                          jstring realApplicationClassName) {
     const char *applicationClassName = env->GetStringUTFChars(realApplicationClassName, nullptr);
     char *appNameChs = static_cast<char *>(calloc(strlen(applicationClassName) + 1, 1));

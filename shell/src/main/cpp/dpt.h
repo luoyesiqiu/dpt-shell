@@ -21,10 +21,9 @@
 #include "dex/MultiDexCode.h"
 #include "JniWrapper.h"
 #include "dpt_util.h"
-JNIEXPORT void
-callRealApplicationOnCreate(JNIEnv *env, jclass, jstring realApplicationClassName);
+void callRealApplicationOnCreate(JNIEnv *env, jclass, jstring realApplicationClassName);
 
-JNIEXPORT void callRealApplicationAttach(JNIEnv *env, jclass, jobject context,
+void callRealApplicationAttach(JNIEnv *env, jclass, jobject context,
                                          jstring realApplicationClassName);
 
 void init_dpt(JNIEnv *env);
