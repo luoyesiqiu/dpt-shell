@@ -39,8 +39,9 @@ java -jar dpt.jar /path/to/apk
 
 - [dx](https://android.googlesource.com/platform/dalvik/+/refs/heads/master/dx/)
 - [Dobby](https://github.com/jmpews/Dobby)
-- [libzip-android](https://github.com/julienr/libzip-android)
+- ~~[libzip-android](https://github.com/julienr/libzip-android)~~
 - [ManifestEditor](https://github.com/WindySha/ManifestEditor)
 - [Xpatch](https://github.com/WindySha/Xpatch)
 - [bhook](https://github.com/bytedance/bhook)
 - [zipalign-java](https://github.com/Iyxan23/zipalign-java)
+- [minizip-ng](https://github.com/zlib-ng/minizip-ng)

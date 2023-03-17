@@ -178,7 +178,7 @@ void removeDexElements(JNIEnv* env,jclass klass,jobject classLoader,jstring elem
 }
 
 jstring readAppComponentFactory(JNIEnv *env, jclass klass, jobject classLoader) {
-    zip_uint64_t entry_size;
+    int64_t entry_size;
     if(zip_addr == nullptr){
         char apkPathChs[256] = {0};
         getApkPath(env,apkPathChs,256);
@@ -186,14 +186,14 @@ jstring readAppComponentFactory(JNIEnv *env, jclass klass, jobject classLoader) 
     }
 
     if(appComponentFactoryChs == nullptr) {
-        appComponentFactoryChs = (char*)read_zip_file_entry(zip_addr, zip_size,"app_acf", &entry_size);
+        appComponentFactoryChs = (char*)read_zip_file_entry(zip_addr, zip_size,ACF_NAME_IN_ZIP, &entry_size);
     }
     DLOGD("readAppComponentFactory = %s", appComponentFactoryChs);
     return env->NewStringUTF((appComponentFactoryChs));
 }
 
 jstring readApplicationName(JNIEnv *env, jclass klass, jobject classLoader) {
-    zip_uint64_t entry_size;
+    int64_t entry_size;
     if(zip_addr == nullptr){
         char apkPathChs[256] = {0};
         getApkPath(env,apkPathChs,256);
@@ -201,7 +201,7 @@ jstring readApplicationName(JNIEnv *env, jclass klass, jobject classLoader) {
     }
 
     if(applicationNameChs == nullptr) {
-        applicationNameChs = (char*)read_zip_file_entry(zip_addr, zip_size,"app_name", &entry_size);
+        applicationNameChs = (char*)read_zip_file_entry(zip_addr, zip_size,APP_NAME_IN_ZIP, &entry_size);
     }
     DLOGD("readApplicationName = %s", applicationNameChs);
     return env->NewStringUTF((applicationNameChs));
@@ -451,8 +451,8 @@ static void extractDexes(){
     getCompressedDexesPath(compressedDexesPathChs, 256);
 
     if(access(compressedDexesPathChs, F_OK) == -1){
-        zip_uint64_t dex_files_size = 0;
-        void *dexFilesData = read_zip_file_entry(zip_addr,zip_size,"i11111i111",&dex_files_size);
+        int64_t dex_files_size = 0;
+        void *dexFilesData = read_zip_file_entry(zip_addr,zip_size,DEX_FILES_NAME_IN_ZIP,&dex_files_size);
         DLOGD("zipCode open = %s",compressedDexesPathChs);
         int fd = open(compressedDexesPathChs, O_CREAT | O_WRONLY  ,S_IRWXU);
         if(fd > 0){
@@ -473,9 +473,9 @@ void init_app(JNIEnv *env, jclass klass, jobject context, jobject classLoader) {
         loadApk(env);
         extractDexes();
 
-        zip_uint64_t entry_size;
+        int64_t entry_size;
         if(codeItemFilePtr == nullptr) {
-            codeItemFilePtr = read_zip_file_entry(zip_addr,zip_size,"OoooooOooo",&entry_size);
+            codeItemFilePtr = read_zip_file_entry(zip_addr,zip_size,CODE_ITEM_NAME_IN_ZIP,&entry_size);
         }
         readCodeItem(env, klass,(uint8_t*)codeItemFilePtr,entry_size);
 
@@ -484,7 +484,7 @@ void init_app(JNIEnv *env, jclass klass, jobject context, jobject classLoader) {
 
         extractDexes();
 
-        AAsset *aAsset = getAsset(env, context, "OoooooOooo");
+        AAsset *aAsset = getAsset(env, context, CODE_ITEM_NAME_IN_ASSETS);
         if (aAsset != nullptr) {
             int len = AAsset_getLength(aAsset);
             auto buf = (uint8_t *) AAsset_getBuffer(aAsset);

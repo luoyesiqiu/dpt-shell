@@ -7,6 +7,7 @@
 #include <elf.h>
 #include "dpt_util.h"
 #include "common/dpt_log.h"
+#include "minizip-ng/mz_strm.h"
 
 #ifdef __LP64__
 #define Elf_Ehdr Elf64_Ehdr
@@ -228,48 +229,60 @@ void load_zip(const char* zip_file_path,void **zip_addr,off_t *zip_size){
     *zip_size = fst.st_size;
 }
 
-void *read_zip_file_entry(const void* zip_addr,off_t zip_size,const char* entry_name,zip_uint64_t *entry_size){
+void *read_zip_file_entry(void* zip_addr,off_t zip_size,const char* entry_name,int64_t *entry_size){
 
-    DLOGD("read_zip_file_item start = %llx,size = %ld",zip_addr,zip_size);
-    zip_error_t  err;
-    zip_source_t *zip_src = zip_source_buffer_create(zip_addr,zip_size,0,&err);
-    if(nullptr == zip_src){
-        DLOGE("read_zip_file_item zip_source_buffer_create err = %s",err.str);
-        return nullptr;
-    }
+    void *mem_stream = nullptr;
+    void *zip_handle = nullptr;
 
-    zip_source_keep(zip_src);
+    mz_stream_mem_create(&mem_stream);
+    mz_stream_mem_set_buffer(mem_stream, zip_addr, zip_size);
+    mz_stream_open(mem_stream, nullptr, MZ_OPEN_MODE_READ);
 
-    zip_error_t  open_source_err;
-    zip_t *achieve = zip_open_from_source(zip_src,ZIP_RDONLY,&open_source_err);
+    mz_zip_create(&zip_handle);
+    int32_t err = mz_zip_open(zip_handle, mem_stream, MZ_OPEN_MODE_READ);
+    if(err == MZ_OK){
+        int32_t i = 0;
+        err = mz_zip_goto_first_entry(zip_handle);
+        while (err == MZ_OK) {
+            mz_zip_file *file_info = nullptr;
+            err = mz_zip_entry_get_info(zip_handle, &file_info);
+            if (err == MZ_OK) {
+                if(strncmp(file_info->filename,entry_name,128) == 0) {
+                    DLOGD("read_zip_file_entry entry name = %s,file size = %ld", file_info->filename,file_info->uncompressed_size);
+                    err = mz_zip_entry_read_open(zip_handle, 0, nullptr);
+                    if(err != MZ_OK){
+                        DLOGW("read_zip_file_entry not prepared: %d",err);
+                        return nullptr;
+                    }
+                    char *entry_data = (char *)calloc(file_info->uncompressed_size + 1,1);
+                    char buf[1024] = {0};
+                    int32_t bytes_read = -1;
+                    int32_t cp_index = 0;
+                    do {
+                        bytes_read = mz_zip_entry_read(zip_handle, buf,
+                                                               1024);
+                        if(bytes_read < 0){
+                            break;
+                        }
+                        memcpy(entry_data + cp_index,buf,bytes_read);
+                        cp_index += bytes_read;
 
-    if(achieve != nullptr) {
-        size_t entry_number = zip_get_num_files(achieve);
-        DLOGD("read_zip_file_item read from mem success,entry num = %zu", entry_number);
+                    } while (bytes_read > 0);
+                    DLOGD("read_zip_file_entry reading file: %s,read bytes: %d",entry_name,cp_index);
 
-        for (size_t i = 0; i < entry_number; i++) {
-            const char* entry_name_tmp = zip_get_name(achieve,i,ZIP_FL_ENC_GUESS);
-            zip_file_t *file = zip_fopen(achieve, entry_name_tmp, ZIP_FL_ENC_GUESS);
-            if (file != nullptr) {
-                zip_stat_t zst;
-                zip_stat(achieve, entry_name_tmp, 0, &zst);
-                if(endWith(entry_name_tmp,entry_name) == 0){
-                    DLOGD("read_zip_file_item entry name = %s,size = %u",entry_name_tmp,zst.size);
-
-                    void *entry_data = calloc(zst.size + 1, 1);
-                    zip_uint64_t entry_size_tmp = zip_fread(file, entry_data, zst.size);
-                    *entry_size = entry_size_tmp;
-
+                    *entry_size = file_info->uncompressed_size;
                     return entry_data;
                 }
-            } else {
-                DLOGE("read_zip_file_item zip entry(%s) open fail!",entry_name_tmp);
             }
+            else{
+                DLOGW("read_zip_file_entry mz_zip_goto_next_entry error!");
+                break;
+            }
+            err = mz_zip_goto_next_entry(zip_handle);
         }
     }
     else{
-        DLOGE("read_zip_file_item read from mem fail: %s",
-              zip_error_strerror(&open_source_err));
+        DLOGW("read_zip_file_entry mz_zip_open fail: %d",err);
     }
 
     return nullptr;
