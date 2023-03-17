@@ -221,7 +221,8 @@ void load_zip(const char* zip_file_path,void **zip_addr,off_t *zip_size){
     }
     struct stat fst;
     fstat(fd,&fst);
-    const off_t need_zip_size = (fst.st_size / 4096) * 4096 + 4096;
+    const int page_size = getpagesize();
+    const off_t need_zip_size = (fst.st_size / page_size) * page_size + page_size;
     DLOGD("load_zip fst.st_size = %lu,need size = %lu",fst.st_size,need_zip_size);
     *zip_addr = mmap(nullptr, need_zip_size, PROT_READ, MAP_PRIVATE, fd, 0);
     *zip_size = fst.st_size;
