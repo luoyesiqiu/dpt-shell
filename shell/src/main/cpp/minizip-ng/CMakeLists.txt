@@ -33,7 +33,7 @@ option(MZ_FORCE_FETCH_LIBS "Enables fetching third-party libraries always" OFF)
 # Encryption support options
 option(MZ_PKCRYPT "Enables PKWARE traditional encryption" ON)
 option(MZ_WZAES "Enables WinZIP AES encryption" ON)
-cmake_dependent_option(MZ_OPENSSL "Enables OpenSSL for encryption" ON "UNIX" OFF)
+cmake_dependent_option(MZ_OPENSSL "Enables OpenSSL for encryption" OFF "UNIX" OFF)
 cmake_dependent_option(MZ_BCRYPT "Enables Win32 Crypto API Next Generation" ON "CMAKE_SYSTEM_NAME STREQUAL WindowsStore" OFF)
 cmake_dependent_option(MZ_LIBBSD "Builds with libbsd crypto random" ON "UNIX" OFF)
 option(MZ_SIGNING "Enables zip signing support" OFF)
