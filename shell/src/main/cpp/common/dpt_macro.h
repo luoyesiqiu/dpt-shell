@@ -8,6 +8,14 @@
 #define DEXES_ZIP_NAME "i11111i111"
 #define CACHE_DIR "code_cache"
 
+#define ACF_NAME_IN_ZIP "assets/app_acf"
+#define APP_NAME_IN_ZIP "assets/app_name"
+#define CODE_ITEM_NAME_IN_ZIP "assets/OoooooOooo"
+#define DEX_FILES_NAME_IN_ZIP "assets/i11111i111"
+
+#define CODE_ITEM_NAME_IN_ASSETS "OoooooOooo"
+
+
 #define PAGE_START(addr) ((addr) & PAGE_MASK)
 
 #ifdef __LP64__

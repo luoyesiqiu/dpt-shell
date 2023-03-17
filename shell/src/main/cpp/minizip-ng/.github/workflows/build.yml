@@ -1,0 +1,321 @@
+name: Build
+on: [push, pull_request]
+jobs:
+  ci:
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Ubuntu 18 GCC 4.8
+            os: ubuntu-18.04
+            compiler: gcc
+            cxx-compiler: g++
+            cmake-args: -D MZ_CODE_COVERAGE=ON -D MZ_SIGNING=ON
+            version: "4.8"
+            codecov: ubuntu_18_gcc_48
+
+          - name: Ubuntu 18 GCC
+            os: ubuntu-18.04
+            compiler: gcc
+            cxx-compiler: g++
+            cmake-args: -D MZ_CODE_COVERAGE=ON -D MZ_SIGNING=ON
+            codecov: ubuntu_18_gcc
+
+          - name: Ubuntu 18 Clang 3.9
+            os: ubuntu-18.04
+            compiler: clang
+            cxx-compiler: clang++
+            cmake-args: -D MZ_CODE_COVERAGE=ON -D MZ_SIGNING=ON
+            codecov: ubuntu_18_clang_39
+            version: "3.7"
+            packages: llvm-3.9
+            gcov-exec: llvm-cov-3.9 gcov
+
+          # No code coverage on release builds
+          - name: Ubuntu 18 Clang
+            os: ubuntu-18.04
+            compiler: clang
+            cxx-compiler: clang++
+            deploy: true
+            deploy-name: linux
+
+          - name: Ubuntu GCC
+            os: ubuntu-latest
+            compiler: gcc
+            cxx-compiler: g++
+            cmake-args: -D MZ_CODE_COVERAGE=ON -D MZ_SIGNING=ON
+            codecov: ubuntu_gcc
+
+          - name: Ubuntu GCC OSB
+            os: ubuntu-latest
+            compiler: gcc
+            cxx-compiler: g++
+            build-dir: ../build
+            build-src-dir: ../minizip-ng
+            cmake-args: -D MZ_CODE_COVERAGE=ON -D MZ_SIGNING=ON
+            codecov: ubuntu_gcc_osb
+
+          - name: Ubuntu Clang
+            os: ubuntu-latest
+            compiler: clang-14
+            cxx-compiler: clang++-14
+            cmake-args: -D MZ_CODE_COVERAGE=ON -D MZ_SIGNING=ON
+            codecov: ubuntu_clang
+            packages: clang-14 llvm-14
+            gcov-exec: llvm-cov-14 gcov
+
+          - name: Ubuntu Clang No Zlib
+            os: ubuntu-latest
+            compiler: clang-14
+            cxx-compiler: clang++-14
+            cmake-args: -D MZ_CODE_COVERAGE=ON -D MZ_SIGNING=ON -D MZ_ZLIB=OFF
+            codecov: ubuntu_clang_no_zlib
+            packages: clang-14 llvm-14
+            gcov-exec: llvm-cov-14 gcov
+
+          - name: Ubuntu Clang No Bzip2
+            os: ubuntu-latest
+            compiler: clang-14
+            cxx-compiler: clang++-14
+            cmake-args: -D MZ_CODE_COVERAGE=ON -D MZ_SIGNING=ON -D MZ_BZIP=OFF
+            codecov: ubuntu_clang_no_bzip2
+            packages: clang-14 llvm-14
+            gcov-exec: llvm-cov-14 gcov
+
+          - name: Ubuntu Clang No LZMA
+            os: ubuntu-latest
+            compiler: clang-14
+            cxx-compiler: clang++-14
+            cmake-args: -D MZ_CODE_COVERAGE=ON -D MZ_SIGNING=ON -D MZ_LZMA=OFF
+            codecov: ubuntu_clang_no_lzma
+            packages: clang-14 llvm-14
+            gcov-exec: llvm-cov-14 gcov
+
+          - name: Ubuntu Clang No Zstd
+            os: ubuntu-latest
+            compiler: clang-14
+            cxx-compiler: clang++-14
+            cmake-args: -D MZ_CODE_COVERAGE=ON -D MZ_SIGNING=ON -D MZ_ZSTD=OFF
+            codecov: ubuntu_clang_no_zstd
+            packages: clang-14 llvm-14
+            gcov-exec: llvm-cov-14 gcov
+
+          - name: Ubuntu Clang No Pkcrypt
+            os: ubuntu-latest
+            compiler: clang-14
+            cxx-compiler: clang++-14
+            cmake-args: -D MZ_CODE_COVERAGE=ON -D MZ_SIGNING=ON -D MZ_PKCRYPT=OFF
+            codecov: ubuntu_clang_no_pkcrypt
+            packages: clang-14 llvm-14
+            gcov-exec: llvm-cov-14 gcov
+
+          - name: Ubuntu Clang No Winzip AES
+            os: ubuntu-latest
+            compiler: clang-14
+            cxx-compiler: clang++-14
+            cmake-args: -D MZ_CODE_COVERAGE=ON -D MZ_SIGNING=ON -D MZ_WZAES=OFF
+            codecov: ubuntu_clang_no_winzip_aes
+            packages: clang-14 llvm-14
+            gcov-exec: llvm-cov-14 gcov
+
+          - name: Ubuntu Clang No Encryption
+            os: ubuntu-latest
+            compiler: clang-14
+            cxx-compiler: clang++-14
+            cmake-args: -D MZ_CODE_COVERAGE=ON -D MZ_SIGNING=ON -D MZ_PKCRYPT=OFF -D MZ_WZAES=OFF
+            codecov: ubuntu_clang_no_encryption
+            packages: clang-14 llvm-14
+            gcov-exec: llvm-cov-14 gcov
+
+          - name: Ubuntu Clang Compress Only
+            os: ubuntu-latest
+            compiler: clang-14
+            cxx-compiler: clang++-14
+            cmake-args: -D MZ_CODE_COVERAGE=ON -D MZ_SIGNING=ON -D MZ_COMPRESS_ONLY=ON
+            codecov: ubuntu_clang_compress_only
+            packages: clang-14 llvm-14
+            gcov-exec: llvm-cov-14 gcov
+
+          - name: Ubuntu Clang Decompress Only
+            os: ubuntu-latest
+            compiler: clang-14
+            cxx-compiler: clang++-14
+            cmake-args: -D MZ_CODE_COVERAGE=ON -D MZ_SIGNING=ON -D MZ_DECOMPRESS_ONLY=ON
+            codecov: ubuntu_clang_decompress_only
+            packages: clang-14 llvm-14
+            gcov-exec: llvm-cov-14 gcov
+
+          - name: Ubuntu Clang OpenSSL
+            os: ubuntu-latest
+            compiler: clang-14
+            cxx-compiler: clang++-14
+            cmake-args: -D MZ_CODE_COVERAGE=ON -D MZ_SIGNING=ON -D MZ_OPENSSL=ON
+            codecov: ubuntu_clang_openssl
+            packages: clang-14 llvm-14
+            gcov-exec: llvm-cov-14 gcov
+
+          # No code coverage supported
+          - name: Windows MSVC
+            os: windows-latest
+            compiler: cl
+            # Don't use find_package for 3rd party libraries which are installed incorrectly on GitHub CI instances
+            cmake-args: -D MZ_FORCE_FETCH_LIBS=ON -D MZ_SIGNING=ON
+            deploy: true
+            deploy-name: windows
+
+          # No code coverage supported
+          - name: Windows MSVC BCrypt
+            os: windows-latest
+            compiler: cl
+            # Don't use find_package for 3rd party libraries which are installed incorrectly on GitHub CI instances
+            cmake-args: -D MZ_FORCE_FETCH_LIBS=ON -D MZ_SIGNING=OFF -D MZ_BCRYPT=ON
+            deploy: true
+            deploy-name: uwp
+
+          - name: Windows GCC
+            os: windows-latest
+            compiler: gcc
+            cxx-compiler: g++
+            # Don't use find_package for 3rd party libraries which are installed incorrectly on GitHub CI instances
+            cmake-args: -D MZ_CODE_COVERAGE=ON -D MZ_SIGNING=ON -D MZ_FORCE_FETCH_LIBS=ON -G Ninja
+            codecov: windows_gcc
+
+          # No code coverage on release builds
+          - name: macOS Xcode 9.4.1
+          # Use older version of macOS to install test certificate without user interaction
+            os: macos-10.15
+            version: "9.4.1"
+            cmake-args: -D MZ_BUILD_UNIT_TESTS=OFF -D MZ_SIGNING=ON
+            deploy: true
+            deploy-name: macos
+
+          - name: macOS Xcode
+            os: macOS-latest
+            cmake-args: -D MZ_CODE_COVERAGE=ON
+            codecov: macos_xcode
+
+          - name: macOS Xcode LibCompression
+            os: macOS-latest
+            cmake-args: -D MZ_CODE_COVERAGE=ON -D MZ_LIBCOMP=ON
+            codecov: macos_xcode_libcompression
+
+          - name: macOS Xcode OpenSSL
+            # Use older version of macOS to install test certificate without user interaction
+            os: macos-10.15
+            cmake-args: -D MZ_CODE_COVERAGE=ON -D MZ_SIGNING=ON -D MZ_OPENSSL=ON -D OPENSSL_ROOT_DIR=/usr/local/opt/openssl -D OPENSSL_INCLUDE_DIRS=/usr/local/opt/openssl/include -D OPENSSL_CRYPTO_LIBRARY=/usr/local/opt/openssl/lib/libcrypto.dylib -D OPENSSL_SSL_LIBRARY=/usr/local/opt/openssl/lib/libssl.dylib
+            codecov: macos_xcode_openssl
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+
+    - name: Install packages (macOS)
+      if: runner.os == 'macOS'
+      run: brew install pkgconfig ${{ matrix.packages }}
+
+    - name: Install packages (Ubuntu)
+      if: runner.os == 'Linux' && matrix.packages
+      run: |
+        sudo apt-get update
+        sudo apt-get install ${{ matrix.packages }}
+
+    - name: Install packages (Windows)
+      if: runner.os == 'Windows' && matrix.compiler == 'gcc'
+      run: |
+        # strawberryperl installs incompatible libraries so remove it
+        choco uninstall --no-progress strawberryperl
+        choco install ninja --no-progress
+
+    - name: Generate project files
+      shell: bash
+      run: |
+        cmake -S ${{ matrix.build-src-dir || '.' }} -B ${{ matrix.build-dir || '.' }} ${{ matrix.cmake-args }} \
+          -D MZ_BUILD_TESTS=ON \
+          -D MZ_BUILD_UNIT_TESTS=ON \
+          -D CMAKE_BUILD_TYPE=Release
+      env:
+        CC: ${{ matrix.compiler }}
+        CXX: ${{ matrix.cxx-compiler }}
+        CFLAGS: ${{ matrix.cflags }}
+        LDFLAGS: ${{ matrix.ldflags }}
+
+    - name: Compile source code
+      run: cmake --build ${{ matrix.build-dir || '.' }} --config ${{ matrix.build-config || 'Release' }}
+
+    - name: Install test certificate (macOS)
+      if: runner.os == 'macOS' && contains(matrix.cmake-args, 'MZ_SIGNING=ON')
+      run: |
+        sudo security authorizationdb write com.apple.trust-settings.admin allow
+        sudo security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain test/test.pem || true
+
+    - name: Install test certificate (Windows)
+      if: runner.os == 'Windows' && contains(matrix.cmake-args, 'MZ_SIGNING=ON')
+      run: certutil -addstore -enterprise Root test/test.pem
+
+    - name: Run test cases
+      run: ctest --output-on-failure -C ${{ matrix.build-config || 'Release' }}
+      working-directory: ${{ matrix.build-dir }}
+      # Specify test certificate for OpenSSL tests
+      env:
+        SSL_CERT_FILE: test.pem
+
+    - name: Generate coverage report
+      shell: bash
+      if: always() && matrix.codecov
+      run: |
+        python3 -u -m pip install --user gcovr==5.0 --ignore-installed
+        python3 -m gcovr \
+          --exclude-unreachable-branches \
+          --gcov-ignore-parse-errors \
+          --gcov-executable "${{ matrix.gcov-exec || 'gcov' }}" \
+          --root ${{ matrix.build-src-dir || '.' }} \
+          --xml \
+          --output coverage.xml \
+          --verbose
+
+    - name: Upload coverage report
+      uses: codecov/codecov-action@v3
+      if: always() && matrix.codecov && env.CODECOV_TOKEN != ''
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
+        flags: ${{ matrix.codecov }}
+        name: ${{ matrix.name }}
+        directory: ${{ matrix.build-src-dir || '.' }}
+        verbose: true
+        fail_ci_if_error: true
+      env:
+        CODECOV_TOKEN: "${{ secrets.CODECOV_TOKEN }}"
+
+    - name: Package release (Ubuntu/macOS)
+      if: (runner.os == 'Linux' || runner.os == 'macOS') && matrix.deploy && startsWith(github.ref, 'refs/tags/')
+      run: ls -R mini*zip | tar -czvf minizip-ng-${{ matrix.deploy-name }}.tar.gz -T -
+
+    - name: Upload release (Ubuntu/macOS)
+      uses: svenstaro/upload-release-action@v1-release
+      if: (runner.os == 'Linux' || runner.os == 'macOS') && matrix.deploy && startsWith(github.ref, 'refs/tags/') && env.GITHUB_TOKEN != ''
+      with:
+        asset_name: minizip-ng-${{ matrix.deploy-name }}.tar.gz
+        file: ${{ matrix.build-dir || '.' }}/minizip-ng-${{ matrix.deploy-name }}.tar.gz
+        tag: ${{ github.ref }}
+        repo_token: ${{ secrets.GITHUB_TOKEN }}
+        overwrite: true
+      env:
+        GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
+
+    - name: Package release (Windows)
+      if: runner.os == 'Windows' && matrix.deploy && startsWith(github.ref, 'refs/tags/')
+      run: 7z a -tzip minizip-ng-${{ matrix.deploy-name }}.zip ./Release/mini*zip.exe
+
+    - name: Upload release (Windows)
+      uses: svenstaro/upload-release-action@v1-release
+      if: runner.os == 'Windows' && matrix.deploy && startsWith(github.ref, 'refs/tags/') && env.GITHUB_TOKEN != ''
+      with:
+        asset_name: minizip-ng-${{ matrix.deploy-name }}.zip
+        file: ${{ matrix.build-dir || '.' }}/minizip-ng-${{ matrix.deploy-name }}.zip
+        tag: ${{ github.ref }}
+        repo_token: ${{ secrets.GITHUB_TOKEN }}
+        overwrite: true
+      env:
+        GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"

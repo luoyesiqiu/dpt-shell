@@ -13,9 +13,9 @@ set(DPT_NATIVE_SOURCE
         )
 
 include_directories(./ )
-include_directories(./libzip/)
 include_directories(./common)
 include_directories(./bhook/include)
+include_directories(./minizip-ng)
 
 # 添加库
 add_library(dpt
@@ -27,8 +27,8 @@ include_directories(
         dobby
 )
 
-add_subdirectory(libzip)
 add_subdirectory(bhook)
+add_subdirectory(minizip-ng)
 
 # 使用预编译库
 add_library(local_dobby STATIC IMPORTED)
@@ -40,7 +40,7 @@ find_library(android-lib android)
 
 target_link_libraries( dpt
             ${log-lib}
-        zip
+        MINIZIP::minizip
         local_dobby
         bytehook
         ${android-lib}
