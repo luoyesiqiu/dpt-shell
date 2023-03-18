@@ -75,6 +75,12 @@ void patchMethod(uint8_t *begin,const char *location,uint32_t dexSize,int dexInd
     }
     auto *dexCodeItem = (dpt::dex::CodeItem *) (begin + codeOff);
 
+    uint16_t firstDvmCode = *((uint16_t*)dexCodeItem->insns_);
+    if(firstDvmCode != 0x0012 && firstDvmCode != 0x0016 && firstDvmCode != 0x000e){
+        NLOG("[*] this method has code no need to patch");
+        return;
+    }
+
     auto dexIt = dexMap.find(dexIndex);
     if (LIKELY(dexIt != dexMap.end())) {
         auto dexMemIt = dexMemMap.find(dexIndex);
@@ -179,6 +185,7 @@ void* DefineClass(void* thiz,void* self,
 
                     for(int i = 0;i < direct_methods_size;i++){
                         auto method = directMethods[i];
+                        method.access_flags_
                         NLOG("[-] DefineClass directMethods[%d] methodIndex = %d,code_off = 0x%x",i,method.method_idx_delta_,method.code_off_);
                         patchMethod(begin, location.c_str(), dexSize, dexIndex, method.method_idx_delta_,method.code_off_);
                     }
