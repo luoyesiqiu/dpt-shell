@@ -10,25 +10,22 @@
 #include <android/api-level.h>
 #include <cstdint>
 #include "dpt_util.h"
-#include "dex/ClassDataItemReader.h"
+#include "dex/dex_file.h"
 #include "common/dpt_log.h"
 #include "common/dpt_macro.h"
 #include "dobby.h"
 
 void dpt_hook();
 
-//android M,N
-static void (*g_originLoadMethodM)(void* thiz, void* self, const void* dex_file, const void* it, void* klass, void* dst) = nullptr;
-//android O,P
-static void (*g_originLoadMethodO)(void* thiz, const void* dex_file, const void* it, void* klass,void *dst) = nullptr;
-//android Q,R,S...
-static void (*g_originLoadMethodQ)(void* thiz, const void* dex_file, const void* method, void* klass,void *dst) = nullptr;
+static void* (*g_originDefineClass)(void* thiz,
+        void* self,
+        const char* descriptor,
+        size_t hash,
+        void* class_loader,
+        const void* dex_file,
+        const void* dex_class_def);
 
-void hook_ClassLinker_LoadMethod();
-void callOriginLoadMethod(void *thiz, void *self, const void *dex_file, const void *it, const void *method,
-                          void *klass, void *dst);
-uint32_t getDexFileLocationOffset();
-uint32_t getDataItemCodeItemOffset();
+void hook_DefineClass();
 void hook_mmap();
 void hook_GetOatDexFile();
 static void (*g_GetOatDexFile)(const char* dex_location,
