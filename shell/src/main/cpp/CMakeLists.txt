@@ -7,9 +7,9 @@ set(DPT_NATIVE_SOURCE
         dpt_hook.cpp
         dex/MultiDexCode.cpp
         dex/CodeItem.cpp
-        dex/ClassDataItemReader.cpp
         JniWrapper.cpp
         dpt_util.cpp
+        dex/dex_file.cpp
         )
 
 include_directories(./ )
