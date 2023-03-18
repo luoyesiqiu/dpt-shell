@@ -40,17 +40,8 @@ const char *GetArtBaseLibPath() {
     }
 }
 
-const char *GetClassLinkerLoadMethodLibPath(){
-    return GetArtLibPath();
-}
-
 const char *GetClassLinkerDefineClassLibPath(){
     return GetArtLibPath();
-}
-
-const char *getClassLinkerLoadMethodSymbol() {
-    const char *sym = find_symbol_in_elf_file(GetClassLinkerLoadMethodLibPath(),2,"ClassLinker","LoadMethod");
-    return sym;
 }
 
 const char *getClassLinkerDefineClassSymbol() {
