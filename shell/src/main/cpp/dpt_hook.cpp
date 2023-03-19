@@ -123,7 +123,6 @@ void* DefineClass(void* thiz,void* self,
                  const void* dex_class_def) {
 
     if(LIKELY(g_originDefineClass != nullptr)){
-        void *ret = g_originDefineClass( thiz,self,descriptor,hash,class_loader, dex_file, dex_class_def);
 
         if(LIKELY(dex_file != nullptr)){
             std::string location;
@@ -146,30 +145,29 @@ void* DefineClass(void* thiz,void* self,
             }
 
             if(location.find(DEXES_ZIP_NAME) != std::string::npos){
-                DLOGD("DefineClass location: %s", location.c_str());
+                NLOG("DefineClass location: %s", location.c_str());
                 if(dex_class_def){
                     auto* class_def = (dpt::dex::ClassDef *)dex_class_def;
-                    DLOGD("[+] DefineClass class_idx_ = 0x%x,class data off = 0x%x",class_def->class_idx_,class_def->class_data_off_);
+                    NLOG("[+] DefineClass class_idx_ = 0x%x,class data off = 0x%x",class_def->class_idx_,class_def->class_data_off_);
 
                     size_t read = 0;
                     auto *class_data = (uint8_t *)((uint8_t *)begin + class_def->class_data_off_);
 
                     uint64_t static_fields_size = 0;
                     read += dpt::DexFileUtils::readUleb128(class_data, &static_fields_size);
-                    DLOGD("[-] DefineClass static_fields_size = %lu,read = %zu",static_fields_size,read);
+                    NLOG("[-] DefineClass static_fields_size = %lu,read = %zu",static_fields_size,read);
 
                     uint64_t instance_fields_size = 0;
                     read += dpt::DexFileUtils::readUleb128(class_data + read, &instance_fields_size);
-                    DLOGD("[-] DefineClass instance_fields_size = %lu,read = %zu",instance_fields_size,read);
-
+                    NLOG("[-] DefineClass instance_fields_size = %lu,read = %zu",instance_fields_size,read);
 
                     uint64_t direct_methods_size = 0;
                     read += dpt::DexFileUtils::readUleb128(class_data + read, &direct_methods_size);
-                    DLOGD("[-] DefineClass direct_methods_size = %lu,read = %zu",direct_methods_size,read);
+                    NLOG("[-] DefineClass direct_methods_size = %lu,read = %zu",direct_methods_size,read);
 
                     uint64_t virtual_methods_size = 0;
                     read += dpt::DexFileUtils::readUleb128(class_data + read, &virtual_methods_size);
-                    DLOGD("[-] DefineClass virtual_methods_size = %lu,read = %zu",virtual_methods_size,read);
+                    NLOG("[-] DefineClass virtual_methods_size = %lu,read = %zu",virtual_methods_size,read);
 
                     dpt::dex::ClassDataField staticFields[static_fields_size];
                     read += dpt::DexFileUtils::readFields(class_data + read,staticFields,static_fields_size);
@@ -185,7 +183,6 @@ void* DefineClass(void* thiz,void* self,
 
                     for(int i = 0;i < direct_methods_size;i++){
                         auto method = directMethods[i];
-                        method.access_flags_
                         NLOG("[-] DefineClass directMethods[%d] methodIndex = %d,code_off = 0x%x",i,method.method_idx_delta_,method.code_off_);
                         patchMethod(begin, location.c_str(), dexSize, dexIndex, method.method_idx_delta_,method.code_off_);
                     }
@@ -199,7 +196,8 @@ void* DefineClass(void* thiz,void* self,
                 }
             }
         }
-        return ret;
+        return g_originDefineClass( thiz,self,descriptor,hash,class_loader, dex_file, dex_class_def);
+
     }
 
     return nullptr;
