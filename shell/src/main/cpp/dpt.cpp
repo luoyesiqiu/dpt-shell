@@ -4,6 +4,7 @@
 
 #include "dpt.h"
 
+using namespace dpt;
 //缓存变量
 static jobject g_realApplicationInstance = nullptr;
 static jclass g_realApplicationClass = nullptr;
@@ -497,7 +498,7 @@ void readCodeItem(JNIEnv *env, jclass klass,uint8_t *data,size_t data_len) {
 
     if (data != nullptr && data_len >= 0) {
 
-        dpt::data::MultiDexCode *dexCode = dpt::data::MultiDexCode::getInst();
+        data::MultiDexCode *dexCode = data::MultiDexCode::getInst();
 
         dexCode->init(data, data_len);
         DLOGI("readCodeItem : version = %d , dexCount = %d", dexCode->readVersion(),
@@ -511,14 +512,14 @@ void readCodeItem(JNIEnv *env, jclass klass,uint8_t *data,size_t data_len) {
 
             DLOGD("readCodeItem : dexCodeOffset[%d] = %d,methodCount[%d] = %d", i, dexCodeOffset, i,
                   methodCount);
-            auto codeItemMap = new std::unordered_map<int, dpt::data::CodeItem *>();
+            auto codeItemMap = new std::unordered_map<int, data::CodeItem *>();
             uint32_t codeItemIndex = dexCodeOffset + 2;
             for (int k = 0; k < methodCount; k++) {
-                dpt::data::CodeItem *codeItem = dexCode->nextCodeItem(&codeItemIndex);
+                data::CodeItem *codeItem = dexCode->nextCodeItem(&codeItemIndex);
                 uint32_t methodIdx = codeItem->getMethodIdx();
-                codeItemMap->insert(std::pair<int, dpt::data::CodeItem *>(methodIdx, codeItem));
+                codeItemMap->insert(std::pair<int, data::CodeItem *>(methodIdx, codeItem));
             }
-            dexMap.insert(std::pair<int, std::unordered_map<int, dpt::data::CodeItem *> *>(i, codeItemMap));
+            dexMap.insert(std::pair<int, std::unordered_map<int, data::CodeItem *> *>(i, codeItemMap));
 
         }
         DLOGD("readCodeItem map size = %ld", dexMap.size());
