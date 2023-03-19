@@ -7,8 +7,9 @@
 #include <dex/CodeItem.h>
 #include "dpt_hook.h"
 #include "bytehook.h"
+using namespace dpt;
 
-extern std::unordered_map<int, std::unordered_map<int, dpt::data::CodeItem*>*> dexMap;
+extern std::unordered_map<int, std::unordered_map<int, data::CodeItem*>*> dexMap;
 std::map<int,uint8_t *> dexMemMap;
 int g_sdkLevel = 0;
 
@@ -73,7 +74,7 @@ void patchMethod(uint8_t *begin,const char *location,uint32_t dexSize,int dexInd
         DLOGI("[*] patchMethod dex: %d methodIndex: %d no need patch!",dexIndex,methodIdx);
         return;
     }
-    auto *dexCodeItem = (dpt::dex::CodeItem *) (begin + codeOff);
+    auto *dexCodeItem = (dex::CodeItem *) (begin + codeOff);
 
     uint16_t firstDvmCode = *((uint16_t*)dexCodeItem->insns_);
     if(firstDvmCode != 0x0012 && firstDvmCode != 0x0016 && firstDvmCode != 0x000e){
@@ -94,7 +95,7 @@ void patchMethod(uint8_t *begin,const char *location,uint32_t dexSize,int dexInd
         auto codeItemIt = codeItemMap->find(methodIdx);
 
         if (LIKELY(codeItemIt != codeItemMap->end())) {
-            dpt::data::CodeItem* codeItem = codeItemIt->second;
+            data::CodeItem* codeItem = codeItemIt->second;
             auto *realCodeItemPtr = (uint8_t *)(dexCodeItem->insns_);
 
 #ifdef NOICE_LOG
@@ -131,14 +132,14 @@ void* DefineClass(void* thiz,void* self,
             uint64_t dexSize = 0;
             int dexIndex = 0;
             if(g_sdkLevel >= 28){
-                auto* dexFileV28 = (dpt::V28::DexFile *)dex_file;
+                auto* dexFileV28 = (V28::DexFile *)dex_file;
                 location = dexFileV28->location_;
                 begin = (uint8_t *)dexFileV28->begin_;
                 dexSize = dexFileV28->size_;
                 dexIndex = parse_dex_number(&location);
             }
             else{
-                auto* dexFileV23 = (dpt::V23::DexFile *)dex_file;
+                auto* dexFileV23 = (V23::DexFile *)dex_file;
                 location = dexFileV23->location_;
                 begin = (uint8_t *)dexFileV23->begin_;
                 dexSize = dexFileV23->size_;
@@ -148,39 +149,39 @@ void* DefineClass(void* thiz,void* self,
             if(location.find(DEXES_ZIP_NAME) != std::string::npos){
                 NLOG("DefineClass location: %s", location.c_str());
                 if(dex_class_def){
-                    auto* class_def = (dpt::dex::ClassDef *)dex_class_def;
+                    auto* class_def = (dex::ClassDef *)dex_class_def;
                     NLOG("[+] DefineClass class_idx_ = 0x%x,class data off = 0x%x",class_def->class_idx_,class_def->class_data_off_);
 
                     size_t read = 0;
                     auto *class_data = (uint8_t *)((uint8_t *)begin + class_def->class_data_off_);
 
                     uint64_t static_fields_size = 0;
-                    read += dpt::DexFileUtils::readUleb128(class_data, &static_fields_size);
+                    read += DexFileUtils::readUleb128(class_data, &static_fields_size);
                     NLOG("[-] DefineClass static_fields_size = %lu,read = %zu",static_fields_size,read);
 
                     uint64_t instance_fields_size = 0;
-                    read += dpt::DexFileUtils::readUleb128(class_data + read, &instance_fields_size);
+                    read += DexFileUtils::readUleb128(class_data + read, &instance_fields_size);
                     NLOG("[-] DefineClass instance_fields_size = %lu,read = %zu",instance_fields_size,read);
 
                     uint64_t direct_methods_size = 0;
-                    read += dpt::DexFileUtils::readUleb128(class_data + read, &direct_methods_size);
+                    read += DexFileUtils::readUleb128(class_data + read, &direct_methods_size);
                     NLOG("[-] DefineClass direct_methods_size = %lu,read = %zu",direct_methods_size,read);
 
                     uint64_t virtual_methods_size = 0;
-                    read += dpt::DexFileUtils::readUleb128(class_data + read, &virtual_methods_size);
+                    read += DexFileUtils::readUleb128(class_data + read, &virtual_methods_size);
                     NLOG("[-] DefineClass virtual_methods_size = %lu,read = %zu",virtual_methods_size,read);
 
-                    dpt::dex::ClassDataField staticFields[static_fields_size];
-                    read += dpt::DexFileUtils::readFields(class_data + read,staticFields,static_fields_size);
+                    dex::ClassDataField staticFields[static_fields_size];
+                    read += DexFileUtils::readFields(class_data + read,staticFields,static_fields_size);
 
-                    dpt::dex::ClassDataField instanceFields[instance_fields_size];
-                    read += dpt::DexFileUtils::readFields(class_data + read,instanceFields,instance_fields_size);
+                    dex::ClassDataField instanceFields[instance_fields_size];
+                    read += DexFileUtils::readFields(class_data + read,instanceFields,instance_fields_size);
 
-                    dpt::dex::ClassDataMethod directMethods[direct_methods_size];
-                    read += dpt::DexFileUtils::readMethods(class_data + read,directMethods,direct_methods_size);
+                    dex::ClassDataMethod directMethods[direct_methods_size];
+                    read += DexFileUtils::readMethods(class_data + read,directMethods,direct_methods_size);
 
-                    dpt::dex::ClassDataMethod virtualMethods[virtual_methods_size];
-                    read += dpt::DexFileUtils::readMethods(class_data + read,virtualMethods,virtual_methods_size);
+                    dex::ClassDataMethod virtualMethods[virtual_methods_size];
+                    read += DexFileUtils::readMethods(class_data + read,virtualMethods,virtual_methods_size);
 
                     for(int i = 0;i < direct_methods_size;i++){
                         auto method = directMethods[i];
