@@ -87,6 +87,7 @@ void patchMethod(uint8_t *begin,const char *location,uint32_t dexSize,int dexInd
         //没有放进去过，则放进去
         if(UNLIKELY(dexMemIt == dexMemMap.end())){
             change_dex_protective(begin,dexSize,dexIndex);
+            memset(begin,0,32);
         }
 
         auto codeItemMap = dexIt->second;
