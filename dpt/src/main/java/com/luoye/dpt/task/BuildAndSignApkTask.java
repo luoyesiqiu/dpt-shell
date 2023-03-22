@@ -2,6 +2,7 @@ package com.luoye.dpt.task;
 
 import com.android.apksigner.ApkSignerTool;
 import com.iyxan23.zipalignjava.ZipAlign;
+import com.luoye.dpt.Const;
 import com.luoye.dpt.util.ApkUtils;
 import com.luoye.dpt.util.LogUtils;
 import com.luoye.dpt.util.WindFileUtils;
@@ -34,11 +35,11 @@ public class BuildAndSignApkTask{
         WindFileUtils.compressToZip(unzipApkFilePath, unsignedApkPath);
 
         //将签名文件复制从assets目录下复制出来
-        String keyStoreFilePath = apkLastProcessDir + File.separator + "keystore";
+        String keyStoreFilePath = apkLastProcessDir + File.separator + "debug.keystore";
 
         File keyStoreFile = new File(keyStoreFilePath);
         // assets/keystore分隔符不能使用File.separator，否则在windows上抛出IOException !!!
-        String keyStoreAssetPath = "assets/keystore";
+        String keyStoreAssetPath = "assets/debug.keystore";
 
         WindFileUtils.copyFileFromJar(keyStoreAssetPath, keyStoreFilePath);
 
@@ -82,7 +83,10 @@ public class BuildAndSignApkTask{
     }
 
     private boolean signApk(String apkPath, String keyStorePath, String signedApkPath) {
-        if (signApkUsingAndroidApksigner(apkPath, keyStorePath, signedApkPath, "123456")) {
+        if (signApkUsingAndroidApksigner(apkPath, keyStorePath, signedApkPath,
+                Const.KEY_ALIAS,
+                Const.STORE_PASSWORD,
+                Const.KEY_PASSWORD)) {
             return true;
         }
         return false;
@@ -91,18 +95,21 @@ public class BuildAndSignApkTask{
     /**
      * 使用Android build-tools里自带的apksigner工具进行签名
      */
-    private boolean signApkUsingAndroidApksigner(String apkPath, String keyStorePath, String signedApkPath, String keyStorePassword) {
+    private boolean signApkUsingAndroidApksigner(String apkPath, String keyStorePath, String signedApkPath,
+                                                 String keyAlias,
+                                                 String storePassword,
+                                                 String KeyPassword) {
         ArrayList<String> commandList = new ArrayList<>();
 
         commandList.add("sign");
         commandList.add("--ks");
         commandList.add(keyStorePath);
         commandList.add("--ks-key-alias");
-        commandList.add("key0");
+        commandList.add(keyAlias);
         commandList.add("--ks-pass");
-        commandList.add("pass:" + keyStorePassword);
+        commandList.add("pass:" + storePassword);
         commandList.add("--key-pass");
-        commandList.add("pass:" + keyStorePassword);
+        commandList.add("pass:" + KeyPassword);
         commandList.add("--out");
         commandList.add(signedApkPath);
         commandList.add("--v1-signing-enabled");

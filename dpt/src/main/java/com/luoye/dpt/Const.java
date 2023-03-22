@@ -4,6 +4,9 @@ package com.luoye.dpt;
  * @author luoyesiqiu
  */
 public class Const {
+    public static final String STORE_PASSWORD = "android";
+    public static final String KEY_PASSWORD = "android";
+    public static final String KEY_ALIAS = "androiddebugkey";
 
     public static final String ROOT_OF_OUT_DIR = System.getProperty("java.io.tmpdir");
     public static final String PROXY_APPLICATION_NAME = "com.luoyesiqiu.shell.ProxyApplication";
