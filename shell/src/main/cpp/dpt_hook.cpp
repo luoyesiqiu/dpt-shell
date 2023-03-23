@@ -100,10 +100,10 @@ void patchMethod(uint8_t *begin,const char *location,uint32_t dexSize,int dexInd
 
 #ifdef NOICE_LOG
             char threadName[128] = {0};
-                    getThreadName(threadName);
-                    NLOG("[*] LoadMethod codeItem patch ,thread = %s, methodIndex = %d,insnsSize = %d >>> %p(0x%lx)",
-                         threadName,codeItem->getMethodIdx(), codeItem->getInsnsSize(), realCodeItemPtr,(realCodeItemPtr - begin)
-                        );
+            getThreadName(threadName);
+            NLOG("[*] patchMethod codeItem patch ,thread = %s, methodIndex = %d,insnsSize = %d >>> %p(0x%lx)",
+                 threadName,codeItem->getMethodIdx(), codeItem->getInsnsSize(), realCodeItemPtr,(realCodeItemPtr - begin)
+                );
 
 #endif
             memcpy(realCodeItemPtr,codeItem->getInsns(),codeItem->getInsnsSize());
