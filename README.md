@@ -23,7 +23,7 @@ java -jar dpt.jar /path/to/apk
 ### 手动编译
 
 ```shell
-git clone https://github.com/luoyesiqiu/dpt-shell
+git clone --recursive https://github.com/luoyesiqiu/dpt-shell
 cd dpt-shell
 gradlew dpt:assemble
 gradlew shell:assemble
