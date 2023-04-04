@@ -20,8 +20,8 @@ set(DPT_NATIVE_SOURCE
         )
 
 option(MZ_LZMA "Enables LZMA & XZ compression" OFF)
-option(MZ_LZMA "Enables LZMA & XZ compression" OFF)
 option(MZ_ZSTD "Enables ZSTD compression" OFF)
+cmake_dependent_option(MZ_OPENSSL "Enables OpenSSL for encryption" OFF "UNIX" OFF)
 
 include_directories(./ )
 include_directories(./common)
