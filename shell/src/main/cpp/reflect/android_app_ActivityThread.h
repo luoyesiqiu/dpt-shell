@@ -16,6 +16,7 @@ namespace dpt {
         public:
             android_app_ActivityThread(JNIEnv *env){
                 this->m_env = env;
+                this->m_obj = currentActivityThread();
             }
             jobject currentActivityThread();
             jobject getBoundApplication();
