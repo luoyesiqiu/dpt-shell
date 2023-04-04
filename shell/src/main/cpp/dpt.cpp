@@ -378,11 +378,11 @@ static void extractDexes(){
 void init_app(JNIEnv *env, jclass klass, jobject context, jobject classLoader) {
     DLOGD("init_app!");
     clock_t start = clock();
+
+    loadApk(env);
+    extractDexes();
+
     if (nullptr == context) {
-
-        loadApk(env);
-        extractDexes();
-
         int64_t entry_size;
         if(codeItemFilePtr == nullptr) {
             codeItemFilePtr = read_zip_file_entry(zip_addr,zip_size,CODE_ITEM_NAME_IN_ZIP,&entry_size);
@@ -390,10 +390,6 @@ void init_app(JNIEnv *env, jclass klass, jobject context, jobject classLoader) {
         readCodeItem(env, klass,(uint8_t*)codeItemFilePtr,entry_size);
 
     } else {
-        loadApk(env);
-
-        extractDexes();
-
         AAsset *aAsset = getAsset(env, context, CODE_ITEM_NAME_IN_ASSETS);
         if (aAsset != nullptr) {
             int len = AAsset_getLength(aAsset);
