@@ -18,7 +18,7 @@ namespace dpt {
         }
 
         jobject android_app_ActivityThread::getBoundApplication() {
-            jobject boundApplication = jni::GetObjectField(m_env,currentActivityThread(),&bound_application_field);
+            jobject boundApplication = jni::GetObjectField(m_env,m_obj,&bound_application_field);
             return boundApplication;
         }
 
