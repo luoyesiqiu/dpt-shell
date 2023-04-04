@@ -1,0 +1,3 @@
+[submodule "shell/src/main/cpp/minizip-ng"]
+	path = shell/src/main/cpp/minizip-ng
+	url = https://github.com/zlib-ng/minizip-ng
