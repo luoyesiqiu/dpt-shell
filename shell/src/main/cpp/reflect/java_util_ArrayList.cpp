@@ -18,7 +18,7 @@ namespace dpt {
         }
 
         void ArrayList::add(int i, jobject obj) {
-            jni::CallVoidMethod(m_env, m_obj, "add", "(ILjava/lang/Object;)Z", i, obj);
+            jni::CallVoidMethod(m_env, m_obj, "add", "(ILjava/lang/Object;)V", i, obj);
         }
     }
 }
