@@ -19,6 +19,10 @@ set(DPT_NATIVE_SOURCE
         reflect/android_app_Application.cpp
         )
 
+option(MZ_LZMA "Enables LZMA & XZ compression" OFF)
+option(MZ_LZMA "Enables LZMA & XZ compression" OFF)
+option(MZ_ZSTD "Enables ZSTD compression" OFF)
+
 include_directories(./ )
 include_directories(./common)
 include_directories(./bhook/include)
