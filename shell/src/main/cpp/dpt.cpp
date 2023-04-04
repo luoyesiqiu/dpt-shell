@@ -28,59 +28,26 @@ static JNINativeMethod gMethods[] = {
 };
 
 void mergeDexElements(JNIEnv* env,jclass klass,jobject oldClassLoader,jobject newClassLoader){
-    jclass BaseDexClassLoaderClass = env->FindClass("dalvik/system/BaseDexClassLoader");
-    jfieldID  pathList = env->GetFieldID(BaseDexClassLoaderClass,"pathList","Ldalvik/system/DexPathList;");
-    jobject oldDexPathListObj = env->GetObjectField(oldClassLoader,pathList);
-    if(env->ExceptionCheck() || nullptr == oldDexPathListObj ){
-        env->ExceptionClear();
-        W_DeleteLocalRef(env,BaseDexClassLoaderClass);
-        DLOGW("mergeDexElements oldDexPathListObj get fail");
-        return;
-    }
-    jobject newDexPathListObj = env->GetObjectField(newClassLoader,pathList);
-    if(env->ExceptionCheck() || nullptr == newDexPathListObj){
-        env->ExceptionClear();
-        W_DeleteLocalRef(env,BaseDexClassLoaderClass);
-        W_DeleteLocalRef(env,oldDexPathListObj);
-        DLOGW("mergeDexElements newDexPathListObj get fail");
-        return;
-    }
+    dalvik_system_BaseDexClassLoader oldBaseDexClassLoader(env,oldClassLoader);
+    dalvik_system_BaseDexClassLoader newBaseDexClassLoader(env,newClassLoader);
+    jobject oldDexPathListObj = oldBaseDexClassLoader.getPathList();
+    jobject newDexPathListObj = newBaseDexClassLoader.getPathList();
 
-    jclass DexPathListClass = env->FindClass("dalvik/system/DexPathList");
-    jfieldID  dexElementField = env->GetFieldID(DexPathListClass,"dexElements","[Ldalvik/system/DexPathList$Element;");
+    dalvik_system_DexPathList newDexPathList(env,newDexPathListObj);
+    dalvik_system_DexPathList oldDexPathList(env,oldDexPathListObj);
 
+    jobjectArray newClassLoaderDexElements = newDexPathList.getDexElements();
 
-    jobjectArray newClassLoaderDexElements = static_cast<jobjectArray>(env->GetObjectField(
-            newDexPathListObj, dexElementField));
-    if(env->ExceptionCheck() || nullptr == newClassLoaderDexElements){
-        env->ExceptionClear();
-        W_DeleteLocalRef(env,BaseDexClassLoaderClass);
-        W_DeleteLocalRef(env,oldDexPathListObj);
-        W_DeleteLocalRef(env,newDexPathListObj);
-        W_DeleteLocalRef(env,DexPathListClass);
-        DLOGW("mergeDexElements new dexElements get fail");
-        return;
-    }
-
-    jobjectArray oldClassLoaderDexElements = static_cast<jobjectArray>(env->GetObjectField(
-            oldDexPathListObj, dexElementField));
-    if(env->ExceptionCheck() || nullptr == oldClassLoaderDexElements){
-        env->ExceptionClear();
-        W_DeleteLocalRef(env,BaseDexClassLoaderClass);
-        W_DeleteLocalRef(env,oldDexPathListObj);
-        W_DeleteLocalRef(env,newDexPathListObj);
-        W_DeleteLocalRef(env,DexPathListClass);
-        W_DeleteLocalRef(env,newClassLoaderDexElements);
-        DLOGW("mergeDexElements old dexElements get fail");
-        return;
-    }
+    jobjectArray oldClassLoaderDexElements = oldDexPathList.getDexElements();
 
     jint oldLen = env->GetArrayLength(oldClassLoaderDexElements);
     jint newLen = env->GetArrayLength(newClassLoaderDexElements);
 
     DLOGD("mergeDexElements oldlen = %d , newlen = %d",oldLen,newLen);
 
-    jclass ElementClass = env->FindClass("dalvik/system/DexPathList$Element");
+    dalvik_system_DexPathList::Element element(env,nullptr);
+
+    jclass ElementClass = element.getClass();
 
     jobjectArray  newElementArray = env->NewObjectArray(oldLen + newLen,ElementClass, nullptr);
 
@@ -89,59 +56,38 @@ void mergeDexElements(JNIEnv* env,jclass klass,jobject oldClassLoader,jobject ne
         env->SetObjectArrayElement(newElementArray,i,elementObj);
     }
 
-
     for(int i = newLen;i < oldLen + newLen;i++) {
         jobject elementObj = env->GetObjectArrayElement(oldClassLoaderDexElements, i - newLen);
         env->SetObjectArrayElement(newElementArray,i,elementObj);
     }
 
-    env->SetObjectField(oldDexPathListObj, dexElementField,newElementArray);
+    oldDexPathList.setDexElements(newElementArray);
 
     DLOGD("mergeDexElements success");
 }
 
 void removeDexElements(JNIEnv* env,jclass klass,jobject classLoader,jstring elementName){
-    jclass BaseDexClassLoaderClass = env->FindClass("dalvik/system/BaseDexClassLoader");
-    jfieldID  pathListFieldId = env->GetFieldID(BaseDexClassLoaderClass,"pathList","Ldalvik/system/DexPathList;");
-    jobject oldDexPathListObj = env->GetObjectField(classLoader,pathListFieldId);
-    if(env->ExceptionCheck() || nullptr == oldDexPathListObj ){
-        env->ExceptionClear();
-        W_DeleteLocalRef(env,BaseDexClassLoaderClass);
-        DLOGW("removeDexElements oldDexPathListObj get fail");
-        return;
-    }
+    dalvik_system_BaseDexClassLoader oldBaseDexClassLoader(env,classLoader);
 
-    jclass DexPathListClass = env->FindClass("dalvik/system/DexPathList");
-    jfieldID  dexElementField = env->GetFieldID(DexPathListClass,"dexElements","[Ldalvik/system/DexPathList$Element;");
+    jobject dexPathListObj = oldBaseDexClassLoader.getPathList();
 
+    dalvik_system_DexPathList dexPathList(env,dexPathListObj);
 
-    jobjectArray oldClassLoaderDexElements = static_cast<jobjectArray>(env->GetObjectField(
-            oldDexPathListObj, dexElementField));
-    if(env->ExceptionCheck() || nullptr == oldClassLoaderDexElements){
-        env->ExceptionClear();
-        W_DeleteLocalRef(env,BaseDexClassLoaderClass);
-        W_DeleteLocalRef(env,oldDexPathListObj);
-        W_DeleteLocalRef(env,DexPathListClass);
-        DLOGW("removeDexElements old dexElements get fail");
-        return;
-    }
+    jobjectArray dexElements = dexPathList.getDexElements();
 
-    jclass ElementClass = env->FindClass("dalvik/system/DexPathList$Element");
+    jint oldLen = env->GetArrayLength(dexElements);
 
-    jint oldLen = env->GetArrayLength(oldClassLoaderDexElements);
-
-    jfieldID pathFieldId = env->GetFieldID(ElementClass, "path", "Ljava/io/File;");
-
-    jclass FileClass = env->FindClass("java/io/File");
-    jmethodID getNameMethodId = env->GetMethodID(FileClass, "getName",
-                                                 "()Ljava/lang/String;");
     jint newLen = oldLen;
     const char *removeElementNameChs = env->GetStringUTFChars(elementName,nullptr);
+
     //推导需要移除的项
     for(int i = 0;i < oldLen;i++) {
-        jobject elementObj = env->GetObjectArrayElement(oldClassLoaderDexElements, i);
-        jobject fileObj = env->GetObjectField(elementObj,pathFieldId);
-        jstring fileName = (jstring)env->CallObjectMethod(fileObj,getNameMethodId);
+        jobject elementObj = env->GetObjectArrayElement(dexElements, i);
+
+        dalvik_system_DexPathList::Element element(env,elementObj);
+        jobject fileObj = element.getPath();
+        java_io_File javaIoFile(env,fileObj);
+        jstring fileName = javaIoFile.getName();
         const char* fileNameChs = env->GetStringUTFChars(fileName,nullptr);
         DLOGD("removeDexElements[%d] old path = %s",i,fileNameChs);
 
@@ -151,6 +97,8 @@ void removeDexElements(JNIEnv* env,jclass klass,jobject classLoader,jstring elem
         env->ReleaseStringUTFChars(fileName,fileNameChs);
     }
 
+    dalvik_system_DexPathList::Element arrayElement(env, nullptr);
+    jclass ElementClass = arrayElement.getClass();
     jobjectArray newElementArray = env->NewObjectArray(newLen,ElementClass,nullptr);
 
     DLOGD("removeDexElements oldlen = %d , newlen = %d",oldLen,newLen);
@@ -158,9 +106,12 @@ void removeDexElements(JNIEnv* env,jclass klass,jobject classLoader,jstring elem
     jint newArrayIndex = 0;
     //填充新数组
     for(int i = 0;i < oldLen;i++) {
-        jobject elementObj = env->GetObjectArrayElement(oldClassLoaderDexElements, i);
-        jobject fileObj = env->GetObjectField(elementObj,pathFieldId);
-        jstring fileName = (jstring)env->CallObjectMethod(fileObj,getNameMethodId);
+        jobject elementObj = env->GetObjectArrayElement(dexElements, i);
+
+        dalvik_system_DexPathList::Element element(env,elementObj);
+        jobject fileObj = element.getPath();
+        java_io_File javaIoFile(env,fileObj);
+        jstring fileName = javaIoFile.getName();
         const char* fileNameChs = env->GetStringUTFChars(fileName,nullptr);
         DLOGD("removeDexElements[%d] old path = %s",i,fileNameChs);
 
@@ -173,8 +124,7 @@ void removeDexElements(JNIEnv* env,jclass klass,jobject classLoader,jstring elem
         env->SetObjectArrayElement(newElementArray,newArrayIndex++,elementObj);
     }
 
-    env->SetObjectField(oldDexPathListObj, dexElementField,newElementArray);
-
+    dexPathList.setDexElements(newElementArray);
     DLOGD("removeDexElements success");
 }
 
@@ -243,42 +193,22 @@ jobject getApplicationInstance(JNIEnv *env, const char *applicationClassName) {
     return g_realApplicationInstance;
 }
 
-//
-// 调用原始apk Application类的onCreate方法
-//
 void callRealApplicationOnCreate(JNIEnv *env, jclass, jstring realApplicationClassName) {
     const char *applicationClassName = env->GetStringUTFChars(realApplicationClassName, nullptr);
 
     char *appNameChs = static_cast<char *>(calloc(strlen(applicationClassName) + 1, 1));
     parseClassName(applicationClassName, appNameChs);
 
-    jobject appInstance = getApplicationInstance(env, appNameChs);
-    if (appInstance == nullptr) {
-        DLOGW("callRealApplicationOnCreate getApplicationInstance fail!");
-        env->ReleaseStringUTFChars(realApplicationClassName, applicationClassName);
-        free(appNameChs);
-        return;
-    }
     DLOGD("callRealApplicationOnCreate className %s -> %s", applicationClassName, appNameChs);
-    jclass appClass = getRealApplicationClass(env, appNameChs);
-    jmethodID onCreate = env->GetMethodID(appClass, "onCreate", "()V");
-    env->CallVoidMethod(appInstance, onCreate);
-    if (env->ExceptionCheck()) {
-        env->ExceptionClear();
-        DLOGW("callRealApplicationOnCreate occur exception!");
-        env->ReleaseStringUTFChars(realApplicationClassName, applicationClassName);
-        free(appNameChs);
-        return;
-    }
-    DLOGW("callRealApplicationOnCreate success!");
-    env->ReleaseStringUTFChars(realApplicationClassName, applicationClassName);
+
+    android_app_Application application(env,appNameChs);
+    application.onCreate();
+
+    DLOGD("callRealApplicationOnCreate call success!");
 
     free(appNameChs);
 }
 
-//
-// 调用原始apk Application类的attach方法
-//
 void callRealApplicationAttach(JNIEnv *env, jclass, jobject context,
                                          jstring realApplicationClassName) {
     const char *applicationClassName = env->GetStringUTFChars(realApplicationClassName, nullptr);
@@ -286,33 +216,14 @@ void callRealApplicationAttach(JNIEnv *env, jclass, jobject context,
     parseClassName(applicationClassName, appNameChs);
     DLOGD("callRealApplicationAttach className %s -> %s", applicationClassName, appNameChs);
 
-    jclass appClass = getRealApplicationClass(env, appNameChs);
-    jmethodID attachBaseContextMethod = env->GetMethodID(appClass, "attach",
-                                                         "(Landroid/content/Context;)V");
+    android_app_Application application(env,appNameChs);
+    application.attach(context);
 
-    jobject realAppInstance = getApplicationInstance(env, applicationClassName);
-    if (realAppInstance == nullptr) {
-        DLOGW("callRealApplicationAttach getApplicationInstance fail!");
-
-        env->ReleaseStringUTFChars(realApplicationClassName, applicationClassName);
-        free(appNameChs);
-        return;
-    }
-    env->CallVoidMethod(realAppInstance, attachBaseContextMethod, context);
-    if (env->ExceptionCheck()) {
-        env->ExceptionClear();
-        DLOGW("callRealApplicationAttach occur exception!");
-        env->ReleaseStringUTFChars(realApplicationClassName, applicationClassName);
-        free(appNameChs);
-        return;
-    }
-    DLOGD("callRealApplicationAttach success!");
-
+    DLOGD("callRealApplicationAttach call success!");
 
     env->ReleaseStringUTFChars(realApplicationClassName, applicationClassName);
 
     free(appNameChs);
-
 }
 
 void replaceApplication(JNIEnv *env, jclass klass, jstring realApplicationClassName){
@@ -357,13 +268,12 @@ void replaceApplicationOnActivityThread(JNIEnv *env,jclass klass, jobject realAp
 }
 
 void replaceApplicationOnLoadedApk(JNIEnv *env, jclass klass,jobject proxyApplication, jobject realApplication) {
-    jobject ActivityThreadObj = getActivityThreadInstance(env);
-    jclass ActivityThreadClass = env->GetObjectClass(ActivityThreadObj);
+    android_app_ActivityThread activityThread(env);
 
-    jfieldID mBoundApplicationField = env->GetFieldID(ActivityThreadClass,
+    jfieldID mBoundApplicationField = env->GetFieldID(activityThread.getClass(),
                                                       "mBoundApplication",
                                                       "Landroid/app/ActivityThread$AppBindData;");
-    jobject mBoundApplicationObj = env->GetObjectField(ActivityThreadObj,mBoundApplicationField);
+    jobject mBoundApplicationObj = env->GetObjectField(activityThread.currentActivityThread(),mBoundApplicationField);
 
     jclass AppBindDataClass = env->GetObjectClass(mBoundApplicationObj);
 
@@ -382,11 +292,11 @@ void replaceApplicationOnLoadedApk(JNIEnv *env, jclass klass,jobject proxyApplic
     //make it null
     env->SetObjectField(loadedApkObj,mApplicationField,nullptr);
 
-    jfieldID mAllApplicationsField = env->GetFieldID(ActivityThreadClass,
+    jfieldID mAllApplicationsField = env->GetFieldID(activityThread.getClass(),
                                                     "mAllApplications",
                                                     "Ljava/util/ArrayList;");
 
-    jobject mAllApplicationsObj = env->GetObjectField(ActivityThreadObj,mAllApplicationsField);
+    jobject mAllApplicationsObj = env->GetObjectField(activityThread.currentActivityThread(),mAllApplicationsField);
 
     jclass ArrayListClass = env->GetObjectClass(mAllApplicationsObj);
 

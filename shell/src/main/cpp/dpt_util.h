@@ -23,7 +23,9 @@
 #include <sys/prctl.h>
 #include "common/dpt_log.h"
 #include "common/dpt_macro.h"
-#include "JniWrapper.h"
+#include "dpt_jni.h"
+#include "reflect/android_app_ActivityThread.h"
+#include "reflect/android_content_pm_ApplicationInfo.h"
 
 static AAssetManager *g_AssetMgrInstance = nullptr;
 static jclass g_ContextClass = nullptr;
@@ -44,7 +46,6 @@ void *read_zip_file_entry(void* zip_addr,off_t zip_size,const char* entry_name,i
 int find_in_maps(const char* find_name,pointer_t *start,pointer_t *end,char *full_path);
 const char* find_symbol_in_elf_file(const char *elf_file,int keyword_count,...);
 void readPackageName(char *packageName,size_t max_len);
-jobject getActivityThreadInstance(JNIEnv *env);
 void getClassName(JNIEnv *env,jobject obj,char *destClassName);
 void parseClassName(const char *src, char *dest);
 void printTime(const char* msg,clock_t start);

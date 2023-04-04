@@ -21,6 +21,8 @@
 #define Elf_Off  Elf32_Off
 #endif
 
+using namespace dpt;
+
 /**
  * location中提取dex的索引
  * 比如：base.apk!classes2.dex会转成1
@@ -95,24 +97,6 @@ void readPackageName(char *packageName,size_t max_len){
 
 }
 
-jobject getActivityThreadInstance(JNIEnv *env) {
-    jclass ActivityThreadClass = env->FindClass("android/app/ActivityThread");
-
-    jmethodID currentActivityThread = env->GetStaticMethodID(ActivityThreadClass,
-                                                             "currentActivityThread",
-                                                             "()Landroid/app/ActivityThread;");
-    jobject activityThreadInstance = env->CallStaticObjectMethod(ActivityThreadClass,
-                                                                 currentActivityThread);
-    if (env->ExceptionCheck() || nullptr == activityThreadInstance) {
-        env->ExceptionClear();
-        W_DeleteLocalRef(env, ActivityThreadClass);
-        DLOGW("currentActivityThread call fail.");
-        return nullptr;
-    }
-
-    return activityThreadInstance;
-}
-
 jclass getContextClass(JNIEnv *env) {
     if (g_ContextClass == nullptr) {
         jclass ContextClass = env->FindClass("android/content/Context");
@@ -146,29 +130,18 @@ AAsset *getAsset(JNIEnv *env, jobject context, const char *filename) {
 }
 
 void getApkPath(JNIEnv *env,char *apkPathOut,size_t max_out_len){
-    jobject sActivityThreadObj = getActivityThreadInstance(env);
+    reflect::android_app_ActivityThread activityThread(env);
+    jobject mBoundApplicationObj = activityThread.getBoundApplication();
 
-    jclass ActivityThreadClass = env->GetObjectClass(sActivityThreadObj);
+    reflect::android_app_ActivityThread::AppBindData appBindData(env,mBoundApplicationObj);
+    jobject appInfoObj = appBindData.getAppInfo();
 
-    jfieldID mBoundApplicationField = env->GetFieldID(ActivityThreadClass,
-                                                      "mBoundApplication",
-                                                      "Landroid/app/ActivityThread$AppBindData;");
-    jobject mBoundApplicationObj = env->GetObjectField(sActivityThreadObj,mBoundApplicationField);
-
-    jclass AppBindDataClass = env->GetObjectClass(mBoundApplicationObj);
-
-    jfieldID appInfoField = env->GetFieldID(AppBindDataClass,"appInfo","Landroid/content/pm/ApplicationInfo;");
-
-    jobject appInfoObj = env->GetObjectField(mBoundApplicationObj,appInfoField);
-
-    jclass ApplicationInfoClass = env->GetObjectClass(appInfoObj);
-
-    jfieldID sourceDirField = env->GetFieldID(ApplicationInfoClass,"sourceDir","Ljava/lang/String;");
-
-    jstring sourceDir = (jstring)env->GetObjectField(appInfoObj,sourceDirField);
+    reflect::android_content_pm_ApplicationInfo applicationInfo(env,appInfoObj);
+    auto sourceDir = applicationInfo.getSourceDir();
 
     const char *sourceDirChs = env->GetStringUTFChars(sourceDir,nullptr);
     strncpy(apkPathOut,sourceDirChs,max_out_len);
+
     DLOGD("getApkPath: %s",apkPathOut);
 }
 
@@ -189,29 +162,6 @@ jstring getCompressedDexesPathExport(JNIEnv *env,jclass klass){
     char dexesPath[256] = {0};
     getCompressedDexesPath(dexesPath,256);
     return env->NewStringUTF(dexesPath);
-}
-
-int endWith(const char *str,const char* sub){
-    if(NULL == str  || NULL == sub){
-        return -1;
-    }
-    size_t target_len = strlen(str);
-    size_t sub_len = strlen(sub);
-
-    if(target_len < sub_len){
-        return -1;
-    }
-
-    int count = 0;
-    for(int i = 0; i < sub_len;i++){
-        char s_tail = *((str + target_len) - i - 1);
-        char sub_tail = *((sub + sub_len) - i - 1);
-        if(s_tail == sub_tail){
-            count++;
-        }
-    }
-
-    return count == sub_len ? 0 : -1;
 }
 
 void load_zip(const char* zip_file_path,void **zip_addr,off_t *zip_size){
