@@ -7,9 +7,16 @@ set(DPT_NATIVE_SOURCE
         dpt_hook.cpp
         dex/MultiDexCode.cpp
         dex/CodeItem.cpp
-        JniWrapper.cpp
+        dpt_jni.cpp
         dpt_util.cpp
         dex/dex_file.cpp
+        reflect/dalvik_system_BaseDexClassLoader.cpp
+        reflect/dalvik_system_DexPathList.cpp
+        reflect/java_io_File.cpp
+        reflect/java_util_ArrayList.cpp
+        reflect/android_app_ActivityThread.cpp
+        reflect/android_content_pm_ApplicationInfo.cpp
+        reflect/android_app_Application.cpp
         )
 
 include_directories(./ )

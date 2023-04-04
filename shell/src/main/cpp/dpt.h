@@ -19,8 +19,13 @@
 #include "common/dpt_log.h"
 #include "dpt_hook.h"
 #include "dex/MultiDexCode.h"
-#include "JniWrapper.h"
+#include "dpt_jni.h"
 #include "dpt_util.h"
+#include "reflect/dalvik_system_BaseDexClassLoader.h"
+#include "reflect/dalvik_system_DexPathList.h"
+#include "reflect/java_io_File.h"
+#include "reflect/android_app_Application.h"
+
 void callRealApplicationOnCreate(JNIEnv *env, jclass, jstring realApplicationClassName);
 
 void callRealApplicationAttach(JNIEnv *env, jclass, jobject context,
