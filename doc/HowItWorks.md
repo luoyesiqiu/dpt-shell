@@ -231,15 +231,15 @@ shell模块是函数抽取壳的主要逻辑，它的功能我们上面已经讲
 
 ### (1) Hook函数
 
-Hook函数时机最好要早点，dpt在`_init`函数中开始进行一系列HOOK
+Hook函数时机最好要早点，dpt在`.init_array`节被加载时开始进行一系列Hook
 
 ```cpp
-extern "C" void _init(void) {
+__attribute__ ((constructor)) void init_dpt() {
     dpt_hook();
 }
 ```
 
-Hook框架使用的[Dobby](https://github.com/jmpews/Dobby)和[bhook](https://github.com/bytedance/bhook)，主要Hook两个函数：mmap和LoadMethod。
+Hook框架使用的[Dobby](https://github.com/jmpews/Dobby)和[bhook](https://github.com/bytedance/bhook)，主要Hook两个函数：mmap和DefineClass。
 
 #### **mmap**
 
@@ -276,129 +276,127 @@ void* fake_mmap(void* __addr, size_t __size, int __prot, int __flags, int __fd, 
 }
 ```
 
-#### **LoadMethod**
+#### **DefineClass**
 
-在Hook LoadMethod函数之前，我们需要了解LoadMethod函数流程。为什么是这个LoadMethod函数，其他函数是否可行？
+在Hook DefineClass函数之前，我们需要了解DefineClass函数流程。为什么是DefineClass函数，其他函数是否可行？
 
-当一个类被加载的时候，它的调用链是这样的(部分流程已省略)：
+当一个类被加载的时候，它的调用顺序是这样的(部分流程已省略)：
 
-```
-ClassLoader.java::loadClass -> DexPathList.java::findClass -> DexFile.java::defineClass -> class_linker.cc::LoadClass -> class_linker.cc::LoadClassMembers -> class_linker.cc::LoadMethod
-```
+1. ClassLoader.java::loadClass 
+2. DexFile.java::defineClass 
+3. class_linker.cc::DefineClass 
+4. class_linker.cc::LoadClass 
+5. class_linker.cc::LoadClassMembers 
+6. class_linker.cc::LoadMethod
 
-也就是说，当一个类被加载，它是会去调用LoadMethod函数的，我们看一下它的函数原型：
-
-```cpp
-void ClassLinker::LoadMethod(const DexFile& dex_file,
-                             const ClassDataItemIterator& it,
-                             Handle<mirror::Class> klass,
-                             ArtMethod* dst);
-```
-
-这个函数太爆炸了，它有两个爆炸性的参数，DexFile和ClassDataItemIterator，我们可以从这个函数得到当前加载函数所在的DexFile结构和当前函数的一些信息，可以看一下ClassDataItemIterator结构：
+也就是说，当一个类被加载，它是会去调用DefineClass函数的，我们看一下它的函数原型：
 
 ```cpp
-  class ClassDataItemIterator{
-  
-  ......
-  
-  // A decoded version of the method of a class_data_item
-  struct ClassDataMethod {
-    uint32_t method_idx_delta_;  // delta of index into the method_ids array for MethodId
+mirror::Class* ClassLinker::DefineClass(Thread* self,
+                                        const char* descriptor,
+                                        size_t hash,
+                                        Handle<mirror::ClassLoader> class_loader,
+                                        const DexFile& dex_file,
+                                        const DexFile::ClassDef& dex_class_def);
+```
+
+DefineClass函数的参数很巧，有DexFile结构，还有ClassDef结构，我们通过Hook这个函数就知道以下信息：
+- 加载的类来自哪个dex文件
+- 加载类的数据的偏移
+
+第一条可以帮助我们大致定位到存储的CodeItem的位置；第二条可以帮助我们找到CodeItem具体存储的位置以及填充到的位置。
+
+来看一下ClassDef的定义：
+
+```cpp
+struct ClassDef {
+    uint32_t class_idx_;  // index into type_ids_ array for this class
     uint32_t access_flags_;
-    uint32_t code_off_;
-    ClassDataMethod() : method_idx_delta_(0), access_flags_(0), code_off_(0) {}
-
-   private:
-    DISALLOW_COPY_AND_ASSIGN(ClassDataMethod);
-  };
-  ClassDataMethod method_;
-
-  // Read and decode a method from a class_data_item stream into method
-  void ReadClassDataMethod();
-
-  const DexFile& dex_file_;
-  size_t pos_;  // integral number of items passed
-  const uint8_t* ptr_pos_;  // pointer into stream of class_data_item
-  uint32_t last_idx_;  // last read field or method index to apply delta to
-  DISALLOW_IMPLICIT_CONSTRUCTORS(ClassDataItemIterator);
+    uint32_t superclass_idx_;  // index into type_ids_ array for superclass
+    uint32_t interfaces_off_;  // file offset to TypeList
+    uint32_t source_file_idx_;  // index into string_ids_ for source file name
+    uint32_t annotations_off_;  // file offset to annotations_directory_item
+    uint32_t class_data_off_;  // file offset to class_data_item
+    uint32_t static_values_off_;  // file offset to EncodedArray
 };
 ```
 
-其中最重要的字段就是`code_off_`它的值是当前加载的函数的CodeItem相对于DexFile的偏移，当相应的函数被加载，我们就可以直接访问到它的CodeItem。其他函数是否也可以？在上面的流程中没有比LoadMethod更适合我们Hook的函数，所以它是相对较好的填充点。
+其中最重要的字段就是`class_data_off_`它的值是当前加载的类的具体数据在dex文件中的偏移，通过这个字段就可以顺藤摸瓜定位到当前加载类的所有函数的在内存中CodeItem的具体位置。
 
-Hook LoadMethod稍微复杂一些，倒不是Hook代码复杂，而是Hook触发后处理的代码比较复杂，我们要适配多个Android版本，每个版本LoadMethod函数的参数都可能有改变，幸运的是，LoadMethod改动也不是很大。那么，我们如何读取ClassDataItemIterator类中的`code_off_`呢？比较直接的做法是计算偏移，然后在代码中维护一份偏移。不过这样的做法不易阅读很容易出错。dpt的做法是把ClassDataItemIterator类拷过来，然后将ClassDataItemIterator引用直接转换为我们自定义的ClassDataItemIterator引用，这样就可以方便的读取字段的值。
-
-下面是LoadMethod被调用后做的操作，逻辑是读取存在map中的insns，然后将它们填回指定位置。
+代码如下：
 
 ```cpp
-void LoadMethod(void *thiz, void *self, const void *dex_file, const void *it, const void *method,
-                void *klass, void *dst) {
+void* DefineClass(void* thiz,void* self,
+                 const char* descriptor,
+                 size_t hash,
+                 void* class_loader,
+                 const void* dex_file,
+                 const void* dex_class_def) {
 
-    if (g_originLoadMethod25 != nullptr
-        || g_originLoadMethod28 != nullptr
-        || g_originLoadMethod29 != nullptr) {
-        uint32_t location_offset = getDexFileLocationOffset();
-        uint32_t begin_offset = getDataItemCodeItemOffset();
-        callOriginLoadMethod(thiz, self, dex_file, it, method, klass, dst);
+    ......
 
-        ClassDataItemReader *classDataItemReader = getClassDataItemReader(it,method);
+    auto* class_def = (dex::ClassDef *)dex_class_def;
 
+    size_t read = 0;
+    auto *class_data = (uint8_t *)((uint8_t *)begin + class_def->class_data_off_);
 
-        uint8_t **begin_ptr = (uint8_t **) ((uint8_t *) dex_file + begin_offset);
-        uint8_t *begin = *begin_ptr;
-        // vtable(4|8) + prev_fields_size
-        std::string *location = (reinterpret_cast<std::string *>((uint8_t *) dex_file +
-                                                                 location_offset));
-        if (location->find("base.apk") != std::string::npos) {
+    uint64_t static_fields_size = 0;
+    read += DexFileUtils::readUleb128(class_data, &static_fields_size);
 
-            //code_item_offset == 0说明是native方法或者没有代码
-            if (classDataItemReader->GetMethodCodeItemOffset() == 0) {
-                DLOGW("native method? = %s code_item_offset = 0x%x",
-                      classDataItemReader->MemberIsNative() ? "true" : "false",
-                      classDataItemReader->GetMethodCodeItemOffset());
-                return;
-            }
+    uint64_t instance_fields_size = 0;
+    read += DexFileUtils::readUleb128(class_data + read, &instance_fields_size);
 
-            uint16_t firstDvmCode = *((uint16_t*)(begin + classDataItemReader->GetMethodCodeItemOffset() + 16));
-            if(firstDvmCode != 0x0012 && firstDvmCode != 0x0016 && firstDvmCode != 0x000e){
-                NLOG("this method has code no need to patch");
-                return;
-            }
+    uint64_t direct_methods_size = 0;
+    read += DexFileUtils::readUleb128(class_data + read, &direct_methods_size);
 
-            uint32_t dexSize = *((uint32_t*)(begin + 0x20));
+    uint64_t virtual_methods_size = 0;
+    read += DexFileUtils::readUleb128(class_data + read, &virtual_methods_size);
 
-            int dexIndex = dexNumber(location);
-            auto dexIt = dexMap.find(dexIndex - 1);
-            if (dexIt != dexMap.end()) {
+    dex::ClassDataField staticFields[static_fields_size];
+    read += DexFileUtils::readFields(class_data + read,staticFields,static_fields_size);
 
-                auto dexMemIt = dexMemMap.find(dexIndex);
-                if(dexMemIt == dexMemMap.end()){
-                    changeDexProtect(begin,location->c_str(),dexSize,dexIndex);
-                }
+    dex::ClassDataField instanceFields[instance_fields_size];
+    read += DexFileUtils::readFields(class_data + read,instanceFields,instance_fields_size);
 
+    dex::ClassDataMethod directMethods[direct_methods_size];
+    read += DexFileUtils::readMethods(class_data + read,directMethods,direct_methods_size);
 
-                auto codeItemMap = dexIt->second;
-                int methodIdx = classDataItemReader->GetMemberIndex();
-                auto codeItemIt = codeItemMap->find(methodIdx);
+    dex::ClassDataMethod virtualMethods[virtual_methods_size];
+    read += DexFileUtils::readMethods(class_data + read,virtualMethods,virtual_methods_size);
 
-                if (codeItemIt != codeItemMap->end()) {
-                    CodeItem* codeItem = codeItemIt->second;
-                    uint8_t  *realCodeItemPtr = (uint8_t*)(begin +
-                                                classDataItemReader->GetMethodCodeItemOffset() +
-                                                16);
-
-                    memcpy(realCodeItemPtr,codeItem->getInsns(),codeItem->getInsnsSize());
-                }
-            }
-        }
+    for(int i = 0;i < direct_methods_size;i++){
+        auto method = directMethods[i];
+        patchMethod(begin, location.c_str(), dexSize, dexIndex, method.method_idx_delta_,method.code_off_);
     }
+
+    for(int i = 0;i < virtual_methods_size;i++){
+        auto method = virtualMethods[i];
+        patchMethod(begin, location.c_str(), dexSize, dexIndex, method.method_idx_delta_,method.code_off_);
+    }
+
+    ......
 }
 ```
 
+ClassDef这个结构还有一个特点，它是dex文件的结构，也就是说dex文件格式不变，它一般就不会变。
+
+还有，DefineClass函数的参数会改变吗？目前来看从Android M到现在没有变过。
+
+所以使用它不用太担心随着Android版本的升级而导致字段偏移的变化，也就是兼容性较强。
+
+这就是为什么用DefineClass作为Hook点。
+
+**Hook其他函数是否可行？**
+
+答案是肯定的，dpt之前就是使用的LoadMethod函数作为Hook点，在LoadMethod函数里面做CodeItem填充操作。
+
+但是后来发现，LoadMethod函数参数不太固定，随着Android版本的升级可能要不断适配，而且每个函数都要填充，会影响一定的性能。
+
 ### (2) 加载dex
 
-所有apk中的dex在处理阶段把它放到了单独的zip文件中，不存在apk中了，所以启动时不会被主动系统加载。而且系统加载的dex是以只读方式加载的，我们没办法去修改dex那一部分的内存，所以我们要手动加载apk中的dex文件。
+所有apk中的dex在处理阶段dpt都把它们放到了单独的zip文件中，不存在apk中了，所以App启动时要手动加载。
+
+系统加载的dex是以只读方式加载的，我们没办法去修改dex那一部分的内存，所以我们要手动加载apk中的dex文件。
 
 ```java
     private ClassLoader loadDex(Context context){
@@ -438,13 +436,11 @@ void mergeDexElements(JNIEnv* env,jclass klass,jobject oldClassLoader,jobject ne
     jobject oldDexPathListObj = env->GetObjectField(oldClassLoader,pathList);
     if(env->ExceptionCheck() || nullptr == oldDexPathListObj ){
         env->ExceptionClear();
-        DLOGW("mergeDexElements oldDexPathListObj get fail");
         return;
     }
     jobject newDexPathListObj = env->GetObjectField(newClassLoader,pathList);
     if(env->ExceptionCheck() || nullptr == newDexPathListObj){
         env->ExceptionClear();
-        DLOGW("mergeDexElements newDexPathListObj get fail");
         return;
     }
 
@@ -456,7 +452,6 @@ void mergeDexElements(JNIEnv* env,jclass klass,jobject oldClassLoader,jobject ne
             newDexPathListObj, dexElementField));
     if(env->ExceptionCheck() || nullptr == newClassLoaderDexElements){
         env->ExceptionClear();
-        DLOGW("mergeDexElements new dexElements get fail");
         return;
     }
 
@@ -464,14 +459,10 @@ void mergeDexElements(JNIEnv* env,jclass klass,jobject oldClassLoader,jobject ne
             oldDexPathListObj, dexElementField));
     if(env->ExceptionCheck() || nullptr == oldClassLoaderDexElements){
         env->ExceptionClear();
-        DLOGW("mergeDexElements old dexElements get fail");
         return;
     }
-
     jint oldLen = env->GetArrayLength(oldClassLoaderDexElements);
     jint newLen = env->GetArrayLength(newClassLoaderDexElements);
-
-    DLOGD("mergeDexElements oldlen = %d , newlen = %d",oldLen,newLen);
 
     jclass ElementClass = env->FindClass("dalvik/system/DexPathList$Element");
 
@@ -482,14 +473,10 @@ void mergeDexElements(JNIEnv* env,jclass klass,jobject oldClassLoader,jobject ne
         env->SetObjectArrayElement(newElementArray,i,elementObj);
     }
 
-
     for(int i = newLen;i < oldLen + newLen;i++) {
         jobject elementObj = env->GetObjectArrayElement(oldClassLoaderDexElements, i - newLen);
         env->SetObjectArrayElement(newElementArray,i,elementObj);
     }
-
     env->SetObjectField(oldDexPathListObj, dexElementField,newElementArray);
-
-    DLOGD("mergeDexElements success");
 }
 ```
