@@ -31,7 +31,7 @@ void callRealApplicationOnCreate(JNIEnv *env, jclass, jstring realApplicationCla
 void callRealApplicationAttach(JNIEnv *env, jclass, jobject context,
                                          jstring realApplicationClassName);
 
-void init_dpt(JNIEnv *env);
+INIT_ARRAY_SECTION void init_dpt();
 void init_app(JNIEnv* env,jclass,jobject context,jobject classLoader);
 void readCodeItem(JNIEnv *env, jclass klass,uint8_t *data,size_t data_len);
 jstring readAppComponentFactory(JNIEnv *env,jclass,jobject classLoader);

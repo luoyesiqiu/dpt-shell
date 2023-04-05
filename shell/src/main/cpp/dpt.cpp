@@ -158,13 +158,8 @@ jstring readApplicationName(JNIEnv *env, jclass klass, jobject classLoader) {
     return env->NewStringUTF((applicationNameChs));
 }
 
-void init_dpt(JNIEnv *env) {
-    DLOGI("init_dpt!");
-}
-
-extern "C" void _init(void) {
-    DLOGI("_init!");
-
+void init_dpt() {
+    DLOGI("init_dpt call!");
     dpt_hook();
 }
 
@@ -442,9 +437,6 @@ JNIEXPORT jint JNI_OnLoad(JavaVM *vm, void *reserved) {
     if (registerNativeMethods(env) == JNI_FALSE) {
         return JNI_ERR;
     }
-
-
-    init_dpt(env);
 
     DLOGI("JNI_OnLoad called!");
     return JNI_VERSION_1_4;
