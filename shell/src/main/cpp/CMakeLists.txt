@@ -49,6 +49,8 @@ set_target_properties(local_dobby PROPERTIES IMPORTED_LOCATION ${CMAKE_CURRENT_S
 find_library(log-lib log)
 find_library(android-lib android)
 
+set_target_properties(dpt PROPERTIES CXX_VISIBILITY_PRESET hidden)
+
 target_link_libraries( dpt
             ${log-lib}
         MINIZIP::minizip
