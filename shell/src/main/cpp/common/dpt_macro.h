@@ -5,6 +5,10 @@
 #ifndef DPT_DPT_MACRO_H
 #define DPT_DPT_MACRO_H
 
+#define SECTION(name) __attribute__ ((section(name)))
+#define KEEP_SYMBOL __attribute__((visibility("default")))
+#define INIT_ARRAY_SECTION __attribute__ ((constructor))
+
 #define DEXES_ZIP_NAME "i11111i111"
 #define CACHE_DIR "code_cache"
 
