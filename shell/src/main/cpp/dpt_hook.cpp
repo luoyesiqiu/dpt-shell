@@ -108,11 +108,11 @@ void patchMethod(uint8_t *begin,const char *location,uint32_t dexSize,int dexInd
             memcpy(realCodeItemPtr,codeItem->getInsns(),codeItem->getInsnsSize());
         }
         else{
-            DLOGE("[*] patchMethod cannot find methodId: %d in dex: %d(%s)",methodIdx,dexIndex,location);
+            DLOGE("[*] patchMethod cannot find  methodId: %d in codeitem map, dex index: %d(%s)",methodIdx,dexIndex,location);
         }
     }
     else{
-        DLOGE("[*] patchMethod cannot find dex: %d",dexIndex);
+        DLOGE("[*] patchMethod cannot find dex: %d in dex map",dexIndex);
     }
 }
 
