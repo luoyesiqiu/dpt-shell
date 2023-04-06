@@ -30,6 +30,18 @@
 #define pointer_t uint32_t
 #endif
 
+#ifdef __LP64__
+#define Elf_Ehdr Elf64_Ehdr
+#define Elf_Shdr Elf64_Shdr
+#define Elf_Sym  Elf64_Sym
+#define Elf_Off  Elf64_Off
+#else
+#define Elf_Ehdr Elf32_Ehdr
+#define Elf_Shdr Elf32_Shdr
+#define Elf_Sym  Elf32_Sym
+#define Elf_Off  Elf32_Off
+#endif
+
 #ifndef LIKELY
 #define LIKELY(x)   __builtin_expect(!!(x), 1)
 #endif
