@@ -480,3 +480,22 @@ void mergeDexElements(JNIEnv* env,jclass klass,jobject oldClassLoader,jobject ne
     env->SetObjectField(oldDexPathListObj, dexElementField,newElementArray);
 }
 ```
+
+### (4) AppComponentFactory
+
+从Android P开始，Android添加了`android.app.AppComponentFactory`类，它允许开发者覆盖Android的常用组件。
+
+AppComponentFactory支持开发者对Application,Activity,Service,Receiver,Provider,ClassLoader(AndroidQ支持)等组件的替换。
+
+这意味着开发者想替换Application等组件时不用写一堆反射代码了，对加固或者插件开发者带来极大的便利。
+
+dpt在AppComponentFactory类的instantiateClassLoader和instantiateApplication函数中做了替换ClassLoader和Application的操作。
+
+具体可以看[ProxyComponentFactory](https://github.com/luoyesiqiu/dpt-shell/blob/main/shell/src/main/java/com/luoyesiqiu/shell/ProxyComponentFactory.java)类，这里不再贴出。
+
+### (5) 性能优化
+
+dpt中有两个性能优化的细节：
+
+- 使用`mmap`函数映射apk到内存，然后再从内存中读取apk中的信息，这样做比从本地直接读apk性能要好上不少，尤其体现在大型apk上。
+- 对于需要填充的CodeItem来讲，插入和查找非常频繁，但是在内存中存储的顺序并不重要。基于这个需求，dpt使用`unordered_map`来存储从本地加载到的CodeItem，插入和查找对应函数的CodeItem在正常情况下都是O(1)。
