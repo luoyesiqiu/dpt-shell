@@ -128,7 +128,7 @@ public class DexUtils {
 
     private static void putToJSON(JSONArray array,Instruction instruction){
         JSONObject jsonObject = new JSONObject();
-        String hex = Arrays.toString(instruction.getInstructionsData());
+        String hex = HexUtils.toHexArray(instruction.getInstructionsData());
         jsonObject.put("methodId",instruction.getMethodIndex());
         jsonObject.put("code",hex);
         array.put(jsonObject);
