@@ -45,3 +45,4 @@ java -jar dpt.jar /path/to/apk
 - [bhook](https://github.com/bytedance/bhook)
 - [zipalign-java](https://github.com/Iyxan23/zipalign-java)
 - [minizip-ng](https://github.com/zlib-ng/minizip-ng)
+- [JSON-java](https://github.com/stleary/JSON-java)

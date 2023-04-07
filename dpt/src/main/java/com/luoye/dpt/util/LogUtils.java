@@ -11,6 +11,7 @@ public class LogUtils {
 
     private static final String TAG = "dpt-processor";
     private static volatile boolean openLog = true;
+    private static volatile boolean openNoisyLog = true;
 
     private enum LogType{
         DEBUG,INFO,WARN,ERROR
@@ -18,6 +19,10 @@ public class LogUtils {
 
     public static void setOpenLog(boolean open){
         openLog = open;
+    }
+
+    public static void setOpenNoisyLog(boolean open){
+        openNoisyLog = open;
     }
 
     public static void info(String fmt,Object... args){
@@ -34,6 +39,12 @@ public class LogUtils {
 
     public static void error(String fmt,Object... args){
         println(LogType.ERROR,TAG,String.format(fmt,args));
+    }
+
+    public static void noisy(String fmt,Object... args){
+        if(openNoisyLog) {
+            println(LogType.INFO, TAG, String.format(fmt, args));
+        }
     }
 
 

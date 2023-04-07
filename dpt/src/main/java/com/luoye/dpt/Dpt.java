@@ -12,6 +12,7 @@ public class Dpt {
             return;
         }
         try {
+            LogUtils.setOpenNoisyLog(false);
             processApk(args[0]);
         } catch (Exception e){
             e.printStackTrace();

@@ -4,7 +4,12 @@ import com.android.dex.ClassData;
 import com.android.dex.ClassDef;
 import com.android.dex.Code;
 import com.android.dex.Dex;
+import com.luoye.dpt.Global;
 import com.luoye.dpt.model.Instruction;
+
+import org.json.JSONArray;
+import org.json.JSONObject;
+
 import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
@@ -35,7 +40,6 @@ public class DexUtils {
       "Ljavax/.*",
       "Lorg/slf4j/.*"
     };
-    private static List<String> processedClassList = new ArrayList<>();
 
     /**
      * 抽取所有方法的代码
@@ -50,7 +54,7 @@ public class DexUtils {
         RandomAccessFile randomAccessFile = null;
         byte[] dexData = IoUtils.readFile(dexFile.getAbsolutePath());
         IoUtils.writeFile(outDexFile.getAbsolutePath(),dexData);
-
+        JSONArray dumpJSON = new JSONArray();
         try {
             dex = new Dex(dexFile);
             randomAccessFile = new RandomAccessFile(outDexFile, "rw");
@@ -68,10 +72,12 @@ public class DexUtils {
                     continue;
                 }
                 if(classDef.getClassDataOffset() == 0){
-                    LogUtils.warn("class '%s' data offset is zero",classDef.toString());
+                    LogUtils.noisy("class '%s' data offset is zero",classDef.toString());
                     continue;
                 }
 
+                JSONObject classJSONObject = new JSONObject();
+                JSONArray classJSONArray = new JSONArray();
                 ClassData classData = dex.readClassData(classDef);
 
                 String className = dex.typeNames().get(classDef.getTypeIndex());
@@ -83,6 +89,7 @@ public class DexUtils {
                     Instruction instruction = extractMethod(dex,randomAccessFile,classDef,method);
                     if(instruction != null) {
                         instructionList.add(instruction);
+                        putToJSON(classJSONArray, instruction);
                     }
                 }
 
@@ -90,19 +97,41 @@ public class DexUtils {
                     Instruction instruction = extractMethod(dex, randomAccessFile,classDef, method);
                     if(instruction != null) {
                         instructionList.add(instruction);
+                        putToJSON(classJSONArray, instruction);
                     }
                 }
-                processedClassList.add(humanizeTypeName);
+
+                classJSONObject.put(humanizeTypeName,classJSONArray);
+                dumpJSON.put(classJSONObject);
             }
         }
         catch (Exception e){
-            e.printStackTrace();
         }
         finally {
             IoUtils.close(randomAccessFile);
+            dumpJSON(dexFile,dumpJSON);
         }
 
         return instructionList;
+    }
+
+    private static void dumpJSON(File originFile,JSONArray array){
+        File pkg = new File(Global.packageName);
+        if(!pkg.exists()){
+            pkg.mkdirs();
+        }
+        File writePath = new File(pkg.getAbsolutePath(),originFile.getName() + ".json");
+        LogUtils.info("dump json to path: %s",writePath.getParentFile().getName() + File.separator + writePath.getName());
+
+        IoUtils.writeFile(writePath.getAbsolutePath(),array.toString(1).getBytes());
+    }
+
+    private static void putToJSON(JSONArray array,Instruction instruction){
+        JSONObject jsonObject = new JSONObject();
+        String hex = Arrays.toString(instruction.getInstructionsData());
+        jsonObject.put("methodId",instruction.getMethodIndex());
+        jsonObject.put("code",hex);
+        array.put(jsonObject);
     }
 
     /**
@@ -120,7 +149,7 @@ public class DexUtils {
         String className = dex.typeNames().get(classDef.getTypeIndex());
         //native函数,abstract函数
         if(method.getCodeOffset() == 0){
-            LogUtils.warn("method code offset is zero,name =  %s.%s , returnType = %s",
+            LogUtils.noisy("method code offset is zero,name =  %s.%s , returnType = %s",
                     TypeUtils.getHumanizeTypeName(className),
                     methodName,
                     TypeUtils.getHumanizeTypeName(returnTypeName));
@@ -132,7 +161,7 @@ public class DexUtils {
         Code code = dex.readCode(method);
         //容错处理
         if(code.getInstructions().length == 0){
-            LogUtils.warn("method has no code,name =  %s.%s , returnType = %s",
+            LogUtils.noisy("method has no code,name =  %s.%s , returnType = %s",
                     TypeUtils.getHumanizeTypeName(className),
                     methodName,
                     TypeUtils.getHumanizeTypeName(returnTypeName));
@@ -142,7 +171,7 @@ public class DexUtils {
         //insns容量不足以存放return语句，跳过
         byte[] returnByteCodes = getReturnByteCodes(returnTypeName);
         if(insnsCapacity * 2 < returnByteCodes.length){
-            LogUtils.warn("The capacity of insns is not enough to store the return statement. %s.%s() ClassIndex = %d -> %s insnsCapacity = %d byte(s) but returnByteCodes = %d byte(s)",
+            LogUtils.noisy("The capacity of insns is not enough to store the return statement. %s.%s() ClassIndex = %d -> %s insnsCapacity = %d byte(s) but returnByteCodes = %d byte(s)",
                     TypeUtils.getHumanizeTypeName(className),
                     methodName,
                     classDef.getTypeIndex(),
@@ -249,16 +278,6 @@ public class DexUtils {
         }
 
         randomAccessFile.close();
-    }
-
-    public static List<String> getProcessedClassList(){
-        return processedClassList;
-    }
-
-    public static void clearProcessedClassList(){
-        if(processedClassList != null){
-            processedClassList.clear();
-        }
     }
 
 }
