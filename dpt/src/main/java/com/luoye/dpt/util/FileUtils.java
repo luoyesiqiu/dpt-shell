@@ -49,8 +49,13 @@ public class FileUtils {
      * @return
      */
     public static String getNewFileName(String fileName,String tag){
-        String filePostfix = fileName.substring(fileName.lastIndexOf(".") + 1);
-        return fileName.replaceAll("\\." + filePostfix + "$","_" + tag + "." + filePostfix) ;
+        String fileSuffix = fileName.substring(fileName.lastIndexOf(".") + 1);
+        return fileName.replaceAll("\\." + fileSuffix + "$","_" + tag + "." + fileSuffix) ;
+    }
+
+    public static String getNewFileSuffix(String fileName,String newSuffix){
+        String fileSuffix = fileName.substring(fileName.lastIndexOf(".") + 1);
+        return fileName.replaceAll("\\." + fileSuffix + "$",  "." + newSuffix) ;
     }
 
     /**

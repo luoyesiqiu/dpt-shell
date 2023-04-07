@@ -294,7 +294,7 @@ public class ApkUtils {
             return (dexNo == null || "".equals(dexNo)) ? 0 : Integer.parseInt(dexNo) - 1;
         }
         else{
-            throw new IllegalArgumentException("dex name format illegal: " + dexName);
+            return  -1;
         }
     }
 
@@ -311,17 +311,20 @@ public class ApkUtils {
         CountDownLatch countDownLatch = new CountDownLatch(dexFiles.size());
         for(File dexFile : dexFiles) {
             ThreadPool.getInstance().execute(() -> {
-                String newName = dexFile.getName().endsWith(".dex") ? dexFile.getName().replaceAll("\\.dex$", "_tmp.dex") : "_tmp.dex";
-                File dexFileNew = new File(dexFile.getParent(), newName);
+                final int dexNo = getDexNumber(dexFile.getName());
+                if(dexNo < 0){
+                    return;
+                }
+                String extractedDexName = dexFile.getName().endsWith(".dex") ? dexFile.getName().replaceAll("\\.dex$", "_extracted.dat") : "_extracted.dat";
+                File extractedDexFile = new File(dexFile.getParent(), extractedDexName);
                 //抽取dex的代码
-                List<Instruction> ret = DexUtils.extractAllMethods(dexFile, dexFileNew);
-                int dexNo = getDexNumber(dexFile.getName());
+                List<Instruction> ret = DexUtils.extractAllMethods(dexFile, extractedDexFile);
                 instructionMap.put(dexNo,ret);
                 //更新dex的hash
-                File dexFileRightHashes = new File(dexFile.getParent(),FileUtils.getNewFileName(dexFile.getName(),"new"));
-                DexUtils.writeHashes(dexFileNew,dexFileRightHashes);
+                File dexFileRightHashes = new File(dexFile.getParent(),FileUtils.getNewFileSuffix(dexFile.getName(),"dat"));
+                DexUtils.writeHashes(extractedDexFile,dexFileRightHashes);
                 dexFile.delete();
-                dexFileNew.delete();
+                extractedDexFile.delete();
                 dexFileRightHashes.renameTo(dexFile);
                 countDownLatch.countDown();
             });
@@ -351,7 +354,7 @@ public class ApkUtils {
         File dirFile = new File(dir);
         File[] files = dirFile.listFiles();
         if(files != null) {
-            Arrays.stream(files).filter(it -> it.getName().endsWith("dex")).forEach(dexFiles::add);
+            Arrays.stream(files).filter(it -> it.getName().endsWith(".dex")).forEach(dexFiles::add);
         }
         return dexFiles;
     }
