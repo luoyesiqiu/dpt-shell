@@ -69,7 +69,7 @@ public class Dpt {
 
         LogUtils.info("Apk main process path: " + apkMainProcessPath);
 
-        ZipUtils.extractAll(apkPath,apkMainProcessPath);
+        ZipUtils.extractAPK(apkPath,apkMainProcessPath);
         Global.packageName = ManifestUtils.getPackageName(apkMainProcessPath + File.separator + "AndroidManifest.xml");
         ApkUtils.extractDexCode(apkMainProcessPath);
 
