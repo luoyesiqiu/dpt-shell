@@ -27,7 +27,7 @@ cd executable
 java -jar dpt.jar -f /path/to/apk
 ```
 
-### 命令行参数说明
+### 命令行参数
 
 ```text
 usage: java -jar dpt.jar [option] -f <apk>
