@@ -1,18 +1,23 @@
 package com.luoye.dpt.util;
 
+import com.android.apksigner.ApkSignerTool;
+import com.iyxan23.zipalignjava.ZipAlign;
 import com.luoye.dpt.Const;
+import com.luoye.dpt.Global;
 import com.luoye.dpt.model.Instruction;
 import com.luoye.dpt.model.MultiDexCode;
 import com.luoye.dpt.task.ThreadPool;
 import com.wind.meditor.core.FileProcesser;
 import com.wind.meditor.property.AttributeItem;
 import com.wind.meditor.property.ModificationProperty;
-import net.lingala.zip4j.ZipFile;
-import net.lingala.zip4j.exception.ZipException;
-import net.lingala.zip4j.model.ZipParameters;
-import net.lingala.zip4j.model.enums.CompressionMethod;
 
 import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.RandomAccessFile;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -27,15 +32,6 @@ import java.util.regex.Pattern;
  * @author luoyesiqiu
  */
 public class ApkUtils {
-
-    /**
-     * 得到一个新的apk文件名
-     * @param apkName
-     * @return
-     */
-    public static String getNewApkName(String apkName){
-        return FileUtils.getNewFileName(apkName,"unsign");
-    }
 
     /**
      * 复制壳的so文件
@@ -74,7 +70,22 @@ public class ApkUtils {
             }
         }
     }
+    /**
+     * 得到一个新的apk文件名
+     * @param apkName
+     * @return
+     */
+    public static String getUnsignApkName(String apkName){
+        return FileUtils.getNewFileName(apkName,"unsign");
+    }
 
+    public static String getUnzipalignApkName(String apkName){
+        return FileUtils.getNewFileName(apkName,"unzipalign");
+    }
+
+    public static String getSignedApkName(String apkName){
+        return FileUtils.getNewFileName(apkName,"signed");
+    }
     /**
      * 获取工作目录下的lib路径
      * @return
@@ -211,7 +222,7 @@ public class ApkUtils {
      * 压缩dex文件
      */
     public static void compressDexFiles(String apkDir){
-        compress(getDexFiles(apkDir),getOutAssetsDir(apkDir).getAbsolutePath()+File.separator + "i11111i111");
+        ZipUtils.compress(getDexFiles(apkDir),getOutAssetsDir(apkDir).getAbsolutePath()+File.separator + "i11111i111");
     }
 
     public static void deleteAllDexFiles(String dir){
@@ -359,71 +370,146 @@ public class ApkUtils {
         return dexFiles;
     }
 
-    /**
-     * 解压文件
-     * @param apkFile
-     * @param destDir
-     */
-    public static void extract(String apkFile,String destDir)  {
-        ZipFile zipFile = new ZipFile(apkFile);
+    public static void buildApk(String originApkPath,String unpackFilePath,String savePath) {
+
+        String originApkName = new File(originApkPath).getName();
+        String apkLastProcessDir = ApkUtils.getLastProcessDir().getAbsolutePath();
+
+        String unzipalignApkPath = savePath + File.separator + getUnzipalignApkName(originApkName);
+        ZipUtils.compressToApk(unpackFilePath, unzipalignApkPath);
+
+        String keyStoreFilePath = apkLastProcessDir + File.separator + "debug.keystore";
+
+        String keyStoreAssetPath = "assets/debug.keystore";
+
         try {
-            zipFile.extractAll(destDir);
+            ZipUtils.readResourceFromRuntime(keyStoreAssetPath, keyStoreFilePath);
         }
-        catch (ZipException e){
+        catch (IOException e){
             e.printStackTrace();
         }
-    }
 
-    /**
-     * 压缩文件
-     */
-    public static void compress(List<File> files,String destFile)  {
-        ZipFile zipFile = new ZipFile(destFile);
-        if(files == null){
-            return;
-        }
+        String unsignedApkPath = savePath + File.separator + getUnsignApkName(originApkName);
+        boolean zipalignSuccess = false;
         try {
-            for(File f : files){
-                if(f.isDirectory()){
-                    zipFile.addFolder(f.getAbsoluteFile());
-                }
-                else{
-                    zipFile.addFile(f.getAbsoluteFile());
-                }
+            zipalignApk(unzipalignApkPath, unsignedApkPath);
+            zipalignSuccess = true;
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        String willSignApkPath = null;
+        if (zipalignSuccess) {
+            LogUtils.info("zipalign success.");
+            willSignApkPath = unsignedApkPath;
+
+        }
+        else{
+            LogUtils.error("warning: zipalign failed!");
+            willSignApkPath = unzipalignApkPath;
+        }
+
+        boolean signResult = false;
+
+        String signedApkPath = savePath + File.separator + getSignedApkName(originApkName);
+
+
+        if(Global.optionSignApk) {
+            signResult = signApkDebug(willSignApkPath, keyStoreFilePath, signedApkPath);
+        }
+
+        File willSignApkFile = new File(willSignApkPath);
+        File signedApkFile = new File(signedApkPath);
+        File keyStoreFile = new File(keyStoreFilePath);
+        File idsigFile = new File(signedApkPath + ".idsig");
+
+
+        LogUtils.info("willSignApkFile: %s ,exists: %s",willSignApkFile.getAbsolutePath(),willSignApkFile.exists());
+        LogUtils.info("signedApkFile: %s ,exists: %s",signedApkFile.getAbsolutePath(),signedApkFile.exists());
+
+        String resultPath = signedApkFile.getAbsolutePath();
+        if (!signedApkFile.exists() || !signResult) {
+            resultPath = willSignApkFile.getAbsolutePath();
+        }
+        else{
+            if(willSignApkFile.exists()){
+                willSignApkFile.delete();
             }
         }
-        catch (Exception e){
-            e.printStackTrace();
-        }
-    }
 
-    /**
-     * 压缩文件
-     */
-    public static void compress(String srcDir,String destFile)  {
-        ZipFile zipFile = new ZipFile(destFile);
-        File dir = new File(srcDir);
-        File[] list = dir.listFiles();
-        if(list == null){
-            return;
-        }
-        try {
-            for(File f : list){
-                if(f.isDirectory()){
-                    zipFile.addFolder(f.getAbsoluteFile());
-                }
-                else{
-                    ZipParameters zipParameters = new ZipParameters();
-                    if(f.getName().equals("resources.arsc")) {
-                        zipParameters.setCompressionMethod(CompressionMethod.STORE);
-                    }
-                    zipFile.addFile(f.getAbsoluteFile(),zipParameters);
-                }
+        if(zipalignSuccess) {
+            File unzipalignApkFile = new File(unzipalignApkPath);
+            try {
+                Path filePath = Paths.get(unzipalignApkFile.getAbsolutePath());
+                Files.deleteIfExists(filePath);
+            }catch (Exception e){
+                LogUtils.debug("unzipalignApkPath err = %s", e);
             }
         }
-        catch (Exception e){
-            e.printStackTrace();
+
+        if (idsigFile.exists()) {
+            idsigFile.delete();
         }
+
+        if (keyStoreFile.exists()) {
+            keyStoreFile.delete();
+        }
+        LogUtils.info("protected apk output path: " + resultPath + "\n");
     }
 
+    private static boolean signApkDebug(String apkPath, String keyStorePath, String signedApkPath) {
+        if (signApk(apkPath, keyStorePath, signedApkPath,
+                Const.KEY_ALIAS,
+                Const.STORE_PASSWORD,
+                Const.KEY_PASSWORD)) {
+            return true;
+        }
+        return false;
+    }
+
+    private static boolean signApk(String apkPath, String keyStorePath, String signedApkPath,
+                                                        String keyAlias,
+                                                        String storePassword,
+                                                        String KeyPassword) {
+        ArrayList<String> commandList = new ArrayList<>();
+
+        commandList.add("sign");
+        commandList.add("--ks");
+        commandList.add(keyStorePath);
+        commandList.add("--ks-key-alias");
+        commandList.add(keyAlias);
+        commandList.add("--ks-pass");
+        commandList.add("pass:" + storePassword);
+        commandList.add("--key-pass");
+        commandList.add("pass:" + KeyPassword);
+        commandList.add("--out");
+        commandList.add(signedApkPath);
+        commandList.add("--v1-signing-enabled");
+        commandList.add("true");
+        commandList.add("--v2-signing-enabled");
+        commandList.add("true");
+        commandList.add("--v3-signing-enabled");
+        commandList.add("true");
+        commandList.add(apkPath);
+
+        int size = commandList.size();
+        String[] commandArray = new String[size];
+        commandArray = commandList.toArray(commandArray);
+
+        try {
+            ApkSignerTool.main(commandArray);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return false;
+        }
+        return true;
+    }
+
+    private static void zipalignApk(String inputApkPath, String outputApkPath) throws Exception{
+        RandomAccessFile in = new RandomAccessFile(inputApkPath, "r");
+        FileOutputStream out = new FileOutputStream(outputApkPath);
+        ZipAlign.alignZip(in, out);
+        IoUtils.close(in);
+        IoUtils.close(out);
+    }
 }
