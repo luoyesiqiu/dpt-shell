@@ -32,6 +32,6 @@ jobs:
     - uses: "marvinpinto/action-automatic-releases@latest"
       with:
         repo_token: "${{ secrets.ACCESS_TOKEN }}"
-        prerelease: true
+        prerelease: false
         files: |
           executable.zip
