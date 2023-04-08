@@ -80,12 +80,6 @@ public class ZipUtils {
         catch (Exception e){
             e.printStackTrace();
         }
-        finally {
-            try {
-                zipFile.close();
-            }catch (IOException e){
-            }
-        }
     }
 
     private static void writeZipEntry(ZipInputStream zipInputStream,String targetFilePath){
