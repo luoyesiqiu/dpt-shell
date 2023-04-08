@@ -22,6 +22,7 @@ import java.util.zip.ZipInputStream;
 
 public class ZipUtils {
 
+    private static final String RENAME_SUFFIX = ".renamed";
     /**
      * 读取资源
      */
@@ -53,16 +54,17 @@ public class ZipUtils {
         }
     }
     /**
-     * 压缩文件
+     * 压缩文件/文件夹为apk
      */
     public static void compressToApk(String srcDir,String destFile)  {
-        ZipFile zipFile = new ZipFile(destFile);
-        File dir = new File(srcDir);
-        File[] list = dir.listFiles();
-        if(list == null){
-            return;
-        }
+        ZipFile zipFile =  null;
         try {
+             zipFile = new ZipFile(destFile);
+            File dir = new File(srcDir);
+            File[] list = dir.listFiles();
+            if(list == null){
+                return;
+            }
             ZipParameters zipParameters = new ZipParameters();
             zipParameters.setCompressionMethod(CompressionMethod.DEFLATE);
             for(File f : list){
@@ -76,9 +78,24 @@ public class ZipUtils {
                     zipFile.addFile(f.getAbsoluteFile(),zipParameters);
                 }
             }
+
+            List<FileHeader> fileHeaders = zipFile.getFileHeaders();
+            for (FileHeader fileHeader : fileHeaders) {
+                String fileName = fileHeader.getFileName();
+                if (fileName.contains(RENAME_SUFFIX)) {
+                    String newFileName = fileName.replaceAll(RENAME_SUFFIX + "\\d+$", "");
+                    zipFile.renameFile(fileHeader, newFileName);
+                    LogUtils.noisy("compress file name restore: %s -> %s", fileName, newFileName);
+
+                }
+            }
+
         }
         catch (Exception e){
             e.printStackTrace();
+        }
+        finally {
+            IoUtils.close(zipFile);
         }
     }
 
@@ -105,9 +122,9 @@ public class ZipUtils {
     }
 
     /**
-     * 解压所有文件
+     * 解压apk所有文件
      */
-    public static void extractAll(String zipFilePath, String destDir)  {
+    public static void extractAPK(String zipFilePath, String destDir)  {
         ZipInputStream zipInputStream = null;
         Map<String,Integer> zipEntryNameMap = new HashMap<>();
         try {
@@ -121,10 +138,10 @@ public class ZipUtils {
                 String lowerCase = zipEntryName.toLowerCase(Locale.US);
                 String finalFileName = zipEntryName;
                 if(zipEntryNameMap.get(lowerCase) != null){
-                    finalFileName = FileUtils.getNewFileName(zipEntryName, String.valueOf(zipEntryNameMap.get(lowerCase) + 1));
+                    finalFileName = zipEntryName + RENAME_SUFFIX + (zipEntryNameMap.get(lowerCase) + 1);
                     String finalFileNameLowerCase = finalFileName.toLowerCase(Locale.US);
                     zipEntryNameMap.put(finalFileNameLowerCase,0);
-                    LogUtils.noisy("extract file rename  %s -> %s",zipEntryName,finalFileName);
+                    LogUtils.noisy("extract file rename: %s -> %s",zipEntryName,finalFileName);
                 }
                 else{
                     zipEntryNameMap.put(lowerCase,0);
