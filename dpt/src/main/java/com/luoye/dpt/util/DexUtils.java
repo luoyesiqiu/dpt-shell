@@ -109,7 +109,9 @@ public class DexUtils {
         }
         finally {
             IoUtils.close(randomAccessFile);
-            dumpJSON(dexFile,dumpJSON);
+            if(Global.dumpCode) {
+                dumpJSON(dexFile, dumpJSON);
+            }
         }
 
         return instructionList;

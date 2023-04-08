@@ -87,4 +87,11 @@ public class FileUtils {
         }
         file.delete();
     }
+
+    /**
+     * 获取当前命令工具所在的目录
+     */
+    public static String getExecutablePath(){
+        return System.getProperty("user.dir");
+    }
 }

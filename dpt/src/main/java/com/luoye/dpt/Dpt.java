@@ -1,26 +1,55 @@
 package com.luoye.dpt;
 
-import com.luoye.dpt.task.BuildAndSignApkTask;
 import com.luoye.dpt.util.*;
+
+import org.apache.commons.cli.CommandLine;
+import org.apache.commons.cli.CommandLineParser;
+import org.apache.commons.cli.DefaultParser;
+import org.apache.commons.cli.HelpFormatter;
+import org.apache.commons.cli.Option;
+import org.apache.commons.cli.Options;
+import org.apache.commons.cli.ParseException;
+
 import java.io.File;
 
 public class Dpt {
 
     public static void main(String[] args) {
-        if(args.length < 1){
-            usage();
-            return;
-        }
         try {
-            LogUtils.setOpenNoisyLog(false);
-            processApk(args[0]);
+            parseOptions(args);
+            if(Global.optionApkPath != null) {
+                processApk(Global.optionApkPath);
+            }
         } catch (Exception e){
-            e.printStackTrace();
         }
     }
 
-    private static void usage(){
-        LogUtils.error("Usage:\n\tjava -jar dpt.jar [--log] <ApkFile>");
+    private static void usage(Options options){
+        HelpFormatter helpFormatter = new HelpFormatter();
+        helpFormatter.printHelp("java -jar dpt.jar [option] -f <apk>",options);
+    }
+
+    private static void parseOptions(String[] args){
+        Options options = new Options();
+        options.addOption(new Option(Const.OPTION_NO_SIGN_APK,Const.OPTION_NO_SIGN_APK_LONG,false,"Do not sign apk."));
+        options.addOption(new Option(Const.OPTION_DUMP_CODE,Const.OPTION_DUMP_CODE_LONG,false,"Dump the code item of DEX and save it to .json files."));
+        options.addOption(new Option(Const.OPTION_OPEN_NOISY_LOG,Const.OPTION_OPEN_NOISY_LOG_LONG,false,"Open noisy log."));
+        options.addOption(new Option(Const.OPTION_APK_FILE,Const.OPTION_APK_FILE_LONG,true,"Need to protect apk file."));
+        CommandLineParser commandLineParser = new DefaultParser();
+        try {
+            CommandLine commandLine = commandLineParser.parse(options, args);
+            if(!commandLine.hasOption(Const.OPTION_APK_FILE)){
+                usage(options);
+                return;
+            }
+            LogUtils.setOpenNoisyLog(commandLine.hasOption(Const.OPTION_OPEN_NOISY_LOG));
+            Global.optionApkPath = commandLine.getOptionValue(Const.OPTION_APK_FILE);
+            Global.dumpCode = commandLine.hasOption(Const.OPTION_DUMP_CODE);
+            Global.optionSignApk = !commandLine.hasOption(Const.OPTION_NO_SIGN_APK);
+        }
+        catch (ParseException e){
+            usage(options);
+        }
     }
 
     private static void processApk(String apkPath){
@@ -34,25 +63,13 @@ public class Dpt {
             LogUtils.error("Apk not exists!");
             return;
         }
-        String apkFileName = apkFile.getName();
-
-        String currentDir = new File(".").getAbsolutePath();  // 当前命令行所在的目录
-        if (currentDir.endsWith("/.")){
-            currentDir = currentDir.substring(0, currentDir.lastIndexOf("/."));
-        }
-        String output = FileUtils.getNewFileName(apkFileName,"signed");
-        LogUtils.info("output: " + output);
-
-
-        File outputFile = new File(currentDir, output);
-        String outputApkFileParentPath = outputFile.getParent();
 
         //apk文件解压的目录
         String apkMainProcessPath = ApkUtils.getWorkspaceDir().getAbsolutePath();
 
         LogUtils.info("Apk main process path: " + apkMainProcessPath);
 
-        ApkUtils.extract(apkPath,apkMainProcessPath);
+        ZipUtils.extractAll(apkPath,apkMainProcessPath);
         Global.packageName = ManifestUtils.getPackageName(apkMainProcessPath + File.separator + "AndroidManifest.xml");
         ApkUtils.extractDexCode(apkMainProcessPath);
 
@@ -69,9 +86,9 @@ public class Dpt {
         ApkUtils.addProxyDex(apkMainProcessPath);
 
         ApkUtils.deleteMetaData(apkMainProcessPath);
-        ApkUtils.copyShellLibs(apkMainProcessPath, new File(outputApkFileParentPath,"shell-files/libs"));
+        ApkUtils.copyShellLibs(apkMainProcessPath, new File(FileUtils.getExecutablePath(),"shell-files/libs"));
 
-        new BuildAndSignApkTask(false, apkMainProcessPath, output).run();
+        ApkUtils.buildApk(apkFile.getAbsolutePath(),apkMainProcessPath,FileUtils.getExecutablePath());
 
         File apkMainProcessFile = new File(apkMainProcessPath);
         if (apkMainProcessFile.exists()) {
