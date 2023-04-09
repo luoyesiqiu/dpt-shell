@@ -13,7 +13,7 @@ dpt-shell是函数抽取壳的实现。一种将dex文件中的函数代码抽�
 转到[Releases](https://github.com/luoyesiqiu/dpt-shell/releases/latest)页面下载executable.zip，解压，执行：
 
 ```shell
-java -jar dpt.jar /path/to/apk
+java -jar dpt.jar -f /path/to/apk
 ```
 
 ### 手动编译
