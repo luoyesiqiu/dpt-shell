@@ -13,6 +13,10 @@ namespace dpt {
         private:
             jni::JNINativeField bound_application_field = {"mBoundApplication",
                                                     "Landroid/app/ActivityThread$AppBindData;"};
+            jni::JNINativeField m_all_application_field = {"mAllApplications",
+                                                         "Ljava/util/ArrayList;"};
+            jni::JNINativeField m_initial_application_field = {"mInitialApplication",
+                                                            "Landroid/app/Application;"};
         public:
             android_app_ActivityThread(JNIEnv *env){
                 this->m_env = env;
@@ -20,6 +24,8 @@ namespace dpt {
             }
             jobject currentActivityThread();
             jobject getBoundApplication();
+            jobject getAllApplication();
+            void setInitialApplication(jobject application);
 
         protected:
             const char *getClassName() {
@@ -30,6 +36,9 @@ namespace dpt {
             private:
                 jni::JNINativeField app_info_field = {"appInfo",
                                                       "Landroid/content/pm/ApplicationInfo;"};
+
+                jni::JNINativeField info_field = {"info",
+                                                      "Landroid/app/LoadedApk;"};
             protected:
                 const char *getClassName() {
                     return "android/app/ActivityThread$AppBindData";
@@ -40,6 +49,7 @@ namespace dpt {
                     this->m_obj = obj;
                 }
                 jobject getAppInfo();
+                jobject getInfo();
 
             };
         };

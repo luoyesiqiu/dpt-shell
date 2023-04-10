@@ -7,6 +7,16 @@
 namespace dpt {
     namespace jni {
 
+        jobject makeBoolean(JNIEnv* env,jboolean value) {
+            jclass booleanClass = jni::FindClass(env,"java/lang/Boolean");
+            return jni::NewObject(env,booleanClass,"(Z)V",value);
+        }
+
+        jobject makeInteger(JNIEnv* env,jint value) {
+            jclass integerClass = jni::FindClass(env,"java/lang/Integer");
+            return jni::NewObject(env,integerClass,"(I)V",value);
+        }
+
         jobject GetObjectField(JNIEnv* env,jobject obj,const JNINativeField *jniNativeField) {
             return jni::GetObjectField(env,obj,jniNativeField->name,jniNativeField->signature);
         }

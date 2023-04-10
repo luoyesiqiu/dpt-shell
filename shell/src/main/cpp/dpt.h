@@ -23,8 +23,11 @@
 #include "dpt_util.h"
 #include "reflect/dalvik_system_BaseDexClassLoader.h"
 #include "reflect/dalvik_system_DexPathList.h"
+#include "reflect/java_util_ArrayList.h"
 #include "reflect/java_io_File.h"
 #include "reflect/android_app_Application.h"
+#include "reflect/android_app_LoadedApk.h"
+
 
 void callRealApplicationOnCreate(JNIEnv *env, jclass, jstring realApplicationClassName);
 

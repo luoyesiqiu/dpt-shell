@@ -15,6 +15,8 @@ namespace dpt {
             const char* name;
             const char* signature;
         } JNINativeField;
+        jobject makeBoolean(JNIEnv* env,jboolean value);
+        jobject makeInteger(JNIEnv* env,jint value);
 
         void SetObjectField(JNIEnv* env,jobject obj,const JNINativeField *jniNativeField,jobject value);
         void SetObjectField(JNIEnv* env,jobject obj,const char *field_name,const char *sig,jobject value);
