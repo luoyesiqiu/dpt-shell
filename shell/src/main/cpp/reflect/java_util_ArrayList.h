@@ -12,9 +12,9 @@ using namespace dpt::reflect;
 #include "dpt_reflect.h"
 namespace dpt {
     namespace reflect {
-        class ArrayList : public Reflect{
+        class java_util_ArrayList : public Reflect{
         public:
-            ArrayList(JNIEnv *env,jobject obj){
+            java_util_ArrayList(JNIEnv *env,jobject obj){
                 this->m_env = env;
                 this->m_obj = obj;
             }

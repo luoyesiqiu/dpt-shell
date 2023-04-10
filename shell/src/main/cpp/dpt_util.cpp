@@ -53,9 +53,8 @@ void parseClassName(const char *src, char *dest) {
 
 void getClassName(JNIEnv *env,jobject obj,char *destClassName){
     jclass objCls = env->GetObjectClass(obj);
-    jclass ClassCls = env->GetObjectClass(objCls);
-    jmethodID getNameMethodId = env->GetMethodID(ClassCls,"getName","()Ljava/lang/String;");
-    jstring classNameInner = (jstring)env->CallObjectMethod(ClassCls,getNameMethodId);
+    reflect::java_lang_Class cls(env,objCls);
+    jstring classNameInner = cls.getName();
 
     const char *classNameInnerChs = env->GetStringUTFChars(classNameInner,nullptr);
 

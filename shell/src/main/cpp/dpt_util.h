@@ -26,6 +26,7 @@
 #include "dpt_jni.h"
 #include "reflect/android_app_ActivityThread.h"
 #include "reflect/android_content_pm_ApplicationInfo.h"
+#include "reflect/java_lang_Class.h"
 
 static AAssetManager *g_AssetMgrInstance = nullptr;
 static jclass g_ContextClass = nullptr;

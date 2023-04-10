@@ -10,5 +10,9 @@ namespace dpt {
             auto sourceDir = (jstring)jni::GetObjectField(m_env,m_obj,&source_dir_field);
             return sourceDir;
         }
+
+        void android_content_pm_ApplicationInfo::setClassName(jobject className) {
+            jni::SetObjectField(m_env,m_obj,&class_name_field,className);
+        }
     } // dpt
 } // reflect

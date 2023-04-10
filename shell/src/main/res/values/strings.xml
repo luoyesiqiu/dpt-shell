@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">dpt</string>
+    <string name="welcome_text">Welcome to use dpt!</string>
 </resources>

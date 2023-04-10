@@ -235,104 +235,67 @@ void replaceApplication(JNIEnv *env, jclass klass, jstring realApplicationClassN
         return;
     }
 
-    replaceApplicationOnActivityThread(env,klass,appInstance);
-
     char pkgChs[256] = {0};
     readPackageName(pkgChs,256);
     DLOGD("replaceApplication = %s",pkgChs);
     jstring packageName = env->NewStringUTF(pkgChs);
     replaceApplicationOnLoadedApk(env,klass,packageName,appInstance);
-
+    replaceApplicationOnActivityThread(env,klass,appInstance);
     DLOGD("replace application success");
 }
 
 void replaceApplicationOnActivityThread(JNIEnv *env,jclass klass, jobject realApplication){
-    jclass ActivityThreadClass = env->FindClass("android/app/ActivityThread");
-    jfieldID sActivityThreadField = env->GetStaticFieldID(ActivityThreadClass,
-                                                          "sCurrentActivityThread",
-                                                          "Landroid/app/ActivityThread;");
-
-    jobject sActivityThreadObj = env->GetStaticObjectField(ActivityThreadClass,sActivityThreadField);
-
-    jfieldID  mInitialApplicationField = env->GetFieldID(ActivityThreadClass,
-                                                         "mInitialApplication",
-                                                         "Landroid/app/Application;");
-    env->SetObjectField(sActivityThreadObj,mInitialApplicationField,realApplication);
+    android_app_ActivityThread activityThread(env);
+    activityThread.setInitialApplication(realApplication);
     DLOGD("replaceApplicationOnActivityThread success");
-
 }
 
 void replaceApplicationOnLoadedApk(JNIEnv *env, jclass klass,jobject proxyApplication, jobject realApplication) {
     android_app_ActivityThread activityThread(env);
 
-    jfieldID mBoundApplicationField = env->GetFieldID(activityThread.getClass(),
-                                                      "mBoundApplication",
-                                                      "Landroid/app/ActivityThread$AppBindData;");
-    jobject mBoundApplicationObj = env->GetObjectField(activityThread.currentActivityThread(),mBoundApplicationField);
+    jobject mBoundApplicationObj = activityThread.getBoundApplication();
 
-    jclass AppBindDataClass = env->GetObjectClass(mBoundApplicationObj);
+    android_app_ActivityThread::AppBindData appBindData(env,mBoundApplicationObj);
+    jobject loadedApkObj = appBindData.getInfo();
 
-    jfieldID infoField = env->GetFieldID(AppBindDataClass,
-                                         "info",
-                                         "Landroid/app/LoadedApk;");
-
-    jobject loadedApkObj = env->GetObjectField(mBoundApplicationObj,infoField);
-
-    jclass LoadedApkClass = env->GetObjectClass(loadedApkObj);
-
-    jfieldID mApplicationField = env->GetFieldID(LoadedApkClass,
-                                                 "mApplication",
-                                                 "Landroid/app/Application;");
+    android_app_LoadedApk loadedApk(env,loadedApkObj);
 
     //make it null
-    env->SetObjectField(loadedApkObj,mApplicationField,nullptr);
+    loadedApk.setApplication(nullptr);
 
-    jfieldID mAllApplicationsField = env->GetFieldID(activityThread.getClass(),
-                                                    "mAllApplications",
-                                                    "Ljava/util/ArrayList;");
+    jobject mAllApplicationsObj = activityThread.getAllApplication();
 
-    jobject mAllApplicationsObj = env->GetObjectField(activityThread.currentActivityThread(),mAllApplicationsField);
+    java_util_ArrayList arrayList(env,mAllApplicationsObj);
 
-    jclass ArrayListClass = env->GetObjectClass(mAllApplicationsObj);
+    arrayList.remove(proxyApplication);
 
-    jmethodID removeMethodId = env->GetMethodID(ArrayListClass,
-                                                "remove",
-                                                "(Ljava/lang/Object;)Z");
+    jobject ApplicationInfoObj = loadedApk.getApplicationInfo();
 
-    jmethodID addMethodId = env->GetMethodID(ArrayListClass,
-                                             "add",
-                                             "(Ljava/lang/Object;)Z");
-
-    env->CallBooleanMethod(mAllApplicationsObj,removeMethodId,proxyApplication);
-
-    env->CallBooleanMethod(mAllApplicationsObj,addMethodId,realApplication);
-
-    jfieldID mApplicationInfoField = env->GetFieldID(LoadedApkClass,
-                                                     "mApplicationInfo",
-                                                     "Landroid/content/pm/ApplicationInfo;");
-
-    jobject ApplicationInfoObj = env->GetObjectField(loadedApkObj,mApplicationInfoField);
-
-    jclass ApplicationInfoClass = env->GetObjectClass(ApplicationInfoObj);
+    android_content_pm_ApplicationInfo applicationInfo(env,ApplicationInfoObj);
 
     char applicationName[128] = {0};
     getClassName(env,realApplication,applicationName);
+
+    DLOGD("applicationName = %s",applicationName);
     char realApplicationNameChs[128] = {0};
     parseClassName(applicationName,realApplicationNameChs);
     jstring realApplicationName = env->NewStringUTF(realApplicationNameChs);
-    jstring realApplicationNameGlobal = (jstring)env->NewGlobalRef(realApplicationName);
+    auto realApplicationNameGlobal = (jstring)env->NewGlobalRef(realApplicationName);
 
-    jfieldID classNameField = env->GetFieldID(ApplicationInfoClass,"className","Ljava/lang/String;");
+    android_content_pm_ApplicationInfo appInfo(env,appBindData.getAppInfo());
 
     //replace class name
-    env->SetObjectField(ApplicationInfoObj,classNameField,realApplicationNameGlobal);
+    applicationInfo.setClassName(realApplicationNameGlobal);
+    appInfo.setClassName(realApplicationNameGlobal);
 
-    jmethodID makeApplicationMethodId = env->GetMethodID(LoadedApkClass,"makeApplication","(ZLandroid/app/Instrumentation;)Landroid/app/Application;");
+    DLOGD("replaceApplicationOnLoadedApk begin makeApplication!");
+
     // call make application
-    env->CallObjectMethod(loadedApkObj,makeApplicationMethodId,false,nullptr);
+    loadedApk.makeApplication(JNI_FALSE,nullptr);
 
     DLOGD("replaceApplicationOnLoadedApk success!");
 }
+
 
 static bool registerNativeMethods(JNIEnv *env) {
     jclass JniBridgeClass = env->FindClass("com/luoyesiqiu/shell/JniBridge");

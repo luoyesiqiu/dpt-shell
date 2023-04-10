@@ -14,9 +14,11 @@ set(DPT_NATIVE_SOURCE
         reflect/dalvik_system_DexPathList.cpp
         reflect/java_io_File.cpp
         reflect/java_util_ArrayList.cpp
+        reflect/java_lang_Class.cpp
         reflect/android_app_ActivityThread.cpp
         reflect/android_content_pm_ApplicationInfo.cpp
         reflect/android_app_Application.cpp
+        reflect/android_app_LoadedApk.cpp
         )
 
 option(MZ_LZMA "Enables LZMA & XZ compression" OFF)
