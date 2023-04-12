@@ -41,24 +41,27 @@ android {
     }
 }
 
-afterEvaluate{
+afterEvaluate{ Project project ->
+    def assembleTask = project.tasks.getByName("assemble")
+    assembleTask.doLast {
+        if (project.name != "shell") {
+            printf("%s skip\n", project.name)
+            return
+        }
+        def targetDir = project.rootDir.absolutePath + File.separator + "executable" + File.separator + "shell-files"
+        printf("shell-targetDir: %s\n", targetDir)
 
-    if(project.name != "shell"){
-        printf("%s skip",project.name)
-        return
-    }
-    def targetDir = project.rootDir.absolutePath + File.separator + "executable" + File.separator + "shell-files"
-    printf("shell-targetDir: %s\n",targetDir)
+        copy {
+            from project.buildDir.absolutePath + File.separator + "intermediates" + File.separator + "dex" + File.separator + "debug" + File.separator + "mergeDexDebug" + File.separator + "classes.dex"
+            into targetDir + File.separator + "dex"
+        }
 
-    copy {
-        from project.buildDir.absolutePath + File.separator + "intermediates" + File.separator + "dex" + File.separator + "debug" + File.separator + "mergeDexDebug" + File.separator + "classes.dex"
-        into targetDir + File.separator + "dex"
+        copy {
+            from project.buildDir.absolutePath + File.separator + "intermediates" + File.separator + "stripped_native_libs" + File.separator + "debug" + File.separator + "out" + File.separator + "lib"
+            into targetDir + File.separator + "libs"
+        }
     }
 
-    copy {
-        from project.buildDir.absolutePath + File.separator + "intermediates" + File.separator + "stripped_native_libs" + File.separator + "debug" + File.separator + "out" + File.separator + "lib"
-        into targetDir + File.separator + "libs"
-    }
 }
 
 dependencies {
