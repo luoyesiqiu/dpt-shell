@@ -33,6 +33,7 @@ java -jar dpt.jar -f /path/to/apk
 usage: java -jar dpt.jar [option] -f <apk>
  -d,--dump-code        Dump the code item of DEX and save it to .json
                        files.
+ -D,--debug            Make apk debuggable.
  -f,--apk-file <arg>   Need to protect apk file.
  -l,--noisy-log        Open noisy log.
  -s,--no-sign          Do not sign apk.
