@@ -89,7 +89,6 @@ public class Dpt {
 
         ApkUtils.addProxyDex(apkMainProcessPath);
 
-        ApkUtils.deleteMetaData(apkMainProcessPath);
         ApkUtils.copyShellLibs(apkMainProcessPath, new File(FileUtils.getExecutablePath(),"shell-files/libs"));
 
         ApkUtils.buildApk(apkFile.getAbsolutePath(),apkMainProcessPath,FileUtils.getExecutablePath());
