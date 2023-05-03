@@ -4,12 +4,8 @@
 
 #include "MultiDexCode.h"
 
-dpt::data::MultiDexCode* dpt::data::MultiDexCode::m_inst = nullptr;
 dpt::data::MultiDexCode* dpt::data::MultiDexCode::getInst(){
-    if(nullptr == m_inst){
-        m_inst = new MultiDexCode();
-    }
-
+    static auto *m_inst = new MultiDexCode();
     return m_inst;
 }
 
@@ -36,9 +32,9 @@ dpt::data::CodeItem* dpt::data::MultiDexCode::nextCodeItem(uint32_t* offset) {
     uint32_t methodIdx = readUInt32(*offset);
     uint32_t offsetOfDex = readUInt32(*offset + 4);
     uint32_t insnsSize = readUInt32(*offset + 8);
-    uint8_t* insns = (uint8_t*)(m_buffer + *offset + 12);
+    auto* insns = (uint8_t*)(m_buffer + *offset + 12);
     *offset = (*offset + 12 + insnsSize);
-    CodeItem* codeItem = new CodeItem(methodIdx,offsetOfDex,insnsSize,insns);
+    auto* codeItem = new CodeItem(methodIdx,offsetOfDex,insnsSize,insns);
 
     return codeItem;
 }
