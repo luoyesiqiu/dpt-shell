@@ -32,8 +32,6 @@ namespace dpt {
             uint32_t *readDexCodeIndex(int *count);
 
             dpt::data::CodeItem *nextCodeItem(uint32_t *offset);
-
-            static MultiDexCode *m_inst;
         };
     }
 }
