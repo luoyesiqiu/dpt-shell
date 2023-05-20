@@ -43,7 +43,7 @@ void mergeDexElements(JNIEnv* env,jclass klass,jobject oldClassLoader,jobject ne
 void removeDexElements(JNIEnv* env,jclass klass,jobject classLoader,jstring elementName);
 void replaceApplication(JNIEnv *env, jclass klass, jstring originApplication);
 void replaceApplicationOnActivityThread(JNIEnv *env,jclass klass, jobject realApplication);
-void replaceApplicationOnLoadedApk(JNIEnv *env, jclass klass,jobject proxyApplication, jobject realApplication);
+void replaceApplicationOnLoadedApk(JNIEnv *env, jclass klass, jobject realApplication);
 std::unordered_map<int,std::unordered_map<int,dpt::data::CodeItem*>*> dexMap;
 
 #endif //DPT_DPT_H

@@ -171,9 +171,18 @@ jclass getRealApplicationClass(JNIEnv *env, const char *applicationClassName) {
     return g_realApplicationClass;
 }
 
-jobject getApplicationInstance(JNIEnv *env, const char *applicationClassName) {
+jobject getApplicationInstance(JNIEnv *env, jstring applicationClassName) {
     if (g_realApplicationInstance == nullptr) {
-        jclass appClass = getRealApplicationClass(env, applicationClassName);
+        const char *applicationClassNameChs = env->GetStringUTFChars(applicationClassName, nullptr);
+
+        size_t len = strnlen(applicationClassNameChs,128) + 1;
+        char *appNameChs = static_cast<char *>(calloc(len, 1));
+        parseClassName(applicationClassNameChs, appNameChs);
+
+        DLOGD("getApplicationInstance %s -> %s",applicationClassNameChs,appNameChs);
+
+
+        jclass appClass = getRealApplicationClass(env, appNameChs);
         jmethodID _init = env->GetMethodID(appClass, "<init>", "()V");
         jobject appInstance = env->NewObject(appClass, _init);
         if (env->ExceptionCheck() || nullptr == appInstance) {
@@ -182,6 +191,8 @@ jobject getApplicationInstance(JNIEnv *env, const char *applicationClassName) {
             return nullptr;
         }
         g_realApplicationInstance = env->NewGlobalRef(appInstance);
+
+        free(appNameChs);
         DLOGD("getApplicationInstance success!");
 
     }
@@ -189,57 +200,35 @@ jobject getApplicationInstance(JNIEnv *env, const char *applicationClassName) {
 }
 
 void callRealApplicationOnCreate(JNIEnv *env, jclass, jstring realApplicationClassName) {
-    const char *applicationClassName = env->GetStringUTFChars(realApplicationClassName, nullptr);
 
-    char *appNameChs = static_cast<char *>(calloc(strlen(applicationClassName) + 1, 1));
-    parseClassName(applicationClassName, appNameChs);
-
-    DLOGD("callRealApplicationOnCreate className %s -> %s", applicationClassName, appNameChs);
-
-    android_app_Application application(env,appNameChs);
+    jobject appInstance = getApplicationInstance(env,realApplicationClassName);
+    android_app_Application application(env,appInstance);
     application.onCreate();
 
     DLOGD("callRealApplicationOnCreate call success!");
 
-    free(appNameChs);
 }
 
 void callRealApplicationAttach(JNIEnv *env, jclass, jobject context,
                                          jstring realApplicationClassName) {
-    const char *applicationClassName = env->GetStringUTFChars(realApplicationClassName, nullptr);
-    char *appNameChs = static_cast<char *>(calloc(strlen(applicationClassName) + 1, 1));
-    parseClassName(applicationClassName, appNameChs);
-    DLOGD("callRealApplicationAttach className %s -> %s", applicationClassName, appNameChs);
 
-    android_app_Application application(env,appNameChs);
+    jobject appInstance = getApplicationInstance(env,realApplicationClassName);
+
+    android_app_Application application(env,appInstance);
     application.attach(context);
 
     DLOGD("callRealApplicationAttach call success!");
 
-    env->ReleaseStringUTFChars(realApplicationClassName, applicationClassName);
-
-    free(appNameChs);
 }
 
 void replaceApplication(JNIEnv *env, jclass klass, jstring realApplicationClassName){
-    const char *applicationClassName = env->GetStringUTFChars(realApplicationClassName, nullptr);
 
-    char *appNameChs = static_cast<char *>(calloc(strlen(applicationClassName) + 1, 1));
-    parseClassName(applicationClassName, appNameChs);
-
-    jobject appInstance = getApplicationInstance(env, appNameChs);
+    jobject appInstance = getApplicationInstance(env, realApplicationClassName);
     if (appInstance == nullptr) {
         DLOGW("replaceApplication getApplicationInstance fail!");
-        env->ReleaseStringUTFChars(realApplicationClassName, applicationClassName);
-        free(appNameChs);
         return;
     }
-
-    char pkgChs[256] = {0};
-    readPackageName(pkgChs,256);
-    DLOGD("replaceApplication = %s",pkgChs);
-    jstring packageName = env->NewStringUTF(pkgChs);
-    replaceApplicationOnLoadedApk(env,klass,packageName,appInstance);
+    replaceApplicationOnLoadedApk(env,klass,appInstance);
     replaceApplicationOnActivityThread(env,klass,appInstance);
     DLOGD("replace application success");
 }
@@ -250,7 +239,7 @@ void replaceApplicationOnActivityThread(JNIEnv *env,jclass klass, jobject realAp
     DLOGD("replaceApplicationOnActivityThread success");
 }
 
-void replaceApplicationOnLoadedApk(JNIEnv *env, jclass klass,jobject proxyApplication, jobject realApplication) {
+void replaceApplicationOnLoadedApk(JNIEnv *env, jclass klass,jobject realApplication) {
     android_app_ActivityThread activityThread(env);
 
     jobject mBoundApplicationObj = activityThread.getBoundApplication();
@@ -267,7 +256,10 @@ void replaceApplicationOnLoadedApk(JNIEnv *env, jclass klass,jobject proxyApplic
 
     java_util_ArrayList arrayList(env,mAllApplicationsObj);
 
-    arrayList.remove(proxyApplication);
+    jobject removed = (jobject)arrayList.remove(0);
+    if(removed != nullptr){
+        DLOGD("replaceApplicationOnLoadedApk proxy application removed");
+    }
 
     jobject ApplicationInfoObj = loadedApk.getApplicationInfo();
 
