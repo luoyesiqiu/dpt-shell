@@ -19,6 +19,7 @@ set(DPT_NATIVE_SOURCE
         reflect/android_content_pm_ApplicationInfo.cpp
         reflect/android_app_Application.cpp
         reflect/android_app_LoadedApk.cpp
+        reflect/android_app_ContextImpl.cpp
         )
 
 option(MZ_LZMA "Enables LZMA & XZ compression" OFF)
