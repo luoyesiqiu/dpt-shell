@@ -31,6 +31,7 @@ java -jar dpt.jar -f /path/to/apk
 
 ```text
 usage: java -jar dpt.jar [option] -f <apk>
+ -c,--disable-acf      Disable app component factory(just use for debug).
  -d,--dump-code        Dump the code item of DEX and save it to .json
                        files.
  -D,--debug            Make apk debuggable.

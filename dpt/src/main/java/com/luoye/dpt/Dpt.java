@@ -36,6 +36,7 @@ public class Dpt {
         options.addOption(new Option(Const.OPTION_OPEN_NOISY_LOG,Const.OPTION_OPEN_NOISY_LOG_LONG,false,"Open noisy log."));
         options.addOption(new Option(Const.OPTION_APK_FILE,Const.OPTION_APK_FILE_LONG,true,"Need to protect apk file."));
         options.addOption(new Option(Const.OPTION_DEBUGGABLE,Const.OPTION_DEBUGGABLE_LONG,false,"Make apk debuggable."));
+        options.addOption(new Option(Const.OPTION_DISABLE_APP_COMPONENT_FACTORY,Const.OPTION_DISABLE_APP_COMPONENT_FACTORY_LONG,false,"Disable app component factory(just use for debug)."));
         CommandLineParser commandLineParser = new DefaultParser();
         try {
             CommandLine commandLine = commandLineParser.parse(options, args);
@@ -48,6 +49,7 @@ public class Dpt {
             Global.dumpCode = commandLine.hasOption(Const.OPTION_DUMP_CODE);
             Global.optionSignApk = !commandLine.hasOption(Const.OPTION_NO_SIGN_APK);
             Global.debuggable = commandLine.hasOption(Const.OPTION_DEBUGGABLE);
+            Global.disabledAppComponentFactory = commandLine.hasOption(Const.OPTION_DISABLE_APP_COMPONENT_FACTORY);
         }
         catch (ParseException e){
             usage(options);
@@ -80,8 +82,10 @@ public class Dpt {
 
         ApkUtils.saveApplicationName(apkMainProcessPath);
         ApkUtils.writeProxyAppName(apkMainProcessPath);
-        ApkUtils.saveAppComponentFactory(apkMainProcessPath);
-        ApkUtils.writeProxyComponentFactoryName(apkMainProcessPath);
+        if(!Global.disabledAppComponentFactory){
+            ApkUtils.saveAppComponentFactory(apkMainProcessPath);
+            ApkUtils.writeProxyComponentFactoryName(apkMainProcessPath);
+        }
         if(Global.debuggable) {
             LogUtils.info("Make apk debuggable.");
             ApkUtils.setDebuggable(apkMainProcessPath, true);

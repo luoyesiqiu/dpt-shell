@@ -14,6 +14,9 @@ public class Const {
     public static final String OPTION_APK_FILE_LONG = "apk-file";
     public static final String OPTION_DEBUGGABLE = "D";
     public static final String OPTION_DEBUGGABLE_LONG = "debug";
+    public static final String OPTION_DISABLE_APP_COMPONENT_FACTORY = "c";
+    public static final String OPTION_DISABLE_APP_COMPONENT_FACTORY_LONG = "disable-acf";
+
     public static final String STORE_PASSWORD = "android";
     public static final String KEY_PASSWORD = "android";
     public static final String KEY_ALIAS = "androiddebugkey";
