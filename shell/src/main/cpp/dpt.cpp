@@ -88,6 +88,10 @@ void removeDexElements(JNIEnv* env,jclass klass,jobject classLoader,jstring elem
         jobject fileObj = element.getPath();
         java_io_File javaIoFile(env,fileObj);
         jstring fileName = javaIoFile.getName();
+        if(fileName == nullptr){
+            DLOGW("removeDexElements got an empty file name");
+            continue;
+        }
         const char* fileNameChs = env->GetStringUTFChars(fileName,nullptr);
         DLOGD("removeDexElements[%d] old path = %s",i,fileNameChs);
 
@@ -112,10 +116,14 @@ void removeDexElements(JNIEnv* env,jclass klass,jobject classLoader,jstring elem
         jobject fileObj = element.getPath();
         java_io_File javaIoFile(env,fileObj);
         jstring fileName = javaIoFile.getName();
+        if(fileName == nullptr){
+            DLOGW("removeDexElements got an empty file name");
+            continue;
+        }
         const char* fileNameChs = env->GetStringUTFChars(fileName,nullptr);
-        DLOGD("removeDexElements[%d] old path = %s",i,fileNameChs);
 
         if(strncmp(fileNameChs,removeElementNameChs,256) == 0){
+            DLOGD("removeDexElements will remove item: %s",fileNameChs);
             env->ReleaseStringUTFChars(fileName,fileNameChs);
             continue;
         }
