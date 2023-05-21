@@ -22,7 +22,6 @@ public class ProxyComponentFactory extends AppComponentFactory {
     private static final String TAG = "dpt " + ProxyComponentFactory.class.getSimpleName();
     private static AppComponentFactory sAppComponentFactory;
     private ClassLoader newClassLoader;
-    private ClassLoader shellClassLoader;
 
     private String getTargetClassName(ClassLoader classLoader){
         return JniBridge.rcf(classLoader);
@@ -93,7 +92,6 @@ public class ProxyComponentFactory extends AppComponentFactory {
         if(!Global.sIsReplacedClassLoader){
             JniBridge.mde(cl, appClassLoader);
             Global.sIsReplacedClassLoader = true;
-            shellClassLoader = cl;
             targetAppComponentFactory = getTargetAppComponentFactory(cl);
         }
         else{
@@ -102,7 +100,6 @@ public class ProxyComponentFactory extends AppComponentFactory {
 
         ClassLoader apacheHttpLibLoader = ShellClassLoader.loadDex(Global.APACHE_HTTP_LIB);
         JniBridge.mde(cl, apacheHttpLibLoader);
-        JniBridge.rde(cl, "base.apk");
         Global.sNeedCalledApplication = false;
 
         if(targetAppComponentFactory != null) {
@@ -118,7 +115,7 @@ public class ProxyComponentFactory extends AppComponentFactory {
                 else{
                     Log.d(TAG, "instantiateApplication app does not specify application name");
 
-                    return (Application) method.invoke(targetAppComponentFactory, shellClassLoader,className);
+                    return (Application) method.invoke(targetAppComponentFactory, cl,className);
                 }
 
             } catch (Exception e) {
@@ -135,7 +132,7 @@ public class ProxyComponentFactory extends AppComponentFactory {
         else{
 
             Log.d(TAG, "instantiateApplication application name and AppComponentFactory no specified");
-            return super.instantiateApplication(shellClassLoader, className);
+            return super.instantiateApplication(cl, className);
         }
     }
 
@@ -147,21 +144,24 @@ public class ProxyComponentFactory extends AppComponentFactory {
         Log.d(TAG, "instantiateClassLoader() called with: cl = [" + cl + "], aInfo = [" + aInfo + "]");
         ClassLoader classLoader = init(cl);
 
-        shellClassLoader = cl;
+        AppComponentFactory targetAppComponentFactory = getTargetAppComponentFactory(cl);
+        JniBridge.mde(cl,classLoader);
+        JniBridge.rde(classLoader, Global.FAKE_APK_NAME);
 
-        AppComponentFactory targetAppComponentFactory = getTargetAppComponentFactory(classLoader);
+
+        Log.d(TAG, "instantiateClassLoader() old classloader = [" + classLoader + "]");
 
         Global.sIsReplacedClassLoader = true;
 
         if(targetAppComponentFactory != null) {
             try {
                 Method method = AppComponentFactory.class.getDeclaredMethod("instantiateClassLoader", ClassLoader.class, ApplicationInfo.class);
-                return (ClassLoader) method.invoke(targetAppComponentFactory, classLoader, aInfo);
+                return (ClassLoader) method.invoke(targetAppComponentFactory, cl, aInfo);
 
             } catch (Exception e) {
             }
         }
-        return super.instantiateClassLoader(classLoader, aInfo);
+        return super.instantiateClassLoader(cl, aInfo);
     }
 
     @Override
