@@ -23,8 +23,8 @@ public class ProxyComponentFactory extends AppComponentFactory {
     private static AppComponentFactory sAppComponentFactory;
     private ClassLoader newClassLoader;
 
-    private String getTargetClassName(ClassLoader classLoader){
-        return JniBridge.rcf(classLoader);
+    private String getTargetClassName(){
+        return JniBridge.rcf();
     }
 
     /**
@@ -34,7 +34,7 @@ public class ProxyComponentFactory extends AppComponentFactory {
      */
     private AppComponentFactory getTargetAppComponentFactory(ClassLoader appClassLoader){
         if(sAppComponentFactory == null){
-            String targetClassName = getTargetClassName(appClassLoader);
+            String targetClassName = getTargetClassName();
             Log.d(TAG,"targetClassName = " + targetClassName);
             if(!TextUtils.isEmpty(targetClassName)) {
                 try {
@@ -88,7 +88,7 @@ public class ProxyComponentFactory extends AppComponentFactory {
         ClassLoader appClassLoader = init(cl);
 
         AppComponentFactory targetAppComponentFactory = null;
-        String applicationName = JniBridge.rapn(null);
+        String applicationName = JniBridge.rapn();
         if(!Global.sIsReplacedClassLoader){
             JniBridge.mde(cl, appClassLoader);
             Global.sIsReplacedClassLoader = true;

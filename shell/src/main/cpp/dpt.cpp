@@ -20,14 +20,14 @@ static JNINativeMethod gMethods[] = {
         {"ia",    "(Landroid/content/Context;)V", (void *) init_app},
         {"gap",   "()Ljava/lang/String;",         (void *) getApkPathExport},
         {"gdp",   "()Ljava/lang/String;",         (void *) getCompressedDexesPathExport},
-        {"rcf",   "(Ljava/lang/ClassLoader;)Ljava/lang/String;",         (void *) readAppComponentFactory},
-        {"rapn",   "(Ljava/lang/ClassLoader;)Ljava/lang/String;",         (void *) readApplicationName},
+        {"rcf",   "()Ljava/lang/String;",         (void *) readAppComponentFactory},
+        {"rapn",   "()Ljava/lang/String;",         (void *) readApplicationName},
         {"mde",   "(Ljava/lang/ClassLoader;Ljava/lang/ClassLoader;)V",        (void *) mergeDexElements},
         {"rde",   "(Ljava/lang/ClassLoader;Ljava/lang/String;)V",        (void *) removeDexElements},
         {"ra", "(Ljava/lang/String;)V",                               (void *) replaceApplication}
 };
 
-void mergeDexElements(JNIEnv* env,jclass klass,jobject oldClassLoader,jobject newClassLoader){
+void mergeDexElements(JNIEnv* env,jclass __unused,jobject oldClassLoader,jobject newClassLoader){
     dalvik_system_BaseDexClassLoader oldBaseDexClassLoader(env,oldClassLoader);
     dalvik_system_BaseDexClassLoader newBaseDexClassLoader(env,newClassLoader);
     jobject oldDexPathListObj = oldBaseDexClassLoader.getPathList();
@@ -66,7 +66,7 @@ void mergeDexElements(JNIEnv* env,jclass klass,jobject oldClassLoader,jobject ne
     DLOGD("mergeDexElements success");
 }
 
-void removeDexElements(JNIEnv* env,jclass klass,jobject classLoader,jstring elementName){
+void removeDexElements(JNIEnv* env,jclass __unused,jobject classLoader,jstring elementName){
     dalvik_system_BaseDexClassLoader oldBaseDexClassLoader(env,classLoader);
 
     jobject dexPathListObj = oldBaseDexClassLoader.getPathList();
@@ -136,7 +136,7 @@ void removeDexElements(JNIEnv* env,jclass klass,jobject classLoader,jstring elem
     DLOGD("removeDexElements success");
 }
 
-jstring readAppComponentFactory(JNIEnv *env, jclass klass, jobject classLoader) {
+jstring readAppComponentFactory(JNIEnv *env, jclass __unused) {
     int64_t entry_size;
     if(zip_addr == nullptr){
         char apkPathChs[256] = {0};
@@ -151,7 +151,7 @@ jstring readAppComponentFactory(JNIEnv *env, jclass klass, jobject classLoader) 
     return env->NewStringUTF((appComponentFactoryChs));
 }
 
-jstring readApplicationName(JNIEnv *env, jclass klass, jobject classLoader) {
+jstring readApplicationName(JNIEnv *env, jclass __unused) {
     int64_t entry_size;
     if(zip_addr == nullptr){
         char apkPathChs[256] = {0};
@@ -241,13 +241,13 @@ void replaceApplication(JNIEnv *env, jclass klass, jstring realApplicationClassN
     DLOGD("replace application success");
 }
 
-void replaceApplicationOnActivityThread(JNIEnv *env,jclass klass, jobject realApplication){
+void replaceApplicationOnActivityThread(JNIEnv *env,jclass __unused, jobject realApplication){
     android_app_ActivityThread activityThread(env);
     activityThread.setInitialApplication(realApplication);
     DLOGD("replaceApplicationOnActivityThread success");
 }
 
-void replaceApplicationOnLoadedApk(JNIEnv *env, jclass klass,jobject realApplication) {
+void replaceApplicationOnLoadedApk(JNIEnv *env, jclass __unused,jobject realApplication) {
     android_app_ActivityThread activityThread(env);
 
     jobject mBoundApplicationObj = activityThread.getBoundApplication();
@@ -333,7 +333,7 @@ static void extractDexes(){
     }
 }
 
-void init_app(JNIEnv *env, jclass klass, jobject context) {
+void init_app(JNIEnv *env, jclass __unused, jobject context) {
     DLOGD("init_app!");
     clock_t start = clock();
 
@@ -390,7 +390,7 @@ void readCodeItem(uint8_t *data,size_t data_len) {
     }
 }
 
-JNIEXPORT jint JNI_OnLoad(JavaVM *vm, void *reserved) {
+JNIEXPORT jint JNI_OnLoad(JavaVM *vm, void *__unused) {
 
     JNIEnv *env = nullptr;
     if (vm->GetEnv((void **) &env, JNI_VERSION_1_4) != JNI_OK) {
@@ -405,6 +405,3 @@ JNIEXPORT jint JNI_OnLoad(JavaVM *vm, void *reserved) {
     return JNI_VERSION_1_4;
 }
 
-JNIEXPORT void JNI_OnUnload(JavaVM *vm, void *reserved) {
-    DLOGI("JNI_OnUnload called!");
-}

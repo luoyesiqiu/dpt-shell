@@ -132,7 +132,7 @@ void getApkPath(JNIEnv *env,char *apkPathOut,size_t max_out_len){
     DLOGD("getApkPath: %s",apkPathOut);
 }
 
-jstring getApkPathExport(JNIEnv *env,jclass) {
+jstring getApkPathExport(JNIEnv *env,jclass __unused) {
     char apkPathChs[256] = {0};
     getApkPath(env,apkPathChs,256);
 
@@ -145,7 +145,7 @@ void getCompressedDexesPath(char *outDexZipPath,size_t max_len) {
     snprintf(outDexZipPath,max_len,"/data/data/%s/%s/%s",packageName,CACHE_DIR,DEXES_ZIP_NAME);
 }
 
-jstring getCompressedDexesPathExport(JNIEnv *env,jclass klass){
+jstring getCompressedDexesPathExport(JNIEnv *env,jclass __unused){
     char dexesPath[256] = {0};
     getCompressedDexesPath(dexesPath,256);
     return env->NewStringUTF(dexesPath);

@@ -69,7 +69,7 @@ void change_dex_protective(uint8_t * begin,int dexSize,int dexIndex){
     }
 }
 
-void patchMethod(uint8_t *begin,const char *location,uint32_t dexSize,int dexIndex,uint32_t methodIdx,uint32_t codeOff){
+void patchMethod(uint8_t *begin,const char * __unused,uint32_t dexSize,int dexIndex,uint32_t methodIdx,uint32_t codeOff){
     if(codeOff == 0){
         DLOGI("[*] patchMethod dex: %d methodIndex: %d no need patch!",dexIndex,methodIdx);
         return;
@@ -261,9 +261,9 @@ void hook_mmap(){
     }
 }
 
-void *fake_GetOatDexFile(const char* dex_location,
-              const uint32_t* dex_location_checksum,
-              std::string* error_msg){
+void *fake_GetOatDexFile(const char* __unused,
+              const uint32_t* __unused,
+              std::string* __unused){
     DLOGD("fake_GetOatDexFile call!");
 
     return nullptr;
