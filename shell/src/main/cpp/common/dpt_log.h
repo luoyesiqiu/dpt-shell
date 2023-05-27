@@ -14,12 +14,6 @@
 #define DLOGD(...) __android_log_print(ANDROID_LOG_DEBUG, TAG, __VA_ARGS__)
 #define DLOGE(...) __android_log_print(ANDROID_LOG_ERROR,TAG,__VA_ARGS__)
 #define DLOGW(...) __android_log_print(ANDROID_LOG_WARN,TAG,__VA_ARGS__)
-#else
-#define DLOGI(...)
-#define DLOGD(...)
-#define DLOGE(...)
-#define DLOGW(...)
-#endif
 
 #ifdef NOICE_LOG
 #define NLOG(...) { \
@@ -28,5 +22,13 @@
 #else
 #define NLOG(...)
 #endif
+
+#else
+#define DLOGI(...)
+#define DLOGD(...)
+#define DLOGE(...)
+#define DLOGW(...)
+#endif
+
 
 #endif //DPT_DPT_LOG_H
