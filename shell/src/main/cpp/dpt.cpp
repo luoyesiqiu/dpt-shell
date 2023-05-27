@@ -341,7 +341,7 @@ void init_app(JNIEnv *env, jclass klass, jobject context, jobject classLoader) {
     extractDexes();
 
     if (nullptr == context) {
-        int64_t entry_size;
+        int64_t entry_size = 0;
         if(codeItemFilePtr == nullptr) {
             codeItemFilePtr = read_zip_file_entry(zip_addr,zip_size,CODE_ITEM_NAME_IN_ZIP,&entry_size);
         }
@@ -386,7 +386,7 @@ void readCodeItem(JNIEnv *env, jclass klass,uint8_t *data,size_t data_len) {
             dexMap.insert(std::pair<int, std::unordered_map<int, data::CodeItem *> *>(i, codeItemMap));
 
         }
-        DLOGD("readCodeItem map size = %ld", dexMap.size());
+        DLOGD("readCodeItem map size = %lu", (unsigned long)dexMap.size());
     }
 }
 

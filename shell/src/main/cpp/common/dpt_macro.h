@@ -25,9 +25,18 @@
 #ifdef __LP64__
 #define LIB_DIR "lib64"
 #define pointer_t uint64_t
+#define FMT_POINTER "0x%lx"
+#define FMT_UNSIGNED_INT "%u"
+#define FMT_UNSIGNED_LONG "%lu"
+#define FMT_INT64_T "%ld"
 #else
 #define LIB_DIR "lib"
 #define pointer_t uint32_t
+#define FMT_POINTER "0x%x"
+#define FMT_UNSIGNED_INT "%u"
+#define FMT_UNSIGNED_LONG "%lu"
+#define FMT_INT64_T "%lld"
+
 #endif
 
 #ifdef __LP64__

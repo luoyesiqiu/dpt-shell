@@ -21,6 +21,8 @@ set(DPT_NATIVE_SOURCE
         reflect/android_app_LoadedApk.cpp
         reflect/android_app_ContextImpl.cpp
         )
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -Werror -Wno-unused-parameter")
+
 
 option(MZ_LZMA "Enables LZMA & XZ compression" OFF)
 option(MZ_ZSTD "Enables ZSTD compression" OFF)

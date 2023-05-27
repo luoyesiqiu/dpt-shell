@@ -40,9 +40,9 @@ namespace dpt {
         void CallVoidMethod(JNIEnv *env, jobject obj, const char *name, const char *sig, ...);
 
         jint CallIntMethod(JNIEnv *env, jobject obj, const char *name, const char *sig,
-                           jboolean defVal, ...);
+                           jint defVal, ...);
         jboolean CallBooleanMethod(JNIEnv *env, jobject obj, const char *name, const char *sig,
-                                   jboolean defVal, ...);
+                                   uint32_t defVal, ...);
 
         void DeleteLocalRef(JNIEnv *env, jobject obj);
     }
