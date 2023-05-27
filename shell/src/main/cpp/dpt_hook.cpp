@@ -53,10 +53,10 @@ const char *getClassLinkerDefineClassSymbol() {
 void change_dex_protective(uint8_t * begin,int dexSize,int dexIndex){
     uintptr_t start = PAGE_START((uintptr_t) (begin));
     uint32_t block = sysconf(_SC_PAGE_SIZE);
-    int n = (dexSize / block) + (dexSize % block != 0);
+    size_t n = (dexSize / block) + (dexSize % block != 0);
 
     for(int i = 0;i < 10;) {
-        DLOGD("mprotect start = 0x%x,end = 0x%x", start, start + block * n);
+        DLOGD("mprotect start = " FMT_POINTER ",end = " FMT_POINTER, start, start + block * n);
         int ret = mprotect((void *) (start), block * n,
                            PROT_READ | PROT_WRITE);
 
@@ -180,13 +180,13 @@ void* DefineClass(void* thiz,void* self,
                     dex::ClassDataMethod virtualMethods[virtual_methods_size];
                     read += DexFileUtils::readMethods(class_data + read,virtualMethods,virtual_methods_size);
 
-                    for(int i = 0;i < direct_methods_size;i++){
+                    for(uint64_t i = 0;i < direct_methods_size;i++){
                         auto method = directMethods[i];
                         NLOG("[-] DefineClass directMethods[%d] methodIndex = %d,code_off = 0x%x",i,method.method_idx_delta_,method.code_off_);
                         patchMethod(begin, location.c_str(), dexSize, dexIndex, method.method_idx_delta_,method.code_off_);
                     }
 
-                    for(int i = 0;i < virtual_methods_size;i++){
+                    for(uint64_t i = 0;i < virtual_methods_size;i++){
                         auto method = virtualMethods[i];
                         NLOG("[-] DefineClass virtualMethods[%d] methodIndex = %d,code_off = 0x%x",i,method.method_idx_delta_,method.code_off_);
                         patchMethod(begin, location.c_str(), dexSize, dexIndex, method.method_idx_delta_,method.code_off_);
@@ -210,12 +210,6 @@ void hook_DefineClass(){
 
 const char *getArtLibName() {
     switch (g_sdkLevel) {
-        case 24:
-        case 25:
-        case 26:
-        case 27:
-        case 28:
-            return "libart.so";
         case 29:
         case 30:
         case 31:
@@ -223,6 +217,7 @@ const char *getArtLibName() {
         case 33:
             return "libartbase.so";
     }
+    return "libart.so";
 }
 
 void* fake_mmap(void* __addr, size_t __size, int __prot, int __flags, int __fd, off_t __offset){
@@ -233,7 +228,7 @@ void* fake_mmap(void* __addr, size_t __size, int __prot, int __flags, int __fd, 
 
     if(hasRead && !hasWrite) {
         prot = prot | PROT_WRITE;
-        DLOGD("fake_mmap call fd = %p,size = %d, prot = %d,flag = %d",__fd,__size, prot,__flags);
+        DLOGD("fake_mmap call fd = %d,size = %zu, prot = %d,flag = %d",__fd,__size, prot,__flags);
     }
     if(g_sdkLevel == 30){
         char link_path[128] = {0};

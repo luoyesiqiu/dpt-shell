@@ -206,29 +206,28 @@ namespace dpt {
             return ret;
         }
 
-        jboolean CallBooleanMethod(JNIEnv *env, jobject obj, const char *name, const char *sig,
-                                   jboolean defVal, ...) {
+        jboolean CallBooleanMethod(JNIEnv *env, jobject obj, const char *name, const char *sig,uint32_t defVal,...) {
             if (nullptr == env || nullptr == obj || nullptr == name || nullptr == sig) {
-                return defVal;
+                return defVal != 0;
             }
             jclass klass = env->GetObjectClass(obj);
             if (env->ExceptionCheck() || klass == nullptr) {
                 env->ExceptionClear();
-                return defVal;
+                return defVal != 0;
             }
             va_list arg;
             va_start(arg, defVal);
             jmethodID jmethodId = env->GetMethodID(klass, name, sig);
             if(jmethodId == nullptr){
                 jni::DeleteLocalRef(env,klass);
-                return defVal;
+                return defVal != 0;
             }
             jboolean ret = env->CallBooleanMethodV(obj, jmethodId, arg);
             va_end(arg);
             if (env->ExceptionCheck()) {
                 env->ExceptionClear();
                 DeleteLocalRef(env, klass);
-                return defVal;
+                return defVal != 0;
             }
             DeleteLocalRef(env, klass);
             return ret;

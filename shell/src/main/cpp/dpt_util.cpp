@@ -75,7 +75,7 @@ void readPackageName(char *packageName,size_t max_len){
     }
     fgets(packageName,max_len,fp);
     fclose(fp);
-    for(int i = 0;i < max_len;i++){
+    for(size_t i = 0;i < max_len;i++){
         if(packageName[i] == ':'){
             packageName[i] = '\0';
             break;
@@ -161,7 +161,7 @@ void load_zip(const char* zip_file_path,void **zip_addr,off_t *zip_size){
     fstat(fd,&fst);
     const int page_size = getpagesize();
     const off_t need_zip_size = (fst.st_size / page_size) * page_size + page_size;
-    DLOGD("load_zip fst.st_size = %lu,need size = %lu",fst.st_size,need_zip_size);
+    DLOGD("load_zip fst.st_size = " FMT_INT64_T ",need size = " FMT_UNSIGNED_LONG ,fst.st_size,need_zip_size);
     *zip_addr = mmap(nullptr, need_zip_size, PROT_READ, MAP_PRIVATE, fd, 0);
     *zip_size = fst.st_size;
 }
@@ -178,14 +178,13 @@ void *read_zip_file_entry(void* zip_addr,off_t zip_size,const char* entry_name,i
     mz_zip_create(&zip_handle);
     int32_t err = mz_zip_open(zip_handle, mem_stream, MZ_OPEN_MODE_READ);
     if(err == MZ_OK){
-        int32_t i = 0;
         err = mz_zip_goto_first_entry(zip_handle);
         while (err == MZ_OK) {
             mz_zip_file *file_info = nullptr;
             err = mz_zip_entry_get_info(zip_handle, &file_info);
             if (err == MZ_OK) {
                 if(strncmp(file_info->filename,entry_name,128) == 0) {
-                    DLOGD("read_zip_file_entry entry name = %s,file size = %ld", file_info->filename,file_info->uncompressed_size);
+                    DLOGD("read_zip_file_entry entry name = %s,file size = " FMT_INT64_T, file_info->filename,file_info->uncompressed_size);
                     err = mz_zip_entry_read_open(zip_handle, 0, nullptr);
                     if(err != MZ_OK){
                         DLOGW("read_zip_file_entry not prepared: %d",err);
@@ -277,6 +276,7 @@ const char* find_symbol_in_elf_file(const char *elf_file,int keyword_count,...){
         fclose(elf_fp);
         free(data);
     }
+    return nullptr;
 }
 
 void hexDump(const char* name,const void* data, size_t size){

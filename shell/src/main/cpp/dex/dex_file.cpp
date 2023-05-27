@@ -22,7 +22,7 @@ size_t dpt::DexFileUtils::readUleb128(uint8_t const * const data, uint64_t * con
 size_t dpt::DexFileUtils::readFields(uint8_t *data,dpt::dex::ClassDataField *field,uint64_t count){
     size_t read = 0;
     uint32_t fieldIndexDelta = 0;
-    for (int i = 0; i < count; ++i) {
+    for (uint64_t i = 0; i < count; ++i) {
         uint64_t fieldIndex = 0;
         read += readUleb128(data + read,&fieldIndex);
         fieldIndexDelta += fieldIndex;
@@ -39,7 +39,7 @@ size_t dpt::DexFileUtils::readFields(uint8_t *data,dpt::dex::ClassDataField *fie
 size_t dpt::DexFileUtils::readMethods(uint8_t *data,dpt::dex::ClassDataMethod *method,uint64_t count){
     size_t read = 0;
     uint32_t methodIndexDelta = 0;
-    for (int i = 0; i < count; ++i) {
+    for (uint64_t i = 0; i < count; ++i) {
         uint64_t methodIndex = 0;
         read += readUleb128(data + read,&methodIndex);
         methodIndexDelta += methodIndex;
