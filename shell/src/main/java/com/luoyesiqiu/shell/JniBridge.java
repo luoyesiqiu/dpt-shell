@@ -10,7 +10,7 @@ public class JniBridge {
     private static final String TAG = JniBridge.class.getSimpleName();
     public static native void craoc(String applicationClassName);
     public static native void craa(Context context, String applicationClassName);
-    public static native void ia(Context context,ClassLoader classLoader);
+    public static native void ia(Context context);
     public static native String rcf(ClassLoader classLoader);
     public static native void mde(ClassLoader oldClassLoader,ClassLoader newClassLoader);
     public static native void rde(ClassLoader classLoader,String elementName);

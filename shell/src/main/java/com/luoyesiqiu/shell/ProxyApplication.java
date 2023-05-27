@@ -42,7 +42,7 @@ public class ProxyApplication extends Application {
         if(!Global.sIsReplacedClassLoader) {
 
             Log.d(TAG,"ProxyApplication init");
-            JniBridge.ia(base,base.getClassLoader());
+            JniBridge.ia(base);
 
             ClassLoader oldClassLoader = base.getClassLoader();
 

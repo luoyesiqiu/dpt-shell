@@ -52,7 +52,7 @@ public class ProxyComponentFactory extends AppComponentFactory {
         if(!Global.sLoadedDexes){
             Global.sLoadedDexes = true;
 
-            JniBridge.ia(null,cl);
+            JniBridge.ia(null);
             String apkPath = JniBridge.gap();
             String dexPath = JniBridge.gdp();
             Log.d(TAG, "init dexPath: " + dexPath + ",apkPath: " + apkPath);
