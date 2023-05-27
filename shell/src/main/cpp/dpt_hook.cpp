@@ -98,17 +98,15 @@ void patchMethod(uint8_t *begin,const char *location,uint32_t dexSize,int dexInd
             auto *realCodeItemPtr = (uint8_t *)(dexCodeItem->insns_);
 
 #ifdef NOICE_LOG
-            char threadName[128] = {0};
-            getThreadName(threadName);
             NLOG("[*] patchMethod codeItem patch ,thread = %s, methodIndex = %d,insnsSize = %d >>> %p(0x%lx)",
-                 threadName,codeItem->getMethodIdx(), codeItem->getInsnsSize(), realCodeItemPtr,(realCodeItemPtr - begin)
+                 getThreadName(),codeItem->getMethodIdx(), codeItem->getInsnsSize(), realCodeItemPtr,(realCodeItemPtr - begin)
                 );
 
 #endif
             memcpy(realCodeItemPtr,codeItem->getInsns(),codeItem->getInsnsSize());
         }
         else{
-            DLOGE("[*] patchMethod cannot find  methodId: %d in codeitem map, dex index: %d(%s)",methodIdx,dexIndex,location);
+            NLOG("[*] patchMethod cannot find  methodId: %d in codeitem map, dex index: %d(%s)",methodIdx,dexIndex,location);
         }
     }
     else{

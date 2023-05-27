@@ -50,5 +50,5 @@ void readPackageName(char *packageName,size_t max_len);
 void getClassName(JNIEnv *env,jobject obj,char *destClassName);
 void parseClassName(const char *src, char *dest);
 void printTime(const char* msg,clock_t start);
-void getThreadName(char *threadName);
+const char* getThreadName();
 #endif //DPT_DPT_UTIL_H

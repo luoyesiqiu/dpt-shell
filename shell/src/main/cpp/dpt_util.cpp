@@ -342,6 +342,9 @@ void printTime(const char* msg,clock_t start){
     DLOGD("%s %lf",msg,(double)(end - start) / CLOCKS_PER_SEC);
 }
 
-void getThreadName(char *threadName){
+const char* getThreadName(){
+    static char threadName[256];
+    memset(threadName,0,256);
     prctl(PR_GET_NAME, (unsigned long)threadName);
+    return threadName;
 }
