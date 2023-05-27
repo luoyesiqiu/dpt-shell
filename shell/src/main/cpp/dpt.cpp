@@ -17,7 +17,7 @@ void *codeItemFilePtr = nullptr;
 static JNINativeMethod gMethods[] = {
         {"craoc", "(Ljava/lang/String;)V",                               (void *) callRealApplicationOnCreate},
         {"craa",  "(Landroid/content/Context;Ljava/lang/String;)V",      (void *) callRealApplicationAttach},
-        {"ia",    "(Landroid/content/Context;Ljava/lang/ClassLoader;)V", (void *) init_app},
+        {"ia",    "(Landroid/content/Context;)V", (void *) init_app},
         {"gap",   "()Ljava/lang/String;",         (void *) getApkPathExport},
         {"gdp",   "()Ljava/lang/String;",         (void *) getCompressedDexesPathExport},
         {"rcf",   "(Ljava/lang/ClassLoader;)Ljava/lang/String;",         (void *) readAppComponentFactory},
@@ -333,7 +333,7 @@ static void extractDexes(){
     }
 }
 
-void init_app(JNIEnv *env, jclass klass, jobject context, jobject classLoader) {
+void init_app(JNIEnv *env, jclass klass, jobject context) {
     DLOGD("init_app!");
     clock_t start = clock();
 
@@ -345,20 +345,20 @@ void init_app(JNIEnv *env, jclass klass, jobject context, jobject classLoader) {
         if(codeItemFilePtr == nullptr) {
             codeItemFilePtr = read_zip_file_entry(zip_addr,zip_size,CODE_ITEM_NAME_IN_ZIP,&entry_size);
         }
-        readCodeItem(env, klass,(uint8_t*)codeItemFilePtr,entry_size);
+        readCodeItem((uint8_t*)codeItemFilePtr,entry_size);
 
     } else {
         AAsset *aAsset = getAsset(env, context, CODE_ITEM_NAME_IN_ASSETS);
         if (aAsset != nullptr) {
             int len = AAsset_getLength(aAsset);
             auto buf = (uint8_t *) AAsset_getBuffer(aAsset);
-            readCodeItem(env, klass,buf,len);
+            readCodeItem(buf,len);
         }
     }
     printTime("read apk data took =" , start);
 }
 
-void readCodeItem(JNIEnv *env, jclass klass,uint8_t *data,size_t data_len) {
+void readCodeItem(uint8_t *data,size_t data_len) {
 
     if (data != nullptr && data_len >= 0) {
 
