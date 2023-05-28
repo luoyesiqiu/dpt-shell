@@ -56,7 +56,7 @@ void change_dex_protective(uint8_t * begin,int dexSize,int dexIndex){
     size_t n = (dexSize / block) + (dexSize % block != 0);
 
     for(int i = 0;i < 10;) {
-        DLOGD("mprotect start = " FMT_POINTER ",end = " FMT_POINTER, start, start + block * n);
+        DLOGD("mprotect dex[%d] start = " FMT_POINTER ",end = " FMT_POINTER,dexIndex, start, start + block * n);
         int ret = mprotect((void *) (start), block * n,
                            PROT_READ | PROT_WRITE);
 
@@ -127,23 +127,22 @@ void* DefineClass(void* thiz,void* self,
             std::string location;
             uint8_t *begin = nullptr;
             uint64_t dexSize = 0;
-            int dexIndex = 0;
             if(g_sdkLevel >= 28){
                 auto* dexFileV28 = (V28::DexFile *)dex_file;
                 location = dexFileV28->location_;
                 begin = (uint8_t *)dexFileV28->begin_;
                 dexSize = dexFileV28->size_;
-                dexIndex = parse_dex_number(&location);
             }
             else{
                 auto* dexFileV23 = (V23::DexFile *)dex_file;
                 location = dexFileV23->location_;
                 begin = (uint8_t *)dexFileV23->begin_;
                 dexSize = dexFileV23->size_;
-                dexIndex = parse_dex_number(&location);
             }
 
             if(location.find(DEXES_ZIP_NAME) != std::string::npos){
+                int dexIndex = parse_dex_number(&location);
+
                 NLOG("DefineClass location: %s", location.c_str());
                 if(dex_class_def){
                     auto* class_def = (dex::ClassDef *)dex_class_def;
