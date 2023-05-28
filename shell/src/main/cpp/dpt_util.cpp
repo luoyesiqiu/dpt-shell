@@ -11,34 +11,43 @@
 
 using namespace dpt;
 
+static int separate_dex_number(std::string *str) {
+    int sum = 0;
+    int mul = 1;
+    for(auto it = str->cend();it >= str->cbegin();it--){
+        if(isdigit(*it)){
+            int number = *it - '0';
+            sum += (number * mul);
+            mul *= 10;
+        }
+        else{
+            if(sum != 0 ) break;
+        }
+    }
+    return sum;
+}
 /**
  * location中提取dex的索引
  * 比如：base.apk!classes2.dex会转成1
  */
 int parse_dex_number(std::string *location) {
-    char buf[3] = {0};
-    if (location->find(".dex") != std::string::npos) {
-        const char *chs = strchr(location->c_str(), '!');
-
-        if(nullptr != chs) {
-            sscanf(chs, "%*[^0-9]%[^.]", buf);
+    int raw_dex_index = 1;
+    if (location->rfind(".dex") != std::string::npos) {
+        size_t sep = location->rfind('!');
+        if(sep != std::string::npos){
+            raw_dex_index = separate_dex_number(location);
         }
         else{
-            const char* chs2 = strchr(location->c_str(), ':');
-            if(nullptr != chs2) {
-                sscanf(chs2, "%*[^0-9]%[^.]", buf);
-            }
-            else{
-                sprintf(buf, "%s", "1");
+            sep = location->rfind(':');
+            if(sep != std::string::npos){
+                raw_dex_index = separate_dex_number(location);
             }
         }
     } else {
-        sprintf(buf, "%s", "1");
+        raw_dex_index = 1;
     }
 
-    int dexIndex = 0;
-    sscanf(buf, "%d", &dexIndex);
-    return dexIndex - 1;
+    return raw_dex_index - 1;
 }
 
 void parseClassName(const char *src, char *dest) {
