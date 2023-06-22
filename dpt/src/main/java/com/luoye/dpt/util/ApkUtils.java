@@ -10,6 +10,7 @@ import com.luoye.dpt.task.ThreadPool;
 import com.wind.meditor.core.FileProcesser;
 import com.wind.meditor.property.AttributeItem;
 import com.wind.meditor.property.ModificationProperty;
+import com.wind.meditor.utils.NodeValue;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -150,7 +151,7 @@ public class ApkUtils {
         String outManifestPath = filePath + File.separator + "AndroidManifest_new.xml";
         ModificationProperty property = new ModificationProperty();
 
-        property.addApplicationAttribute(new AttributeItem("extractNativeLibs","true"));
+        property.addApplicationAttribute(new AttributeItem(NodeValue.Application.EXTRACTNATIVELIBS,1));
 
         FileProcesser.processManifestFile(inManifestPath, outManifestPath, property);
 
