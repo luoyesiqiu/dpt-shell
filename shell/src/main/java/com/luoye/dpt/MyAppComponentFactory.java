@@ -1,5 +1,6 @@
 package com.luoye.dpt;
 
+import android.annotation.TargetApi;
 import android.app.Activity;
 import android.app.AppComponentFactory;
 import android.app.Application;
@@ -7,7 +8,7 @@ import android.app.Service;
 import android.content.ContentProvider;
 import android.content.Intent;
 import android.util.Log;
-
+@TargetApi(28)
 public class MyAppComponentFactory extends AppComponentFactory {
     public static final String TAG = MyAppComponentFactory.class.getSimpleName();
     @Override
