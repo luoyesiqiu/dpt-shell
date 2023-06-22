@@ -1,5 +1,6 @@
  package com.luoyesiqiu.shell;
 
+import android.annotation.TargetApi;
 import android.app.Activity;
 import android.app.AppComponentFactory;
 import android.app.Application;
@@ -16,7 +17,7 @@ import com.luoyesiqiu.shell.util.FileUtils;
 import com.luoyesiqiu.shell.util.ShellClassLoader;
 
 import java.lang.reflect.Method;
-
+@TargetApi(28)
 public class ProxyComponentFactory extends AppComponentFactory {
     private static final String TAG = "dpt " + ProxyComponentFactory.class.getSimpleName();
     private static AppComponentFactory sAppComponentFactory;
