@@ -314,21 +314,42 @@ static void loadApk(JNIEnv *env){
         load_zip(apkPathChs,&zip_addr,&zip_size);
     }
 }
+
+static void writeDexAchieve(const char *dexAchievePath) {
+    int64_t dex_files_size = 0;
+    void *dexFilesData = read_zip_file_entry(zip_addr,zip_size,DEX_FILES_NAME_IN_ZIP,&dex_files_size);
+    DLOGD("zipCode open = %s",dexAchievePath);
+    int fd = open(dexAchievePath, O_CREAT | O_WRONLY  ,S_IRWXU);
+    if(fd > 0){
+        write(fd,dexFilesData,dex_files_size);
+        close(fd);
+    }
+    else {
+        DLOGE("WTF! zipCode write fail: %s", strerror(fd));
+    }
+}
+
 static void extractDexes(){
     char compressedDexesPathChs[256] = {0};
     getCompressedDexesPath(compressedDexesPathChs, 256);
 
-    if(access(compressedDexesPathChs, F_OK) == -1){
-        int64_t dex_files_size = 0;
-        void *dexFilesData = read_zip_file_entry(zip_addr,zip_size,DEX_FILES_NAME_IN_ZIP,&dex_files_size);
-        DLOGD("zipCode open = %s",compressedDexesPathChs);
-        int fd = open(compressedDexesPathChs, O_CREAT | O_WRONLY  ,S_IRWXU);
-        if(fd > 0){
-            write(fd,dexFilesData,dex_files_size);
-            close(fd);
+    char codeCachePathChs[256] = {0};
+    getCodeCachePath(codeCachePathChs, 256);
+
+    if(access(codeCachePathChs, F_OK) == 0){
+        if(access(compressedDexesPathChs, F_OK) != 0) {
+            writeDexAchieve(compressedDexesPathChs);
         }
         else {
-            DLOGE("zipCode write fail: %s", strerror(fd));
+            DLOGI("dex files is achieved!");
+        }
+    }
+    else {
+        if(mkdir(codeCachePathChs,0775) == 0){
+            writeDexAchieve(compressedDexesPathChs);
+        }
+        else {
+            DLOGE("WTF! cannot make code_cache directory!");
         }
     }
 }

@@ -38,6 +38,7 @@ AAsset *getAsset(JNIEnv *env, jobject context, const char *filename);
 void getApkPath(JNIEnv *env,char *apkPathOut,size_t max_out_len);
 jstring getApkPathExport(JNIEnv *env,jclass __unused);
 void getCompressedDexesPath(char *outDexZipPath,size_t max_len);
+void getCodeCachePath(char *outCodeCachePath,size_t max_len);
 jstring getCompressedDexesPathExport(JNIEnv *,jclass __unused);
 int endWith(const char *str,const char* sub);
 void appendLog(const char* log);

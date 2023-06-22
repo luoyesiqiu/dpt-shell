@@ -154,6 +154,12 @@ void getCompressedDexesPath(char *outDexZipPath,size_t max_len) {
     snprintf(outDexZipPath,max_len,"/data/data/%s/%s/%s",packageName,CACHE_DIR,DEXES_ZIP_NAME);
 }
 
+void getCodeCachePath(char *outCodeCachePath,size_t max_len) {
+    char packageName[256] = {0};
+    readPackageName(packageName,256);
+    snprintf(outCodeCachePath,max_len,"/data/data/%s/%s/",packageName,CACHE_DIR);
+}
+
 jstring getCompressedDexesPathExport(JNIEnv *env,jclass __unused){
     char dexesPath[256] = {0};
     getCompressedDexesPath(dexesPath,256);
