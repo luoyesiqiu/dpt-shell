@@ -3,6 +3,10 @@ package com.luoyesiqiu.shell;
 import android.content.Context;
 import android.util.Log;
 
+import com.luoyesiqiu.shell.util.EnvUtils;
+
+import java.io.File;
+
 /**
  * Created by luoyesiqiu
  */
@@ -19,9 +23,23 @@ public class JniBridge {
     public static native void ra(String originApplicationClassName);
     public static native String rapn();
 
-    static {
+    public static void loadShellLibs(String workspacePath,String apkPath) {
+        final String[] allowLibNames = {Global.SHELL_SO_NAME};
         try {
-            System.loadLibrary("dpt");
+            String abiDirName = EnvUtils.getAbiDirName(apkPath);
+            File shellLibsFile = new File(workspacePath + File.separator + Global.LIB_DIR + File.separator + abiDirName);
+            File[] files = shellLibsFile.listFiles();
+            if(files != null) {
+                for(File shellLibPath : files) {
+                    String fullLibPath = shellLibPath.getAbsolutePath();
+                    for(String libName : allowLibNames) {
+                        String libSuffix = File.separator + libName;
+                        if(fullLibPath.endsWith(libSuffix)) {
+                            System.load(fullLibPath);
+                        }
+                    }
+                }
+            }
         }
         catch (Throwable e){
             Log.w(TAG,e);

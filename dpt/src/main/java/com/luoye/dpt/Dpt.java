@@ -92,8 +92,7 @@ public class Dpt {
         }
 
         ApkUtils.addProxyDex(apkMainProcessPath);
-
-        ApkUtils.copyShellLibs(apkMainProcessPath, new File(FileUtils.getExecutablePath(),"shell-files/libs"));
+        ApkUtils.copyNativeLibs(apkMainProcessPath);
 
         ApkUtils.buildApk(apkFile.getAbsolutePath(),apkMainProcessPath,FileUtils.getExecutablePath());
 

@@ -37,6 +37,7 @@ public class ApkUtils {
      * 复制壳的so文件
      * @param src
      */
+    @Deprecated
     public static void copyShellLibs(String filePath, File src){
         File outLibDir = getOutLibDir(filePath);
         if(outLibDir.exists()){
@@ -223,6 +224,14 @@ public class ApkUtils {
      */
     public static void compressDexFiles(String apkDir){
         ZipUtils.compress(getDexFiles(apkDir),getOutAssetsDir(apkDir).getAbsolutePath()+File.separator + "i11111i111");
+    }
+
+    /**
+     * 压缩so文件
+     */
+    public static void copyNativeLibs(String apkDir){
+        File file = new File(FileUtils.getExecutablePath(), "shell-files/libs");
+        FileUtils.copy(file.getAbsolutePath(),getOutAssetsDir(apkDir).getAbsolutePath() + File.separator + "vwwwwwvwww");
     }
 
     public static void deleteAllDexFiles(String dir){
