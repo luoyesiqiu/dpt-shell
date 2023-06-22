@@ -52,18 +52,14 @@ public class ShellClassLoader extends PathClassLoader {
     }
 
     public static ClassLoader loadDex(String apkPath,String dexPath){
-        String[] abiArray = {"arm", "arm64", "x86", "x86_64"};
+        String abi = EnvUtils.getAbiDirName(apkPath);
         String nativePath = null;
-        for (String abi : abiArray) {
-            File nativeLibPath = new File(apkPath.substring(0,apkPath.lastIndexOf("/")) + File.separator + "lib" ,abi);
-            if(nativeLibPath.exists()) {
-                nativePath = nativeLibPath.getAbsolutePath();
-                break;
-            }
+        if(abi != null) {
+            File nativeLibPath = new File(apkPath.substring(0, apkPath.lastIndexOf("/")) + File.separator + "lib", abi);
+            nativePath = nativeLibPath.getAbsolutePath();
+            Log.d(TAG, "loadDex() called with: sourcePath = [" + apkPath + "]");
+            Log.d(TAG, "loadDex() called with: nativePath = [" + nativePath + "]");
         }
-        Log.d(TAG, "loadDex() called with: sourcePath = [" + apkPath + "]");
-        Log.d(TAG, "loadDex() called with: nativePath = [" + nativePath + "]");
-
         return new ShellClassLoader(dexPath ,nativePath,ClassLoader.getSystemClassLoader());
     }
 

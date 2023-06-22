@@ -1,22 +1,67 @@
  package com.luoyesiqiu.shell.util;
 
 import android.content.Context;
-import android.os.Process;
-import android.system.Os;
+import android.util.Log;
 
-import java.io.BufferedReader;
+import com.luoyesiqiu.shell.Global;
+
+import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.Closeable;
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileReader;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.StringWriter;
+import java.util.Enumeration;
 import java.util.zip.ZipEntry;
-import java.util.zip.ZipInputStream;
+import java.util.zip.ZipFile;
 
-public class FileUtils {
+ public class FileUtils {
+     private static final String TAG = "dpt";
+
+     public static void unzipLibs(String sourceDir,String dataDir) {
+         String abiName = EnvUtils.getAbiDirName(sourceDir);
+
+         File libsOutDir = new File(dataDir + File.separator + Global.LIB_DIR + File.separator + abiName);
+         File shellSoFile = new File(libsOutDir.getAbsolutePath(),Global.SHELL_SO_NAME);
+         if(!shellSoFile.exists()) {
+             FileUtils.unzip(sourceDir,
+                     "assets/" + Global.ZIP_LIB_DIR + "/" + abiName + "/", /* 注意最后一个斜杠 */
+                     libsOutDir.getAbsolutePath());
+         }
+     }
+     public static void unzip(String zipFilePath,String entryName,String outDir){
+         long start = System.currentTimeMillis();
+         File out = new File(outDir);
+         if(!out.exists()){
+             out.mkdirs();
+         }
+         try {
+             ZipFile zip = new ZipFile(zipFilePath);
+             Enumeration<? extends ZipEntry> entries = zip.entries();
+             while(entries.hasMoreElements()){
+                 ZipEntry entry = entries.nextElement();
+
+                 if(entry.getName().startsWith(entryName)) {
+                     byte[] buf = new byte[4096];
+                     int len = -1;
+                     File entryFile = new File(outDir + File.separator  + Global.SHELL_SO_NAME);
+                     BufferedOutputStream bufferedOutputStream = new BufferedOutputStream(new FileOutputStream(entryFile));
+                     BufferedInputStream bufferedInputStream = new BufferedInputStream(zip.getInputStream(entry));
+                     while ((len = bufferedInputStream.read(buf)) != -1) {
+                         bufferedOutputStream.write(buf, 0, len);
+                     }
+                     FileUtils.close(bufferedOutputStream);
+                     break;
+                 }
+             }
+         }
+         catch (Exception e) {
+             e.printStackTrace();
+         }
+         Log.d(TAG, "unzip libs took: " + (System.currentTimeMillis() - start) + "ms" );
+     }
 
     public static void close(Closeable closeable){
         if(closeable != null){

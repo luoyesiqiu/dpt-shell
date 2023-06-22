@@ -2,6 +2,7 @@ package com.luoyesiqiu.shell;
 
 import android.app.Application;
 import android.content.Context;
+import android.content.pm.ApplicationInfo;
 import android.text.TextUtils;
 import android.util.Log;
 
@@ -40,6 +41,12 @@ public class ProxyApplication extends Application {
         Log.d(TAG,"attachBaseContext classloader = " + base.getClassLoader());
 
         if(!Global.sIsReplacedClassLoader) {
+            ApplicationInfo applicationInfo = base.getApplicationInfo();
+            if(applicationInfo == null) {
+                throw new NullPointerException("application info is null");
+            }
+            FileUtils.unzipLibs(applicationInfo.sourceDir,applicationInfo.dataDir);
+            JniBridge.loadShellLibs(applicationInfo.dataDir,applicationInfo.sourceDir);
 
             Log.d(TAG,"ProxyApplication init");
             JniBridge.ia(base);

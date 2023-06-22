@@ -11,13 +11,12 @@ import android.content.pm.ApplicationInfo;
 import android.text.TextUtils;
 import android.util.Log;
 
+import com.luoyesiqiu.shell.util.EnvUtils;
+import com.luoyesiqiu.shell.util.FileUtils;
 import com.luoyesiqiu.shell.util.ShellClassLoader;
 
-import androidx.annotation.NonNull;
-import androidx.annotation.RequiresApi;
 import java.lang.reflect.Method;
 
-@RequiresApi(api = 28)
 public class ProxyComponentFactory extends AppComponentFactory {
     private static final String TAG = "dpt " + ProxyComponentFactory.class.getSimpleName();
     private static AppComponentFactory sAppComponentFactory;
@@ -85,6 +84,15 @@ public class ProxyComponentFactory extends AppComponentFactory {
     @Override
     public Application instantiateApplication(ClassLoader cl, String className) throws ClassNotFoundException, IllegalAccessException, InstantiationException {
         Log.d(TAG, "instantiateApplication() called with: cl = [" + cl + "], className = [" + className + "]");
+        if(!Global.sIsReplacedClassLoader) {
+            if(EnvUtils.getApplicationInfo() == null) {
+                throw new NullPointerException("application info is null");
+            }
+            String dataDir = EnvUtils.getApplicationInfo().dataDir;
+            String sourceDir = EnvUtils.getApplicationInfo().sourceDir;
+            FileUtils.unzipLibs(sourceDir,dataDir);
+            JniBridge.loadShellLibs(dataDir,sourceDir);
+        }
         ClassLoader appClassLoader = init(cl);
 
         AppComponentFactory targetAppComponentFactory = null;
@@ -142,6 +150,11 @@ public class ProxyComponentFactory extends AppComponentFactory {
     @Override
     public ClassLoader instantiateClassLoader(ClassLoader cl, ApplicationInfo aInfo) {
         Log.d(TAG, "instantiateClassLoader() called with: cl = [" + cl + "], aInfo = [" + aInfo + "]");
+        if(aInfo == null) {
+            throw new NullPointerException("application info is null");
+        }
+        FileUtils.unzipLibs(aInfo.sourceDir,aInfo.dataDir);
+        JniBridge.loadShellLibs(aInfo.dataDir,aInfo.sourceDir);
         ClassLoader classLoader = init(cl);
 
         AppComponentFactory targetAppComponentFactory = getTargetAppComponentFactory(cl);
@@ -198,9 +211,8 @@ public class ProxyComponentFactory extends AppComponentFactory {
     }
 
 
-    @NonNull
     @Override
-    public ContentProvider instantiateProvider(@NonNull ClassLoader cl, @NonNull String className) throws ClassNotFoundException, IllegalAccessException, InstantiationException {
+    public ContentProvider instantiateProvider( ClassLoader cl,  String className) throws ClassNotFoundException, IllegalAccessException, InstantiationException {
         Log.d(TAG, "instantiateProvider() called with: cl = [" + cl + "], className = [" + className + "]");
         AppComponentFactory targetAppComponentFactory = getTargetAppComponentFactory(cl);
         if(targetAppComponentFactory != null) {
