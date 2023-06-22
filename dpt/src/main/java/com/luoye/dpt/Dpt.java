@@ -91,6 +91,8 @@ public class Dpt {
             ApkUtils.setDebuggable(apkMainProcessPath, true);
         }
 
+        ApkUtils.setExtractNativeLibs(apkMainProcessPath);
+
         ApkUtils.addProxyDex(apkMainProcessPath);
         ApkUtils.copyNativeLibs(apkMainProcessPath);
 
