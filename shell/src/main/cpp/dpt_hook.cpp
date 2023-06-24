@@ -69,7 +69,7 @@ void change_dex_protective(uint8_t * begin,int dexSize,int dexIndex){
     }
 }
 
-void patchMethod(uint8_t *begin,const char * __unused,uint32_t dexSize,int dexIndex,uint32_t methodIdx,uint32_t codeOff){
+void patchMethod(uint8_t *begin,__unused const char *location,uint32_t dexSize,int dexIndex,uint32_t methodIdx,uint32_t codeOff){
     if(codeOff == 0){
         NLOG("[*] patchMethod dex: %d methodIndex: %d no need patch!",dexIndex,methodIdx);
         return;
@@ -97,7 +97,7 @@ void patchMethod(uint8_t *begin,const char * __unused,uint32_t dexSize,int dexIn
             data::CodeItem* codeItem = codeItemIt->second;
             auto *realCodeItemPtr = (uint8_t *)(dexCodeItem->insns_);
 
-        NLOG("[*] patchMethod codeItem patch ,thread = %s, methodIndex = %d,insnsSize = %d >>> %p(0x%lx)",
+        NLOG("[*] patchMethod codeItem patch ,thread = %s, methodIndex = %d,insnsSize = %d >>> %p(0x%x)",
              getThreadName(),codeItem->getMethodIdx(), codeItem->getInsnsSize(), realCodeItemPtr,(realCodeItemPtr - begin)
             );
             memcpy(realCodeItemPtr,codeItem->getInsns(),codeItem->getInsnsSize());
@@ -148,19 +148,19 @@ void* DefineClass(void* thiz,void* self,
 
                 uint64_t static_fields_size = 0;
                 read += DexFileUtils::readUleb128(class_data, &static_fields_size);
-                NLOG("[-] DefineClass static_fields_size = %lu,read = %zu",static_fields_size,read);
+                NLOG("[-] DefineClass static_fields_size = %llu,read = %zu",static_fields_size,read);
 
                 uint64_t instance_fields_size = 0;
                 read += DexFileUtils::readUleb128(class_data + read, &instance_fields_size);
-                NLOG("[-] DefineClass instance_fields_size = %lu,read = %zu",instance_fields_size,read);
+                NLOG("[-] DefineClass instance_fields_size = %llu,read = %zu",instance_fields_size,read);
 
                 uint64_t direct_methods_size = 0;
                 read += DexFileUtils::readUleb128(class_data + read, &direct_methods_size);
-                NLOG("[-] DefineClass direct_methods_size = %lu,read = %zu",direct_methods_size,read);
+                NLOG("[-] DefineClass direct_methods_size = %llu,read = %zu",direct_methods_size,read);
 
                 uint64_t virtual_methods_size = 0;
                 read += DexFileUtils::readUleb128(class_data + read, &virtual_methods_size);
-                NLOG("[-] DefineClass virtual_methods_size = %lu,read = %zu",virtual_methods_size,read);
+                NLOG("[-] DefineClass virtual_methods_size = %llu,read = %zu",virtual_methods_size,read);
 
                 dex::ClassDataField staticFields[static_fields_size];
                 read += DexFileUtils::readFields(class_data + read,staticFields,static_fields_size);
@@ -176,13 +176,13 @@ void* DefineClass(void* thiz,void* self,
 
                 for(uint64_t i = 0;i < direct_methods_size;i++){
                     auto method = directMethods[i];
-                    NLOG("[-] DefineClass directMethods[%d] methodIndex = %d,code_off = 0x%x",i,method.method_idx_delta_,method.code_off_);
+                    NLOG("[-] DefineClass directMethods[%llu] methodIndex = %u,code_off = 0x%x",i,method.method_idx_delta_,method.code_off_);
                     patchMethod(begin, location.c_str(), dexSize, dexIndex, method.method_idx_delta_,method.code_off_);
                 }
 
                 for(uint64_t i = 0;i < virtual_methods_size;i++){
                     auto method = virtualMethods[i];
-                    NLOG("[-] DefineClass virtualMethods[%d] methodIndex = %d,code_off = 0x%x",i,method.method_idx_delta_,method.code_off_);
+                    NLOG("[-] DefineClass virtualMethods[%llu] methodIndex = %u,code_off = 0x%x",i,method.method_idx_delta_,method.code_off_);
                     patchMethod(begin, location.c_str(), dexSize, dexIndex, method.method_idx_delta_,method.code_off_);
                 }
             }
