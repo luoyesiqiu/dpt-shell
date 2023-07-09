@@ -294,7 +294,7 @@ const char* find_symbol_in_elf_file(const char *elf_file,int keyword_count,...){
     return nullptr;
 }
 
-void hexDump(const char* name,const void* data, size_t size){
+void hexDump(__unused const char* name,const void* data, size_t size){
     char ascii[17];
     size_t i, j;
     ascii[16] = '\0';
@@ -352,8 +352,8 @@ void appendLog(const char* log){
     }
 }
 
-void printTime(const char* msg,clock_t start){
-    clock_t end = clock();
+void printTime(__unused const char* msg,__unused clock_t start){
+    __unused clock_t end = clock();
     DLOGD("%s %lf",msg,(double)(end - start) / CLOCKS_PER_SEC);
 }
 
