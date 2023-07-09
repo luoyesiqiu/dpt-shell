@@ -22,6 +22,8 @@ set(DPT_NATIVE_SOURCE
         reflect/android_app_ContextImpl.cpp
         )
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -Werror")
+SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fvisibility=hidden")
+SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fvisibility=hidden")
 
 
 option(MZ_LZMA "Enables LZMA & XZ compression" OFF)
@@ -53,8 +55,6 @@ set_target_properties(local_dobby PROPERTIES IMPORTED_LOCATION ${CMAKE_CURRENT_S
 # 寻找已存在的库
 find_library(log-lib log)
 find_library(android-lib android)
-
-set_target_properties(dpt PROPERTIES CXX_VISIBILITY_PRESET hidden)
 
 target_link_libraries( dpt
             ${log-lib}
