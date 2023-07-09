@@ -56,6 +56,14 @@ set_target_properties(local_dobby PROPERTIES IMPORTED_LOCATION ${CMAKE_CURRENT_S
 find_library(log-lib log)
 find_library(android-lib android)
 
+option (DEBUG_MODE "Build as debug" OFF)
+if(${DEBUG_MODE})
+    add_definitions(-DDEBUG)
+    message("WARNNING:opened log")
+else()
+    message("closed log")
+endif()
+
 target_link_libraries( dpt
             ${log-lib}
         MINIZIP::minizip

@@ -7,8 +7,6 @@
 #define TAG  "dpt_native"
 #include "android/log.h"
 
-#define DEBUG
-
 #ifdef DEBUG
 #define DLOGI(...) __android_log_print(ANDROID_LOG_INFO,TAG,__VA_ARGS__)
 #define DLOGD(...) __android_log_print(ANDROID_LOG_DEBUG, TAG, __VA_ARGS__)
@@ -28,6 +26,7 @@
 #define DLOGD(...)
 #define DLOGE(...)
 #define DLOGW(...)
+#define NLOG(...)
 #endif
 
 
