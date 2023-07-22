@@ -8,15 +8,19 @@
 #include "android/log.h"
 
 #ifdef DEBUG
-#define DLOGI(...) __android_log_print(ANDROID_LOG_INFO,TAG,__VA_ARGS__)
-#define DLOGD(...) __android_log_print(ANDROID_LOG_DEBUG, TAG, __VA_ARGS__)
-#define DLOGE(...) __android_log_print(ANDROID_LOG_ERROR,TAG,__VA_ARGS__)
-#define DLOGW(...) __android_log_print(ANDROID_LOG_WARN,TAG,__VA_ARGS__)
+#define DLOG(_level,...) do { \
+        char logBuffer[1024];                                              \
+        snprintf(logBuffer, sizeof(logBuffer), __VA_ARGS__);            \
+        __android_log_print(_level,TAG,"[%s] %s",getThreadName(),logBuffer);                            \
+}while(false)
+
+#define DLOGI(...) DLOG(ANDROID_LOG_INFO,__VA_ARGS__)
+#define DLOGD(...) DLOG(ANDROID_LOG_DEBUG, __VA_ARGS__)
+#define DLOGE(...) DLOG(ANDROID_LOG_ERROR,__VA_ARGS__)
+#define DLOGW(...) DLOG(ANDROID_LOG_WARN,__VA_ARGS__)
 
 #ifdef NOICE_LOG
-#define NLOG(...) { \
-    __android_log_print(ANDROID_LOG_INFO,TAG,__VA_ARGS__); \
-}
+#define NLOG(...) DLOG(ANDROID_LOG_INFO,__VA_ARGS__)
 #else
 #define NLOG(...)
 #endif
