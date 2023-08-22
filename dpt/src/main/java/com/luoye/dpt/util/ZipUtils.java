@@ -138,9 +138,9 @@ public class ZipUtils {
                 String lowerCase = zipEntryName.toLowerCase(Locale.US);
                 String finalFileName = zipEntryName;
                 if(zipEntryNameMap.get(lowerCase) != null){
-                    finalFileName = zipEntryName + RENAME_SUFFIX + (zipEntryNameMap.get(lowerCase) + 1);
-                    String finalFileNameLowerCase = finalFileName.toLowerCase(Locale.US);
-                    zipEntryNameMap.put(finalFileNameLowerCase,0);
+                    int num = zipEntryNameMap.get(lowerCase) + 1;
+                    finalFileName = zipEntryName + RENAME_SUFFIX + num;
+                    zipEntryNameMap.put(lowerCase ,num);
                     LogUtils.noisy("extract file rename: %s -> %s",zipEntryName,finalFileName);
                 }
                 else{
