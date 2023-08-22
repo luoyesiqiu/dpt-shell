@@ -8,6 +8,7 @@ import com.luoye.dpt.model.MultiDexCode;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
@@ -16,7 +17,7 @@ import java.util.Map;
  */
 public class MultiDexCodeUtils {
 
-    public static MultiDexCode makeMultiDexCode(Map<Integer,List<Instruction>> multiDexInsns){
+    public static MultiDexCode makeMultiDexCode(Map<Integer, List<Instruction>> multiDexInsns) {
         int fileOffset = 0;
         MultiDexCode multiDexCode = new MultiDexCode();
         multiDexCode.setVersion(Const.MULTI_DEX_CODE_VERSION);
@@ -29,14 +30,19 @@ public class MultiDexCodeUtils {
 
         List<DexCode> dexCodeList = new ArrayList<>();
         List<Integer> insnsIndexList = new ArrayList<>();
-
-        for (int index = 0;index < multiDexInsns.size(); index++ ) {
+        Iterator<Map.Entry<Integer, List<Instruction>>> iterator = multiDexInsns.entrySet()
+                                                                                .iterator();
+        while (iterator.hasNext()) {
+            List<Instruction> insns = iterator.next()
+                                              .getValue();
             LogUtils.info("DexCode offset = " + fileOffset);
-            List<Instruction> insns = multiDexInsns.get(index);
+            if (insns == null) {
+                continue;
+            }
             dexCodeIndex.add(fileOffset);
             DexCode dexCode = new DexCode();
 
-            dexCode.setMethodCount((short)insns.size());
+            dexCode.setMethodCount((short) insns.size());
             fileOffset += 2;
             dexCode.setInsns(insns);
 
@@ -62,10 +68,12 @@ public class MultiDexCodeUtils {
 
     /**
      * 写出MultiDexCode结构
+     *
      * @param multiDexCode MultiDexCode结构
      */
-    public static void writeMultiDexCode(String out, MultiDexCode multiDexCode){
-        if(multiDexCode.getDexCodes().isEmpty()){
+    public static void writeMultiDexCode(String out, MultiDexCode multiDexCode) {
+        if (multiDexCode.getDexCodes()
+                        .isEmpty()) {
             return;
         }
         RandomAccessFile randomAccessFile = null;
@@ -99,11 +107,9 @@ public class MultiDexCodeUtils {
                 }
             }
 
-        }
-        catch (IOException e){
+        } catch (IOException e) {
             e.printStackTrace();
-        }
-        finally {
+        } finally {
             IoUtils.close(randomAccessFile);
         }
     }
