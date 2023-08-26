@@ -54,6 +54,5 @@ sourceSets.main.resources {
 
 dependencies {
     implementation fileTree(dir:'libs',include:['*.jar'])
-    implementation 'de.upb.cs.swt:axml:2.1.1'
     implementation group: 'net.lingala.zip4j', name: 'zip4j', version: '2.11.5'
 }
