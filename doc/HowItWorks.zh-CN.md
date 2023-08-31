@@ -167,7 +167,7 @@ CodeItem是dex文件中存放函数字节码相关数据的结构。下图显示
         String returnTypeName = dex.typeNames().get(dex.protoIds().get(dex.methodIds().get(method.getMethodIndex()).getProtoIndex()).getReturnTypeIndex());
         String methodName = dex.strings().get(dex.methodIds().get(method.getMethodIndex()).getNameIndex());
         String className = dex.typeNames().get(classDef.getTypeIndex());
-        //native函数
+        //native函数或者abstract函数
         if(method.getCodeOffset() == 0){
             String log = String.format("method code offset is zero,name =  %s.%s , returnType = %s",
                     TypeUtils.getHumanizeTypeName(className),

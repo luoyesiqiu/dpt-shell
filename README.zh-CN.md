@@ -44,7 +44,7 @@ usage: java -jar dpt.jar [option] -f <apk>
 
 ## 原理解析
 
-[How it works](doc/HowItWorks.md)
+[How it works](doc/HowItWorks.zh-CN.md)
 
 ## 声明
 
