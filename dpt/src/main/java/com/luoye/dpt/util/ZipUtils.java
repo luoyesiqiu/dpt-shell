@@ -67,6 +67,7 @@ public class ZipUtils {
             }
             ZipParameters zipParameters = new ZipParameters();
             zipParameters.setCompressionMethod(CompressionMethod.DEFLATE);
+            zipParameters.setCompressionLevel(CompressionLevel.ULTRA);
             for(File f : list){
                 if(f.isDirectory()){
                     zipFile.addFolder(f.getAbsoluteFile(),zipParameters);
