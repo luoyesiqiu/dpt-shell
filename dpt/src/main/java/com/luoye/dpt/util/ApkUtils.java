@@ -151,7 +151,7 @@ public class ApkUtils {
         String outManifestPath = filePath + File.separator + "AndroidManifest_new.xml";
         ModificationProperty property = new ModificationProperty();
 
-        property.addApplicationAttribute(new AttributeItem(NodeValue.Application.EXTRACTNATIVELIBS,1));
+        property.addApplicationAttribute(new AttributeItem(NodeValue.Application.EXTRACTNATIVELIBS, "true"));
 
         FileProcesser.processManifestFile(inManifestPath, outManifestPath, property);
 
