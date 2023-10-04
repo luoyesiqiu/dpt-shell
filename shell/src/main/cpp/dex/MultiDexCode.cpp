@@ -9,7 +9,7 @@ dpt::data::MultiDexCode* dpt::data::MultiDexCode::getInst(){
     return m_inst;
 }
 
-void dpt::data::MultiDexCode::init(uint8_t* buffer, int size){
+void dpt::data::MultiDexCode::init(uint8_t* buffer, size_t size){
     this->m_buffer = buffer;
     this->m_size = size;
 }

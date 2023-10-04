@@ -17,7 +17,7 @@ namespace dpt {
         public:
             static MultiDexCode *getInst();
 
-            void init(uint8_t *buffer, int size);
+            void init(uint8_t *buffer, size_t size);
 
             uint8_t readUInt8(uint32_t offset);
 
