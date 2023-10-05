@@ -13,6 +13,7 @@ namespace dpt {
         class android_content_pm_ApplicationInfo: public Reflect{
         private:
             jni::JNINativeField source_dir_field = {"sourceDir","Ljava/lang/String;"};
+            jni::JNINativeField data_dir_field = {"dataDir","Ljava/lang/String;"};
             jni::JNINativeField class_name_field = {"className","Ljava/lang/String;"};
         public:
             android_content_pm_ApplicationInfo(JNIEnv *env,jobject obj){
@@ -20,6 +21,7 @@ namespace dpt {
                 this->m_obj = obj;
             }
             jstring getSourceDir();
+            jstring getDataDir();
             void setClassName(jobject className);
         protected:
             const char * getClassName() override{

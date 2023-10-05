@@ -141,6 +141,22 @@ void getApkPath(JNIEnv *env,char *apkPathOut,size_t max_out_len){
     DLOGD("getApkPath: %s",apkPathOut);
 }
 
+void getDataDir(JNIEnv *env,char *dataDirOut,size_t max_out_len) {
+    reflect::android_app_ActivityThread activityThread(env);
+    jobject mBoundApplicationObj = activityThread.getBoundApplication();
+
+    reflect::android_app_ActivityThread::AppBindData appBindData(env,mBoundApplicationObj);
+    jobject appInfoObj = appBindData.getAppInfo();
+
+    reflect::android_content_pm_ApplicationInfo applicationInfo(env,appInfoObj);
+    auto sourceDir = applicationInfo.getDataDir();
+
+    const char *dataDirChs = env->GetStringUTFChars(sourceDir,nullptr);
+    strncpy(dataDirOut,dataDirChs,max_out_len);
+
+    DLOGD("data dir: %s",dataDirOut);
+}
+
 jstring getApkPathExport(JNIEnv *env,jclass __unused) {
     char apkPathChs[256] = {0};
     getApkPath(env,apkPathChs,256);
@@ -148,21 +164,21 @@ jstring getApkPathExport(JNIEnv *env,jclass __unused) {
     return env->NewStringUTF(apkPathChs);
 }
 
-void getCompressedDexesPath(char *outDexZipPath,size_t max_len) {
-    char packageName[256] = {0};
-    readPackageName(packageName,256);
-    snprintf(outDexZipPath,max_len,"/data/data/%s/%s/%s",packageName,CACHE_DIR,DEXES_ZIP_NAME);
+void getCompressedDexesPath(JNIEnv *env,char *outDexZipPath,size_t max_len) {
+    char dataDir[256] = {0};
+    getDataDir(env,dataDir,256);
+    snprintf(outDexZipPath,max_len,"%s/%s/%s",dataDir,CACHE_DIR,DEXES_ZIP_NAME);
 }
 
-void getCodeCachePath(char *outCodeCachePath,size_t max_len) {
-    char packageName[256] = {0};
-    readPackageName(packageName,256);
-    snprintf(outCodeCachePath,max_len,"/data/data/%s/%s/",packageName,CACHE_DIR);
+void getCodeCachePath(JNIEnv *env,char *outCodeCachePath,size_t max_len) {
+    char dataDir[256] = {0};
+    getDataDir(env,dataDir,256);
+    snprintf(outCodeCachePath,max_len,"%s/%s/",dataDir,CACHE_DIR);
 }
 
 jstring getCompressedDexesPathExport(JNIEnv *env,jclass __unused){
     char dexesPath[256] = {0};
-    getCompressedDexesPath(dexesPath,256);
+    getCompressedDexesPath(env,dexesPath,256);
     return env->NewStringUTF(dexesPath);
 }
 
