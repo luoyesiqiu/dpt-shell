@@ -329,12 +329,12 @@ static void writeDexAchieve(const char *dexAchievePath) {
     }
 }
 
-static void extractDexes(){
+static void extractDexes(JNIEnv *env){
     char compressedDexesPathChs[256] = {0};
-    getCompressedDexesPath(compressedDexesPathChs, 256);
+    getCompressedDexesPath(env,compressedDexesPathChs, 256);
 
     char codeCachePathChs[256] = {0};
-    getCodeCachePath(codeCachePathChs, 256);
+    getCodeCachePath(env,codeCachePathChs, 256);
 
     if(access(codeCachePathChs, F_OK) == 0){
         if(access(compressedDexesPathChs, F_OK) != 0) {
@@ -359,7 +359,7 @@ void init_app(JNIEnv *env, jclass __unused, jobject context) {
     clock_t start = clock();
 
     loadApk(env);
-    extractDexes();
+    extractDexes(env);
 
     if (nullptr == context) {
         int64_t entry_size = 0;
