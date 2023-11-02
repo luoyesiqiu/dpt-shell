@@ -4,7 +4,6 @@ import com.android.dex.ClassData;
 import com.android.dex.ClassDef;
 import com.android.dex.Code;
 import com.android.dex.Dex;
-import com.luoye.dpt.Global;
 import com.luoye.dpt.model.Instruction;
 
 import org.json.JSONArray;
@@ -19,7 +18,7 @@ import java.util.*;
  * @author luoyesiqiu
  */
 public class DexUtils {
-    /* 以下为不抽取的类的规则 */
+    /* The following are the rules for classes that do not extract */
     private static final String[] excludeRule = {
       "Landroid/.*",
       "Landroidx/.*",
@@ -42,13 +41,12 @@ public class DexUtils {
     };
 
     /**
-     * 抽取所有方法的代码
-     * @param dexFile 输入dex
-     * @param outDexFile 输出dex
-     * @return
-     * @throws IOException
+     * Extract all methods code
+     * @param dexFile dex input path
+     * @param outDexFile dex output path
+     * @return insns list
      */
-    public static List<Instruction> extractAllMethods(File dexFile, File outDexFile) {
+    public static List<Instruction> extractAllMethods(File dexFile, File outDexFile,String packageName,boolean dumpCode) {
         List<Instruction> instructionList = new ArrayList<>();
         Dex dex = null;
         RandomAccessFile randomAccessFile = null;
@@ -61,7 +59,7 @@ public class DexUtils {
             Iterable<ClassDef> classDefs = dex.classDefs();
             for (ClassDef classDef : classDefs) {
                 boolean skip = false;
-                //跳过系统类
+                //Skip exclude classes name
                 for(String rule : excludeRule){
                     if(classDef.toString().matches(rule)){
                         skip = true;
@@ -109,16 +107,16 @@ public class DexUtils {
         }
         finally {
             IoUtils.close(randomAccessFile);
-            if(Global.dumpCode) {
-                dumpJSON(dexFile, dumpJSON);
+            if(dumpCode) {
+                dumpJSON(packageName,dexFile, dumpJSON);
             }
         }
 
         return instructionList;
     }
 
-    private static void dumpJSON(File originFile,JSONArray array){
-        File pkg = new File(Global.packageName);
+    private static void dumpJSON(String packageName, File originFile, JSONArray array){
+        File pkg = new File(packageName);
         if(!pkg.exists()){
             pkg.mkdirs();
         }
@@ -137,19 +135,18 @@ public class DexUtils {
     }
 
     /**
-     * 抽取单个方法的代码
-     * @param dex dex文件
-     * @param outRandomAccessFile 输出的文件
-     * @param method 要抽取的方法
-     * @return
-     * @throws Exception
+     * Extract a method code
+     * @param dex dex struct
+     * @param outRandomAccessFile out file
+     * @param method will extract method
+     * @return a insns
      */
     private static Instruction extractMethod(Dex dex ,RandomAccessFile outRandomAccessFile,ClassDef classDef,ClassData.Method method)
             throws Exception{
         String returnTypeName = dex.typeNames().get(dex.protoIds().get(dex.methodIds().get(method.getMethodIndex()).getProtoIndex()).getReturnTypeIndex());
         String methodName = dex.strings().get(dex.methodIds().get(method.getMethodIndex()).getNameIndex());
         String className = dex.typeNames().get(classDef.getTypeIndex());
-        //native函数,abstract函数
+        //native function or abstract function
         if(method.getCodeOffset() == 0){
             LogUtils.noisy("method code offset is zero,name =  %s.%s , returnType = %s",
                     TypeUtils.getHumanizeTypeName(className),
@@ -161,7 +158,7 @@ public class DexUtils {
         //16 = registers_size + ins_size + outs_size + tries_size + debug_info_off + insns_size
         int insnsOffset = method.getCodeOffset() + 16;
         Code code = dex.readCode(method);
-        //容错处理
+        //Fault-tolerant handling
         if(code.getInstructions().length == 0){
             LogUtils.noisy("method has no code,name =  %s.%s , returnType = %s",
                     TypeUtils.getHumanizeTypeName(className),
@@ -170,7 +167,7 @@ public class DexUtils {
             return null;
         }
         int insnsCapacity = code.getInstructions().length;
-        //insns容量不足以存放return语句，跳过
+        //The insns capacity is not enough to store the return statement, skip it
         byte[] returnByteCodes = getReturnByteCodes(returnTypeName);
         if(insnsCapacity * 2 < returnByteCodes.length){
             LogUtils.noisy("The capacity of insns is not enough to store the return statement. %s.%s() ClassIndex = %d -> %s insnsCapacity = %d byte(s) but returnByteCodes = %d byte(s)",
@@ -184,12 +181,12 @@ public class DexUtils {
             return null;
         }
         instruction.setOffsetOfDex(insnsOffset);
-        //这里的MethodIndex对应method_ids区的索引
+        //Here, MethodIndex corresponds to the index of the method_ids area
         instruction.setMethodIndex(method.getMethodIndex());
-        //注意：这里是数组的大小
+        //Note: Here is the size of the array
         instruction.setInstructionDataSize(insnsCapacity * 2);
         byte[] byteCode = new byte[insnsCapacity * 2];
-        //写入nop指令
+        //Write nop instruction
         for (int i = 0; i < insnsCapacity; i++) {
             outRandomAccessFile.seek(insnsOffset + (i * 2));
             byteCode[i * 2] = outRandomAccessFile.readByte();
@@ -199,16 +196,14 @@ public class DexUtils {
         }
         instruction.setInstructionsData(byteCode);
         outRandomAccessFile.seek(insnsOffset);
-        //写出return语句
+        //Write return instruction
         outRandomAccessFile.write(returnByteCodes);
 
         return instruction;
     }
 
     /**
-     * 根据类型缩写获取return语句的code
-     * @param typeName
-     * @return
+     * Obtain the code of the return statement based on the jvm type
      */
     public static byte[] getReturnByteCodes(String typeName){
         byte[] returnVoidCodes = {(byte)0x0e , (byte)(0x0)};
@@ -235,9 +230,7 @@ public class DexUtils {
     }
 
     /**
-     * 写入dex的校验数据
-     * @param oldDexFile
-     * @param newDexFile
+     * Write dex hashes
      */
     public static void writeHashes(File oldDexFile,File newDexFile){
         byte[] dexData = IoUtils.readFile(oldDexFile.getAbsolutePath());
@@ -254,10 +247,7 @@ public class DexUtils {
     }
 
     /**
-     * 填充code到dex
-     * @param dexFile 要填充的dex
-     * @param instructions 指令数组
-     * @throws IOException
+     * Restore dex code to dex
      */
     public static void restoreInstructions(File dexFile,List<Instruction> instructions) throws IOException {
         Dex dex = new Dex(dexFile);

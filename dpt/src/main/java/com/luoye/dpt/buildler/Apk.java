@@ -1,12 +1,18 @@
-package com.luoye.dpt.util;
+package com.luoye.dpt.buildler;
 
 import com.android.apksigner.ApkSignerTool;
 import com.iyxan23.zipalignjava.ZipAlign;
 import com.luoye.dpt.Const;
-import com.luoye.dpt.Global;
 import com.luoye.dpt.model.Instruction;
 import com.luoye.dpt.model.MultiDexCode;
 import com.luoye.dpt.task.ThreadPool;
+import com.luoye.dpt.util.DexUtils;
+import com.luoye.dpt.util.FileUtils;
+import com.luoye.dpt.util.IoUtils;
+import com.luoye.dpt.util.LogUtils;
+import com.luoye.dpt.util.ManifestUtils;
+import com.luoye.dpt.util.MultiDexCodeUtils;
+import com.luoye.dpt.util.ZipUtils;
 import com.wind.meditor.core.FileProcesser;
 import com.wind.meditor.property.AttributeItem;
 import com.wind.meditor.property.ModificationProperty;
@@ -29,92 +35,134 @@ import java.util.concurrent.CountDownLatch;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-/**
- * @author luoyesiqiu
- */
-public class ApkUtils {
+public class Apk extends AndroidPackage {
 
-    /**
-     * 复制壳的so文件
-     * @param src
-     */
-    @Deprecated
-    public static void copyShellLibs(String filePath, File src){
-        File outLibDir = getOutLibDir(filePath);
-        if(outLibDir.exists()){
-            File[] libDirs = outLibDir.listFiles();
-            if(libDirs != null && libDirs.length != 0) {
-                for (File libDir : libDirs) {
-                    File srcDir = new File(src + File.separator + libDir.getName());
-                    if (srcDir.exists() && libDir.exists()) {
-                        System.out.printf("copyShellLibs %s --> %s\n", srcDir.getAbsolutePath(), outLibDir.getAbsolutePath());
-                        FileUtils.copy(srcDir.getAbsolutePath(), outLibDir.getAbsolutePath());
-                    }
-                }
-            }
-            else{
-                File[] srcDirs = src.listFiles();
-                if(srcDirs != null){
-                    for (File srcDir : srcDirs) {
-                        System.out.printf("copyShellLibs %s --> %s\n",srcDir.getAbsolutePath(),outLibDir.getAbsolutePath());
-                        FileUtils.copy(srcDir.getAbsolutePath(), outLibDir.getAbsolutePath());
-                    }
-                }
-            }
+    private boolean dumpCode;
+
+    public static class Builder extends AndroidPackage.Builder {
+        private boolean dumpCode;
+        @Override
+        public Apk build() {
+            return new Apk(this);
         }
-        else{
-            File[] srcDirs = src.listFiles();
-            if(srcDirs != null){
-                for (File srcDir : srcDirs) {
-                    System.out.printf("copyShellLibs %s --> %s\n",srcDir.getAbsolutePath(),outLibDir.getAbsolutePath());
-                    FileUtils.copy(srcDir.getAbsolutePath(), outLibDir.getAbsolutePath());
-                }
-            }
+
+        public Builder filePath(String path) {
+            this.filePath = path;
+            return this;
+        }
+
+        public Builder packageName(String packageName) {
+            this.packageName = packageName;
+            return this;
+        }
+
+        public Builder debuggable(boolean debuggable) {
+            this.debuggable = debuggable;
+            return this;
+        }
+
+        public Builder sign(boolean sign) {
+            this.sign = sign;
+            return this;
+        }
+
+        public Builder dumpCode(boolean dumpCode) {
+            this.dumpCode = dumpCode;
+            return this;
+        }
+
+        public Builder appComponentFactory(boolean appComponentFactory) {
+            this.appComponentFactory = appComponentFactory;
+            return this;
         }
     }
-    /**
-     * 得到一个新的apk文件名
-     * @param apkName
-     * @return
-     */
-    public static String getUnsignApkName(String apkName){
+
+    protected Apk(Builder builder) {
+        setFilePath(builder.filePath);
+        setDebuggable(builder.debuggable);
+        setAppComponentFactory(builder.appComponentFactory);
+        setSign(builder.sign);
+        setPackageName(builder.packageName);
+        setDumpCode(builder.dumpCode);
+    }
+
+    public void setDumpCode(boolean dumpCode) {
+        this.dumpCode = dumpCode;
+    }
+
+    public boolean isDumpCode() {
+        return dumpCode;
+    }
+
+    private static void process(Apk apk){
+        if(!new File("shell-files").exists()) {
+            LogUtils.error("Cannot find shell files!");
+            return;
+        }
+        File apkFile = new File(apk.getFilePath());
+
+        if(!apkFile.exists()){
+            LogUtils.error("Apk not exists!");
+            return;
+        }
+
+        //apk extract path
+        String apkMainProcessPath = apk.getWorkspaceDir().getAbsolutePath();
+
+        LogUtils.info("Apk main process path: " + apkMainProcessPath);
+
+        ZipUtils.extractAPK(apk.getFilePath(),apkMainProcessPath);
+        String packageName = ManifestUtils.getPackageName(apkMainProcessPath + File.separator + "AndroidManifest.xml");
+        apk.setPackageName(packageName);
+        apk.extractDexCode(apkMainProcessPath);
+
+        apk.compressDexFiles(apkMainProcessPath);
+        apk.deleteAllDexFiles(apkMainProcessPath);
+
+        apk.saveApplicationName(apkMainProcessPath);
+        apk.writeProxyAppName(apkMainProcessPath);
+        if(apk.isAppComponentFactory()){
+            apk.saveAppComponentFactory(apkMainProcessPath);
+            apk.writeProxyComponentFactoryName(apkMainProcessPath);
+        }
+        if(apk.isDebuggable()) {
+            LogUtils.info("Make apk debuggable.");
+            apk.setDebuggable(apkMainProcessPath, true);
+        }
+
+        apk.setExtractNativeLibs(apkMainProcessPath);
+
+        apk.addProxyDex(apkMainProcessPath);
+        apk.copyNativeLibs(apkMainProcessPath);
+
+        apk.buildApk(apkFile.getAbsolutePath(),apkMainProcessPath, FileUtils.getExecutablePath());
+
+        File apkMainProcessFile = new File(apkMainProcessPath);
+        if (apkMainProcessFile.exists()) {
+            FileUtils.deleteRecurse(apkMainProcessFile);
+        }
+        LogUtils.info("All done.");
+    }
+    public void protect() {
+        process(this);
+    }
+
+    private String getUnsignApkName(String apkName){
         return FileUtils.getNewFileName(apkName,"unsign");
     }
 
-    public static String getUnzipalignApkName(String apkName){
+    private String getUnzipalignApkName(String apkName){
         return FileUtils.getNewFileName(apkName,"unzipalign");
     }
 
-    public static String getSignedApkName(String apkName){
+    private String getSignedApkName(String apkName){
         return FileUtils.getNewFileName(apkName,"signed");
     }
-    /**
-     * 获取工作目录下的lib路径
-     * @return
-     */
-    public static File getOutLibDir(String filePath){
-        return FileUtils.getDir(filePath,"lib");
-    }
 
     /**
-     * 获取工作目录下的META-INF路径
-     * @return
+     * Write proxy ApplicationName
      */
-    public static File getOutMetaDir(String filePath){
-        return FileUtils.getDir(filePath,"META-INF");
-    }
-
-    /**
-     * 删除meta-data
-     */
-    public static void deleteMetaData(String filePath){
-        FileUtils.deleteRecurse(getOutMetaDir(filePath));
-    }
-
-    /**
-     * 写入代理ApplicationName
-     */
-    public static void writeProxyAppName(String filePath){
+    private void writeProxyAppName(String filePath){
         String inManifestPath = filePath + File.separator + "AndroidManifest.xml";
         String outManifestPath = filePath + File.separator + "AndroidManifest_new.xml";
         ManifestUtils.writeApplicationName(inManifestPath,outManifestPath, Const.PROXY_APPLICATION_NAME);
@@ -126,10 +174,8 @@ public class ApkUtils {
 
         outManifestFile.renameTo(inManifestFile);
     }
-    /**
-     * 写入代理ComponentFactory
-     */
-    public static void writeProxyComponentFactoryName(String filePath){
+
+    private void writeProxyComponentFactoryName(String filePath){
         String inManifestPath = filePath + File.separator + "AndroidManifest.xml";
         String outManifestPath = filePath + File.separator + "AndroidManifest_new.xml";
         ManifestUtils.writeAppComponentFactory(inManifestPath,outManifestPath, Const.PROXY_COMPONENT_FACTORY);
@@ -142,10 +188,7 @@ public class ApkUtils {
         outManifestFile.renameTo(inManifestFile);
     }
 
-    /**
-     * 设置extractNativeLibs为true
-     */
-    public static void setExtractNativeLibs(String filePath){
+    private void setExtractNativeLibs(String filePath){
 
         String inManifestPath = filePath + File.separator + "AndroidManifest.xml";
         String outManifestPath = filePath + File.separator + "AndroidManifest_new.xml";
@@ -163,10 +206,7 @@ public class ApkUtils {
         outManifestFile.renameTo(inManifestFile);
     }
 
-    /**
-     * 设置debuggable标志
-     */
-    public static void setDebuggable(String filePath,boolean debuggable){
+    private void setDebuggable(String filePath,boolean debuggable){
         String inManifestPath = filePath + File.separator + "AndroidManifest.xml";
         String outManifestPath = filePath + File.separator + "AndroidManifest_new.xml";
         ManifestUtils.writeDebuggable(inManifestPath,outManifestPath, debuggable ? "true" : "false");
@@ -179,75 +219,43 @@ public class ApkUtils {
         outManifestFile.renameTo(inManifestFile);
     }
 
-    /**
-     * 获取工作目录
-     * @return
-     */
-    public static File getWorkspaceDir(){
+    private File getWorkspaceDir(){
         return FileUtils.getDir(Const.ROOT_OF_OUT_DIR,"dptOut");
     }
 
     /**
-     * 删除工作目录
+     * Get last process（zipalign，sign）dir
      */
-    public static void deleteWorkspaceDir(){
-        File outDir = getWorkspaceDir();
-        FileUtils.deleteRecurse(outDir);
-    }
-
-    /**
-     * 获取最后处理（对齐，签名）目录
-     * @return
-     */
-    public static File getLastProcessDir(){
+    private File getLastProcessDir(){
         return FileUtils.getDir(Const.ROOT_OF_OUT_DIR,"dptLastProcess");
     }
 
-    /**
-     * 获取工作目录下的Assets目录
-     * @return
-     */
-    public static File getOutAssetsDir(String filePath){
+    private File getOutAssetsDir(String filePath){
         return FileUtils.getDir(filePath,"assets");
     }
 
-    /**
-     * 添加代理dex
-     * @param apkDir
-     */
-    public static void addProxyDex(String apkDir){
+    private void addProxyDex(String apkDir){
         String proxyDexPath = "shell-files/dex/classes.dex";
         addDex(proxyDexPath,apkDir);
     }
 
-    /**
-     * 压缩dex文件
-     */
-    public static void compressDexFiles(String apkDir){
+    private void compressDexFiles(String apkDir){
         ZipUtils.compress(getDexFiles(apkDir),getOutAssetsDir(apkDir).getAbsolutePath()+File.separator + "i11111i111");
     }
 
-    /**
-     * 压缩so文件
-     */
-    public static void copyNativeLibs(String apkDir){
+    private void copyNativeLibs(String apkDir){
         File file = new File(FileUtils.getExecutablePath(), "shell-files/libs");
         FileUtils.copy(file.getAbsolutePath(),getOutAssetsDir(apkDir).getAbsolutePath() + File.separator + "vwwwwwvwww");
     }
 
-    public static void deleteAllDexFiles(String dir){
+    private void deleteAllDexFiles(String dir){
         List<File> dexFiles = getDexFiles(dir);
         for (File dexFile : dexFiles) {
             dexFile.delete();
         }
     }
 
-    /**
-     * 添加dex
-     * @param dexFilePath
-     * @param apkDir
-     */
-    public static void addDex(String dexFilePath,String apkDir){
+    private void addDex(String dexFilePath,String apkDir){
         File dexFile = new File(dexFilePath);
         List<File> dexFiles = getDexFiles(apkDir);
         int newDexNameNumber = dexFiles.size() + 1;
@@ -259,20 +267,11 @@ public class ApkUtils {
         IoUtils.writeFile(newDexPath,dexData);
     }
 
-    /**
-     * 获取AndroidManiest.xml路径
-     * @param apkOutDir
-     * @return
-     */
     private static String getManifestFilePath(String apkOutDir){
         return apkOutDir + File.separator + "AndroidManifest.xml";
     }
 
-    /**
-     * 保存ApplicationName
-     * @param apkOutDir
-     */
-    public static void saveApplicationName(String apkOutDir){
+    private void saveApplicationName(String apkOutDir){
         String androidManifestFile = getManifestFilePath(apkOutDir);
         File appNameOutFile = new File(getOutAssetsDir(apkOutDir),"app_name");
         String appName = ManifestUtils.getApplicationName(androidManifestFile);
@@ -282,11 +281,7 @@ public class ApkUtils {
         IoUtils.writeFile(appNameOutFile.getAbsolutePath(),appName.getBytes());
     }
 
-    /**
-     * 保存ComponentFactory
-     * @param apkOutDir
-     */
-    public static void saveAppComponentFactory(String apkOutDir){
+    private void saveAppComponentFactory(String apkOutDir){
         String androidManifestFile = getManifestFilePath(apkOutDir);
         File appNameOutFile = new File(getOutAssetsDir(apkOutDir),"app_acf");
         String appName = ManifestUtils.getAppComponentFactory(androidManifestFile);
@@ -296,7 +291,7 @@ public class ApkUtils {
         IoUtils.writeFile(appNameOutFile.getAbsolutePath(),appName.getBytes());
     }
 
-    public static boolean isSystemComponentFactory(String name){
+    private boolean isSystemComponentFactory(String name){
         if(name.equals("androidx.core.app.CoreComponentFactory") || name.equals("android.support.v4.app.CoreComponentFactory")){
             return true;
         }
@@ -304,10 +299,10 @@ public class ApkUtils {
     }
 
     /**
-     * 获取dex文件的序号
-     * 例如：classes2.dex返回1
+     * Get dex file number
+     * ex：classes2.dex return 1
      */
-    public static int getDexNumber(String dexName){
+    private int getDexNumber(String dexName){
         Pattern pattern = Pattern.compile("classes(\\d*)\\.dex$");
         Matcher matcher = pattern.matcher(dexName);
         if(matcher.find()){
@@ -319,11 +314,7 @@ public class ApkUtils {
         }
     }
 
-    /**
-     * 提取apk里的dex的代码
-     * @param apkOutDir
-     */
-    public static void  extractDexCode(String apkOutDir){
+    private void  extractDexCode(String apkOutDir){
         List<File> dexFiles = getDexFiles(apkOutDir);
         Map<Integer,List<Instruction>> instructionMap = new HashMap<>();
         String appNameNew = "OoooooOooo";
@@ -338,10 +329,10 @@ public class ApkUtils {
                 }
                 String extractedDexName = dexFile.getName().endsWith(".dex") ? dexFile.getName().replaceAll("\\.dex$", "_extracted.dat") : "_extracted.dat";
                 File extractedDexFile = new File(dexFile.getParent(), extractedDexName);
-                //抽取dex的代码
-                List<Instruction> ret = DexUtils.extractAllMethods(dexFile, extractedDexFile);
+
+                List<Instruction> ret = DexUtils.extractAllMethods(dexFile, extractedDexFile, getPackageName(), isDumpCode());
                 instructionMap.put(dexNo,ret);
-                //更新dex的hash
+
                 File dexFileRightHashes = new File(dexFile.getParent(),FileUtils.getNewFileSuffix(dexFile.getName(),"dat"));
                 DexUtils.writeHashes(extractedDexFile,dexFileRightHashes);
                 dexFile.delete();
@@ -366,11 +357,9 @@ public class ApkUtils {
 
     }
     /**
-     * 获取某个目录下的所有dex文件
-     * @param dir
-     * @return
+     * Get all dex files
      */
-    public static List<File> getDexFiles(String dir){
+    private List<File> getDexFiles(String dir){
         List<File> dexFiles = new ArrayList<>();
         File dirFile = new File(dir);
         File[] files = dirFile.listFiles();
@@ -380,10 +369,10 @@ public class ApkUtils {
         return dexFiles;
     }
 
-    public static void buildApk(String originApkPath,String unpackFilePath,String savePath) {
+    private void buildApk(String originApkPath,String unpackFilePath,String savePath) {
 
         String originApkName = new File(originApkPath).getName();
-        String apkLastProcessDir = ApkUtils.getLastProcessDir().getAbsolutePath();
+        String apkLastProcessDir = getLastProcessDir().getAbsolutePath();
 
         String unzipalignApkPath = savePath + File.separator + getUnzipalignApkName(originApkName);
         ZipUtils.compressToApk(unpackFilePath, unzipalignApkPath);
@@ -423,8 +412,7 @@ public class ApkUtils {
 
         String signedApkPath = savePath + File.separator + getSignedApkName(originApkName);
 
-
-        if(Global.optionSignApk) {
+        if(isSign()) {
             signResult = signApkDebug(willSignApkPath, keyStoreFilePath, signedApkPath);
         }
 
@@ -478,9 +466,9 @@ public class ApkUtils {
     }
 
     private static boolean signApk(String apkPath, String keyStorePath, String signedApkPath,
-                                                        String keyAlias,
-                                                        String storePassword,
-                                                        String KeyPassword) {
+                                   String keyAlias,
+                                   String storePassword,
+                                   String KeyPassword) {
         ArrayList<String> commandList = new ArrayList<>();
 
         commandList.add("sign");

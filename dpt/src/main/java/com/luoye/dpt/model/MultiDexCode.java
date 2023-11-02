@@ -40,13 +40,13 @@ public class MultiDexCode {
     }
 
 
-    //版本号
+    //File version
     private short version;
-    //dex的数量
+    //Dex count
     private short dexCount;
-    //DexCode的索引，List长度为dex的数量
+    //Index of DexCode, the list size equals dex count
     private List<Integer> dexCodesIndex;
-    //真实的DexCode，List长度为dex的数量
+    //Real DexCode, the list size equals dex count
     private List<DexCode> dexCodes;
 
     @Override

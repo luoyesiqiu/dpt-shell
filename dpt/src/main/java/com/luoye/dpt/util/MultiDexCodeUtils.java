@@ -67,9 +67,7 @@ public class MultiDexCodeUtils {
     }
 
     /**
-     * 写出MultiDexCode结构
-     *
-     * @param multiDexCode MultiDexCode结构
+     * Write MultiDexCode struct to file
      */
     public static void writeMultiDexCode(String out, MultiDexCode multiDexCode) {
         if (multiDexCode.getDexCodes()
@@ -80,23 +78,23 @@ public class MultiDexCodeUtils {
 
         try {
             randomAccessFile = new RandomAccessFile(out, "rw");
-            //写入版本号
+            //Write file version
             randomAccessFile.write(Endian.makeLittleEndian(multiDexCode.getVersion()));
-            //写入dex数量
+            //Write dex count
             randomAccessFile.write(Endian.makeLittleEndian(multiDexCode.getDexCount()));
 
-            //写入每个dex在文件中的位置
+            //Write to the location of each dex in the file
             for (Integer dexCodesIndex : multiDexCode.getDexCodesIndex()) {
                 randomAccessFile.write(Endian.makeLittleEndian(dexCodesIndex));
             }
-            //写入每个dex的数据
+            //Write data for each dex
             for (DexCode dexCode : multiDexCode.getDexCodes()) {
                 List<Instruction> insns = dexCode.getInsns();
 
                 int methodCount = dexCode.getMethodCount() & 0xFFFF;
 
                 LogUtils.info("insns item count:" + insns.size() + ",method count : " + methodCount);
-                //写入单个dex的函数数量
+                //The number of functions that are written to a single dex
                 randomAccessFile.write(Endian.makeLittleEndian(dexCode.getMethodCount()));
                 for (int i = 0; i < insns.size(); i++) {
                     Instruction instruction = insns.get(i);

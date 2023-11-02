@@ -1,5 +1,6 @@
 package com.luoye.dpt;
 
+import com.luoye.dpt.buildler.Apk;
 import com.luoye.dpt.util.*;
 
 import org.apache.commons.cli.CommandLine;
@@ -10,16 +11,12 @@ import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 
-import java.io.File;
-
 public class Dpt {
 
     public static void main(String[] args) {
         try {
-            parseOptions(args);
-            if(Global.optionApkPath != null) {
-                processApk(Global.optionApkPath);
-            }
+            Apk apk = parseOptions(args);
+            apk.protect();
         } catch (Exception e){
         }
     }
@@ -29,7 +26,7 @@ public class Dpt {
         helpFormatter.printHelp("java -jar dpt.jar [option] -f <apk>",options);
     }
 
-    private static void parseOptions(String[] args){
+    private static Apk parseOptions(String[] args){
         Options options = new Options();
         options.addOption(new Option(Const.OPTION_NO_SIGN_APK,Const.OPTION_NO_SIGN_APK_LONG,false,"Do not sign apk."));
         options.addOption(new Option(Const.OPTION_DUMP_CODE,Const.OPTION_DUMP_CODE_LONG,false,"Dump the code item of DEX and save it to .json files."));
@@ -42,66 +39,25 @@ public class Dpt {
             CommandLine commandLine = commandLineParser.parse(options, args);
             if(!commandLine.hasOption(Const.OPTION_APK_FILE)){
                 usage(options);
-                return;
+                return new Apk.Builder().build();
             }
             LogUtils.setOpenNoisyLog(commandLine.hasOption(Const.OPTION_OPEN_NOISY_LOG));
-            Global.optionApkPath = commandLine.getOptionValue(Const.OPTION_APK_FILE);
-            Global.dumpCode = commandLine.hasOption(Const.OPTION_DUMP_CODE);
-            Global.optionSignApk = !commandLine.hasOption(Const.OPTION_NO_SIGN_APK);
-            Global.debuggable = commandLine.hasOption(Const.OPTION_DEBUGGABLE);
-            Global.disabledAppComponentFactory = commandLine.hasOption(Const.OPTION_DISABLE_APP_COMPONENT_FACTORY);
+
+
+            return new Apk.Builder()
+                    .filePath(commandLine.getOptionValue(Const.OPTION_APK_FILE))
+                    .sign(!commandLine.hasOption(Const.OPTION_NO_SIGN_APK))
+                    .debuggable(commandLine.hasOption(Const.OPTION_DEBUGGABLE))
+                    .appComponentFactory(!commandLine.hasOption(Const.OPTION_DISABLE_APP_COMPONENT_FACTORY))
+                    .dumpCode(commandLine.hasOption(Const.OPTION_DUMP_CODE))
+                    .build();
         }
         catch (ParseException e){
             usage(options);
         }
+
+        return new Apk.Builder().build();
     }
 
-    private static void processApk(String apkPath){
-        if(!new File("shell-files").exists()) {
-            LogUtils.error("Cannot find shell files!");
-            return;
-        }
-        File apkFile = new File(apkPath);
 
-        if(!apkFile.exists()){
-            LogUtils.error("Apk not exists!");
-            return;
-        }
-
-        //apk文件解压的目录
-        String apkMainProcessPath = ApkUtils.getWorkspaceDir().getAbsolutePath();
-
-        LogUtils.info("Apk main process path: " + apkMainProcessPath);
-
-        ZipUtils.extractAPK(apkPath,apkMainProcessPath);
-        Global.packageName = ManifestUtils.getPackageName(apkMainProcessPath + File.separator + "AndroidManifest.xml");
-        ApkUtils.extractDexCode(apkMainProcessPath);
-
-        ApkUtils.compressDexFiles(apkMainProcessPath);
-        ApkUtils.deleteAllDexFiles(apkMainProcessPath);
-
-        ApkUtils.saveApplicationName(apkMainProcessPath);
-        ApkUtils.writeProxyAppName(apkMainProcessPath);
-        if(!Global.disabledAppComponentFactory){
-            ApkUtils.saveAppComponentFactory(apkMainProcessPath);
-            ApkUtils.writeProxyComponentFactoryName(apkMainProcessPath);
-        }
-        if(Global.debuggable) {
-            LogUtils.info("Make apk debuggable.");
-            ApkUtils.setDebuggable(apkMainProcessPath, true);
-        }
-
-        ApkUtils.setExtractNativeLibs(apkMainProcessPath);
-
-        ApkUtils.addProxyDex(apkMainProcessPath);
-        ApkUtils.copyNativeLibs(apkMainProcessPath);
-
-        ApkUtils.buildApk(apkFile.getAbsolutePath(),apkMainProcessPath,FileUtils.getExecutablePath());
-
-        File apkMainProcessFile = new File(apkMainProcessPath);
-        if (apkMainProcessFile.exists()) {
-            FileUtils.deleteRecurse(apkMainProcessFile);
-        }
-        LogUtils.info("All done.");
-    }
 }

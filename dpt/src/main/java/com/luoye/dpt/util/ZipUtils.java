@@ -27,7 +27,7 @@ public class ZipUtils {
     private static final HashMap<String, CompressionMethod> compressedLevelMap = new HashMap<>();
 
     /**
-     * 读取资源
+     * Read asset file from .jar
      */
     public static void readResourceFromRuntime(String resourcePath, String distPath) throws IOException {
         InputStream inputStream = ZipUtils.class.getClassLoader()
@@ -61,7 +61,7 @@ public class ZipUtils {
     }
 
     /**
-     * 压缩文件/文件夹为apk
+     * Compress files to apk
      */
     public static void compressToApk(String srcDir, String destFile) {
         ZipFile zipFile = null;
@@ -125,7 +125,7 @@ public class ZipUtils {
     }
 
     /**
-     * 解压apk所有文件
+     * Unzip apk
      */
     public static void extractAPK(String zipFilePath, String destDir) {
         ZipInputStream zipInputStream = null;
@@ -162,7 +162,7 @@ public class ZipUtils {
     }
 
     /**
-     * 解压单个文件
+     * Unzip a file
      */
     public static void extractFile(String zipFilePath, String fileName, String destDir) {
         ZipFile zipFile = new ZipFile(zipFilePath);
@@ -176,7 +176,7 @@ public class ZipUtils {
 
 
     /**
-     * 正常压缩文件
+     * Compress to common zip file
      */
     public static void compress(List<File> files, String destFile) {
         ZipFile zipFile = new ZipFile(destFile);
