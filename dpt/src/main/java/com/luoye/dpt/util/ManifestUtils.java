@@ -13,7 +13,7 @@ import pxb.android.axml.AxmlParser;
 public class ManifestUtils {
 
     /**
-     * 写入App名称到xml
+     * Write app name to xml
      */
     public static void writeApplicationName(String inManifestFile, String outManifestFile, String newApplicationName){
         ModificationProperty property = new ModificationProperty();
@@ -24,7 +24,7 @@ public class ManifestUtils {
     }
 
     /**
-     * 写入appComponentFactory到xml
+     * Write appComponentFactory to xml
      */
     public static void writeAppComponentFactory(String inManifestFile, String outManifestFile, String newComponentFactory){
         ModificationProperty property = new ModificationProperty();
@@ -35,7 +35,7 @@ public class ManifestUtils {
     }
 
     /**
-     * 写入debuggable属性
+     * Write debuggable field
      */
     public static void writeDebuggable(String inManifestFile, String outManifestFile, String debuggable){
         ModificationProperty property = new ModificationProperty();
@@ -46,11 +46,11 @@ public class ManifestUtils {
     }
 
     /**
-     * 获取AndroidManifest.xml中属性的值
-     * @param file AndroidManifest.xml文件
-     * @param tag 标签
-     * @param ns 命名空间
-     * @param attrName 属性名
+     * Get AndroidManifest.xml attr value
+     * @param file AndroidManifest.xml file
+     * @param tag tag name
+     * @param ns namespace
+     * @param attrName attr name
      * @return
      */
     public static String getValue(String file,String tag,String ns,String attrName){
@@ -74,14 +74,14 @@ public class ManifestUtils {
     }
 
     /**
-     * 获取AndroidManifest.xml里的android:name
+     * Get android:name value from AndroidManifest.xml
      */
     public static String getApplicationName(String file) {
         return getValue(file,"application","android","name");
     }
 
     /**
-     * 获取AndroidManifest.xml里的android:appComponentFactory
+     * Get android:appComponentFactory value from AndroidManifest.xml
      */
     public static String getAppComponentFactory(String file) {
         return getValue(file,"application","android","appComponentFactory");

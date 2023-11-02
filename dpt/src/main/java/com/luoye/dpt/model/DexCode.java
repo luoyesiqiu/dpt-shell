@@ -31,11 +31,11 @@ public class DexCode {
         this.insns = insns;
     }
 
-    //dex函数数量
+    //method count in dex
     private Short methodCount;
-    //insns结构索引
+    //insns index list
     private List<Integer> insnsIndex;
-    //insn列表
+    //insns list
     private List<Instruction> insns;
 
     @Override

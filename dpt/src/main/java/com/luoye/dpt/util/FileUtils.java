@@ -8,11 +8,7 @@ import java.util.Queue;
  * @author luoyesiqiu
  */
 public class FileUtils {
-    /**
-     * 复制一个文件或目录到其他位置
-     * @param src
-     * @param dest
-     */
+
     public static void copy(String src,String dest){
         File srcFile = new File(src);
         File destFile = new File(dest);
@@ -42,12 +38,6 @@ public class FileUtils {
         }
     }
 
-    /**
-     * 得到一个新文件的路径
-     * @param fileName
-     * @param tag
-     * @return
-     */
     public static String getNewFileName(String fileName,String tag){
         String fileSuffix = fileName.substring(fileName.lastIndexOf(".") + 1);
         return fileName.replaceAll("\\." + fileSuffix + "$","_" + tag + "." + fileSuffix) ;
@@ -59,10 +49,7 @@ public class FileUtils {
     }
 
     /**
-     * 得到一个目录，不存在则创建
-     * @param path 父路径
-     * @param dirName 目录
-     * @return
+     * Get a directory and create it if it doesn't exist
      */
     public static File getDir(String path,String dirName){
         File dirFile = new File(path,dirName);
@@ -73,8 +60,7 @@ public class FileUtils {
     }
 
     /**
-     * 递归删除目录/文件
-     * @param file
+     * Recursively delete directories or files
      */
     public static void deleteRecurse(File file){
         if(file.isDirectory()){
@@ -89,7 +75,7 @@ public class FileUtils {
     }
 
     /**
-     * 获取当前命令工具所在的目录
+     * Gets the directory where the current command tool is located
      */
     public static String getExecutablePath(){
         return System.getProperty("user.dir");

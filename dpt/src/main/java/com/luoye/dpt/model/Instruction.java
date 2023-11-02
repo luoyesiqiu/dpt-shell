@@ -49,12 +49,12 @@ public class Instruction {
                 '}';
     }
 
-    //在dex中的偏移
+    //Offset in dex
     private int offsetOfDex;
-    //对应dex中的method_idx
+    //Corresponding method_idx in dex
     private int methodIndex;
-    //instructionsData数组的长度
+    //instructionsData size
     private int instructionDataSize;
-    //指令长度
+    //insns data
     private byte[] instructionsData;
 }
