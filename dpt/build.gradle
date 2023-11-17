@@ -55,4 +55,5 @@ sourceSets.main.resources {
 dependencies {
     implementation fileTree(dir:'libs',include:['*.jar'])
     implementation group: 'net.lingala.zip4j', name: 'zip4j', version: '2.11.5'
+    testImplementation 'junit:junit:4.+'
 }
