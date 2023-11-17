@@ -26,24 +26,24 @@ public class LogUtils {
     }
 
     public static void info(String fmt,Object... args){
-        println(LogType.INFO,TAG,String.format(fmt,args));
+        println(LogType.INFO,TAG,String.format(Locale.US, fmt, args));
     }
 
     public static void debug(String fmt,Object... args){
-        println(LogType.DEBUG,TAG,String.format(fmt,args));
+        println(LogType.DEBUG,TAG,String.format(Locale.US, fmt, args));
     }
 
     public static void warn(String fmt,Object... args){
-        println(LogType.WARN,TAG,String.format(fmt,args));
+        println(LogType.WARN,TAG,String.format(Locale.US, fmt, args));
     }
 
     public static void error(String fmt,Object... args){
-        println(LogType.ERROR,TAG,String.format(fmt,args));
+        println(LogType.ERROR,TAG,String.format(Locale.US, fmt, args));
     }
 
     public static void noisy(String fmt,Object... args){
         if(openNoisyLog) {
-            println(LogType.INFO, TAG, String.format(fmt, args));
+            println(LogType.INFO, TAG, String.format(Locale.US, fmt, args));
         }
     }
 
