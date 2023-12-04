@@ -11,6 +11,5 @@ public class Global {
     public static final String SHELL_SO_NAME = "libdpt.so";
     public volatile static boolean sIsReplacedClassLoader = false;
     public volatile static boolean sNeedCalledApplication = true;
-    public volatile static boolean sLoadedDexes = false;
 
 }

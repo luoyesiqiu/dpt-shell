@@ -13,15 +13,25 @@ using namespace dpt::reflect;
 namespace dpt{
     namespace reflect{
         class java_io_File : public Reflect{
+        private:
+            const char *className = "java/io/File";
         public:
             java_io_File(JNIEnv *env,jobject obj){
                 this->m_env = env;
                 this->m_obj = obj;
             }
+            java_io_File(JNIEnv *env,jstring pathname){
+                this->m_env = env;
+                jclass FileClass = jni::FindClass(env,className);
+                this->m_obj = jni::NewObject(env,
+                                             FileClass,
+                                             "(Ljava/lang/String;)V",
+                                             pathname);
+            }
             jstring getName();
         protected:
             const char *getClassName() {
-                return "java/io/File";
+                return className;
             }
         };
     }
