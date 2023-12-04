@@ -5,7 +5,7 @@
 #include "dpt.h"
 
 using namespace dpt;
-//缓存变量
+
 static jobject g_realApplicationInstance = nullptr;
 static jclass g_realApplicationClass = nullptr;
 void* zip_addr = nullptr;
@@ -22,46 +22,61 @@ static JNINativeMethod gMethods[] = {
         {"gdp",   "()Ljava/lang/String;",         (void *) getCompressedDexesPathExport},
         {"rcf",   "()Ljava/lang/String;",         (void *) readAppComponentFactory},
         {"rapn",   "()Ljava/lang/String;",         (void *) readApplicationName},
-        {"mde",   "(Ljava/lang/ClassLoader;Ljava/lang/ClassLoader;)V",        (void *) mergeDexElements},
+        {"mde",   "(Ljava/lang/ClassLoader;)V",        (void *) mergeDexElements},
         {"rde",   "(Ljava/lang/ClassLoader;Ljava/lang/String;)V",        (void *) removeDexElements},
         {"ra", "(Ljava/lang/String;)V",                               (void *) replaceApplication}
 };
 
-void mergeDexElements(JNIEnv* env,jclass __unused,jobject oldClassLoader,jobject newClassLoader){
-    dalvik_system_BaseDexClassLoader oldBaseDexClassLoader(env,oldClassLoader);
-    dalvik_system_BaseDexClassLoader newBaseDexClassLoader(env,newClassLoader);
-    jobject oldDexPathListObj = oldBaseDexClassLoader.getPathList();
-    jobject newDexPathListObj = newBaseDexClassLoader.getPathList();
+jobjectArray makePathElements(JNIEnv* env){
+    char compressedDexesPathChs[256] = {0};
+    getCompressedDexesPath(env,compressedDexesPathChs, 256);
 
-    dalvik_system_DexPathList newDexPathList(env,newDexPathListObj);
-    dalvik_system_DexPathList oldDexPathList(env,oldDexPathListObj);
+    jstring compressedDexesPath = env->NewStringUTF(compressedDexesPathChs);
 
-    jobjectArray newClassLoaderDexElements = newDexPathList.getDexElements();
+    java_io_File file(env,compressedDexesPath);
 
-    jobjectArray oldClassLoaderDexElements = oldDexPathList.getDexElements();
+    java_util_ArrayList files(env);
+    files.add(file.getInstance());
+    java_util_ArrayList suppressedExceptions(env);
 
-    jint oldLen = env->GetArrayLength(oldClassLoaderDexElements);
-    jint newLen = env->GetArrayLength(newClassLoaderDexElements);
+    jobjectArray elements = dalvik_system_DexPathList::makePathElements(env,
+                                                                        files.getInstance(),
+                                                                        nullptr,
+                                                                        suppressedExceptions.getInstance());
 
-    DLOGD("mergeDexElements oldlen = %d , newlen = %d",oldLen,newLen);
+    return elements;
+}
 
-    dalvik_system_DexPathList::Element element(env,nullptr);
+void mergeDexElements(JNIEnv* env,jclass __unused, jobject targetClassLoader){
 
+    jobjectArray extraDexElements = makePathElements(env);
+
+    dalvik_system_BaseDexClassLoader targetBaseDexClassLoader(env,targetClassLoader);
+
+    jobject originDexPathListObj = targetBaseDexClassLoader.getPathList();
+
+    dalvik_system_DexPathList targetDexPathList(env,originDexPathListObj);
+
+    jobjectArray originDexElements = targetDexPathList.getDexElements();
+
+    jsize extraSize = env->GetArrayLength(extraDexElements);
+    jsize originSize = env->GetArrayLength(originDexElements);
+
+    dalvik_system_DexPathList::Element element(env, nullptr);
     jclass ElementClass = element.getClass();
+    jobjectArray  newDexElements = env->NewObjectArray(originSize + extraSize,ElementClass, nullptr);
 
-    jobjectArray  newElementArray = env->NewObjectArray(oldLen + newLen,ElementClass, nullptr);
-
-    for(int i = 0;i < newLen;i++) {
-        jobject elementObj = env->GetObjectArrayElement(newClassLoaderDexElements, i);
-        env->SetObjectArrayElement(newElementArray,i,elementObj);
+    for(int i = 0;i < originSize;i++) {
+        jobject elementObj = env->GetObjectArrayElement(originDexElements, i);
+        env->SetObjectArrayElement(newDexElements,i,elementObj);
     }
 
-    for(int i = newLen;i < oldLen + newLen;i++) {
-        jobject elementObj = env->GetObjectArrayElement(oldClassLoaderDexElements, i - newLen);
-        env->SetObjectArrayElement(newElementArray,i,elementObj);
+    for(int i = originSize;i < originSize + extraSize;i++) {
+        jobject elementObj = env->GetObjectArrayElement(extraDexElements, i - originSize);
+        env->SetObjectArrayElement(newDexElements,i,elementObj);
     }
 
-    oldDexPathList.setDexElements(newElementArray);
+    targetDexPathList.setDexElements(newDexElements);
 
     DLOGD("mergeDexElements success");
 }

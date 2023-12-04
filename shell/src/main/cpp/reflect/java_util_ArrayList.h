@@ -13,10 +13,18 @@ using namespace dpt::reflect;
 namespace dpt {
     namespace reflect {
         class java_util_ArrayList : public Reflect{
+        private:
+            const char *className = "java/util/ArrayList";
         public:
             java_util_ArrayList(JNIEnv *env,jobject obj){
                 this->m_env = env;
                 this->m_obj = obj;
+            }
+
+            java_util_ArrayList(JNIEnv *env){
+                this->m_env = env;
+                jclass ArrayListClass = jni::FindClass(env,className);
+                this->m_obj = jni::NewObject(env, ArrayListClass,"()V");
             }
             jboolean remove(jobject obj);
             jobject remove(int i);
@@ -25,7 +33,7 @@ namespace dpt {
 
         protected:
             const char *getClassName() {
-                return "java/util/ArrayList";
+                return className;
             }
         };
     }

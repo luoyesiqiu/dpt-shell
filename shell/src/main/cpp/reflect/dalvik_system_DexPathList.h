@@ -25,6 +25,8 @@ namespace dpt{
                 jobjectArray getDexElements();
 
                 void setDexElements(jobjectArray dexElements);
+                static jobjectArray makePathElements(JNIEnv *env, jobject files, jobject optimizedDirectory,
+                                        jobject suppressedExceptions);
 
             protected:
                 const char *getClassName() {

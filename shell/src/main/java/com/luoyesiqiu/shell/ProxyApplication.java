@@ -7,7 +7,6 @@ import android.text.TextUtils;
 import android.util.Log;
 
 import com.luoyesiqiu.shell.util.FileUtils;
-import com.luoyesiqiu.shell.util.ShellClassLoader;
 
 /**
  * Created by luoyesiqiu
@@ -51,11 +50,8 @@ public class ProxyApplication extends Application {
             Log.d(TAG,"ProxyApplication init");
             JniBridge.ia(base);
 
-            ClassLoader oldClassLoader = base.getClassLoader();
-
-            ClassLoader shellClassLoader = ShellClassLoader.loadDex(base);
-
-            JniBridge.mde(oldClassLoader,shellClassLoader);
+            ClassLoader targetClassLoader = base.getClassLoader();
+            JniBridge.mde(targetClassLoader);
             Global.sIsReplacedClassLoader = true;
         }
     }
