@@ -193,7 +193,7 @@ void load_zip(const char* zip_file_path,void **zip_addr,off_t *zip_size){
     const int page_size = getpagesize();
     const off_t need_zip_size = (fst.st_size / page_size) * page_size + page_size;
     DLOGD("load_zip fst.st_size = " FMT_INT64_T ",need size = " FMT_UNSIGNED_LONG ,fst.st_size,need_zip_size);
-    *zip_addr = mmap(nullptr, need_zip_size, PROT_READ, MAP_PRIVATE, fd, 0);
+    *zip_addr = mmap64(nullptr, need_zip_size, PROT_READ, MAP_PRIVATE, fd, 0);
     *zip_size = fst.st_size;
 }
 
