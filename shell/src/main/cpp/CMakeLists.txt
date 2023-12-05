@@ -22,8 +22,8 @@ set(DPT_NATIVE_SOURCE
         reflect/android_app_ContextImpl.cpp
         )
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -Werror")
-SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fvisibility=hidden")
-SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fvisibility=hidden")
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fvisibility=hidden")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fvisibility=hidden")
 
 
 option(MZ_LZMA "Enables LZMA & XZ compression" OFF)
