@@ -198,6 +198,7 @@ void load_zip(const char* zip_file_path,void **zip_addr,off_t *zip_size){
 }
 
 void *read_zip_file_entry(void* zip_addr,off_t zip_size,const char* entry_name,int64_t *entry_size){
+    DLOGD("read_zip_file_entry prepare read file: %s",entry_name);
 
     void *mem_stream = nullptr;
     void *zip_handle = nullptr;
@@ -214,28 +215,33 @@ void *read_zip_file_entry(void* zip_addr,off_t zip_size,const char* entry_name,i
             mz_zip_file *file_info = nullptr;
             err = mz_zip_entry_get_info(zip_handle, &file_info);
             if (err == MZ_OK) {
-                if(strncmp(file_info->filename,entry_name,128) == 0) {
-                    DLOGD("read_zip_file_entry entry name = %s,file size = " FMT_INT64_T, file_info->filename,file_info->uncompressed_size);
+
+                if(strncmp(file_info->filename,entry_name,256) == 0) {
+                    DLOGD("read_zip_file_entry found entry name = %s,file size = " FMT_INT64_T,
+                          file_info->filename,
+                          file_info->uncompressed_size);
+
                     err = mz_zip_entry_read_open(zip_handle, 0, nullptr);
                     if(err != MZ_OK){
                         DLOGW("read_zip_file_entry not prepared: %d",err);
                         return nullptr;
                     }
-                    char *entry_data = (char *)calloc(file_info->uncompressed_size + 1,1);
-                    char buf[1024] = {0};
+                    char *entry_data = (char *) calloc(file_info->uncompressed_size + 1, 1);
+                    char buf[4096] = {0};
                     int32_t bytes_read = -1;
                     int32_t cp_index = 0;
                     do {
                         bytes_read = mz_zip_entry_read(zip_handle, buf,
-                                                               1024);
-                        if(bytes_read < 0){
+                                                       4096);
+                        if (bytes_read < 0) {
                             break;
                         }
-                        memcpy(entry_data + cp_index,buf,bytes_read);
+                        memcpy(entry_data + cp_index, buf, bytes_read);
                         cp_index += bytes_read;
 
                     } while (bytes_read > 0);
-                    DLOGD("read_zip_file_entry reading file: %s,read bytes: %d",entry_name,cp_index);
+                    DLOGD("read_zip_file_entry reading entry: %s,read size: %d", entry_name,
+                          cp_index);
 
                     *entry_size = file_info->uncompressed_size;
                     return entry_data;
