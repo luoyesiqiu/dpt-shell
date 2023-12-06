@@ -39,11 +39,13 @@ jobjectArray makePathElements(JNIEnv* env){
     files.add(file.getInstance());
     java_util_ArrayList suppressedExceptions(env);
 
+    clock_t cl = clock();
     jobjectArray elements = dalvik_system_DexPathList::makePathElements(env,
                                                                         files.getInstance(),
                                                                         nullptr,
                                                                         suppressedExceptions.getInstance());
 
+    printTime("makePathElements success,took = ",cl);
     return elements;
 }
 

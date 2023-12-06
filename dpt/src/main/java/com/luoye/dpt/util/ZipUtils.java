@@ -4,7 +4,6 @@ import net.lingala.zip4j.ZipFile;
 import net.lingala.zip4j.exception.ZipException;
 import net.lingala.zip4j.model.FileHeader;
 import net.lingala.zip4j.model.ZipParameters;
-import net.lingala.zip4j.model.enums.CompressionLevel;
 import net.lingala.zip4j.model.enums.CompressionMethod;
 
 import java.io.BufferedInputStream;
@@ -14,6 +13,7 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
@@ -23,8 +23,15 @@ import java.util.zip.ZipInputStream;
 
 public class ZipUtils {
 
-    private static final String RENAME_SUFFIX = ".renamed";
     private static final HashMap<String, CompressionMethod> compressedLevelMap = new HashMap<>();
+    private static final String RENAME_SUFFIX = ".renamed";
+
+    private static List<String> storeList = Arrays.asList(
+            "assets/app_acf",
+            "assets/app_name",
+            "assets/i11111i111",
+            "assets/OoooooOooo"
+    );
 
     /**
      * Read asset file from .jar
@@ -60,6 +67,53 @@ public class ZipUtils {
         }
     }
 
+    private static void setCompressionMethod(String fileName,ZipParameters zipParameters) {
+        if (compressedLevelMap.containsKey(fileName)) {
+            zipParameters.setCompressionMethod(compressedLevelMap.get(fileName));
+        }
+        if(storeList.contains(fileName)) {
+            zipParameters.setCompressionMethod(CompressionMethod.STORE);
+        }
+    }
+
+    private static void addEntry(ZipFile zipFile,String rootDir,File parent) throws IOException{
+        ZipParameters zipParameters = new ZipParameters();
+        if(parent.isDirectory()) {
+            File[] list = parent.listFiles();
+            if(list == null) {
+                return;
+            }
+            if (list.length > 0) {
+                for (File f : list) {
+                    if (f.isDirectory()) {
+                        addEntry(zipFile, rootDir, f);
+                    } else {
+                        String entryName = f.getAbsolutePath().replace(rootDir,"").substring(1);
+                        entryName = entryName.replaceAll("\\\\","/");
+                        File entryFile = new File(entryName);
+                        zipParameters.setRootFolderNameInZip(entryFile.getParent());
+                        setCompressionMethod(entryName, zipParameters);
+                        zipFile.addFile(f.getAbsoluteFile(), zipParameters);
+                    }
+                }
+            } else {
+                String entryName = parent.getAbsolutePath().replace(rootDir,"").substring(1);
+                entryName = entryName.replaceAll("\\\\","/");
+                File entryFile = new File(entryName);
+                zipParameters.setRootFolderNameInZip(entryFile.getParent());
+                setCompressionMethod(entryName, zipParameters);
+                zipFile.addFolder(parent, zipParameters);
+            }
+        }
+        else {
+            String entryName = parent.getAbsolutePath().replace(rootDir,"").substring(1);
+            entryName = entryName.replaceAll("\\\\","/");
+            File entryFile = new File(entryName);
+            zipParameters.setRootFolderNameInZip(entryFile.getParent());
+            setCompressionMethod(entryName, zipParameters);
+            zipFile.addFile(parent, zipParameters);
+        }
+    }
     /**
      * Compress files to apk
      */
@@ -68,22 +122,7 @@ public class ZipUtils {
         try {
             zipFile = new ZipFile(destFile);
             File dir = new File(srcDir);
-            File[] list = dir.listFiles();
-            if (list == null) {
-                return;
-            }
-            ZipParameters zipParameters = new ZipParameters();
-            for (File f : list) {
-                if (compressedLevelMap.containsKey(f.getName())) {
-                    zipParameters.setCompressionMethod(compressedLevelMap.get(f.getName()));
-                }
-                if (f.isDirectory()) {
-                    zipFile.addFolder(f.getAbsoluteFile(), zipParameters);
-                } else {
-                    zipFile.addFile(f.getAbsoluteFile(), zipParameters);
-                }
-            }
-
+            addEntry(zipFile, dir.getAbsolutePath(), dir);
             List<FileHeader> fileHeaders = zipFile.getFileHeaders();
             for (FileHeader fileHeader : fileHeaders) {
                 String fileName = fileHeader.getFileName();
@@ -91,7 +130,6 @@ public class ZipUtils {
                     String newFileName = fileName.replaceAll(RENAME_SUFFIX + "\\d+$", "");
                     zipFile.renameFile(fileHeader, newFileName);
                     LogUtils.noisy("compress file name restore: %s -> %s", fileName, newFileName);
-
                 }
             }
 
