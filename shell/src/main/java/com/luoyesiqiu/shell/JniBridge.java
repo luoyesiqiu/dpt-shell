@@ -3,6 +3,8 @@ package com.luoyesiqiu.shell;
 import android.content.Context;
 import android.util.Log;
 
+import androidx.annotation.Keep;
+
 import com.luoyesiqiu.shell.util.EnvUtils;
 
 import java.io.File;
@@ -10,6 +12,7 @@ import java.io.File;
 /**
  * Created by luoyesiqiu
  */
+@Keep
 public class JniBridge {
     private static final String TAG = JniBridge.class.getSimpleName();
     public static native void craoc(String applicationClassName);
