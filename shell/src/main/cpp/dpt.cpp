@@ -27,13 +27,9 @@ static JNINativeMethod gMethods[] = {
         {"ra", "(Ljava/lang/String;)V",                               (void *) replaceApplication}
 };
 
-jobjectArray makePathElements(JNIEnv* env){
-    char compressedDexesPathChs[256] = {0};
-    getCompressedDexesPath(env,compressedDexesPathChs, 256);
-
-    jstring compressedDexesPath = env->NewStringUTF(compressedDexesPathChs);
-
-    java_io_File file(env,compressedDexesPath);
+jobjectArray makePathElements(JNIEnv* env,const char *pathChs) {
+    jstring path = env->NewStringUTF(pathChs);
+    java_io_File file(env,path);
 
     java_util_ArrayList files(env);
     files.add(file.getInstance());
@@ -49,9 +45,8 @@ jobjectArray makePathElements(JNIEnv* env){
     return elements;
 }
 
-void mergeDexElements(JNIEnv* env,jclass __unused, jobject targetClassLoader){
-
-    jobjectArray extraDexElements = makePathElements(env);
+void mergeDexElement(JNIEnv* env,jclass __unused, jobject targetClassLoader,const char* pathChs) {
+    jobjectArray extraDexElements = makePathElements(env,pathChs);
 
     dalvik_system_BaseDexClassLoader targetBaseDexClassLoader(env,targetClassLoader);
 
@@ -83,6 +78,15 @@ void mergeDexElements(JNIEnv* env,jclass __unused, jobject targetClassLoader){
     DLOGD("mergeDexElements success");
 }
 
+void mergeDexElements(JNIEnv* env,jclass klass, jobject targetClassLoader) {
+    char compressedDexesPathChs[256] = {0};
+    getCompressedDexesPath(env,compressedDexesPathChs, 256);
+
+    mergeDexElement(env,klass,targetClassLoader,compressedDexesPathChs);
+
+    DLOGD("mergeDexElements success");
+}
+
 void removeDexElements(JNIEnv* env,jclass __unused,jobject classLoader,jstring elementName){
     dalvik_system_BaseDexClassLoader oldBaseDexClassLoader(env,classLoader);
 
@@ -97,7 +101,6 @@ void removeDexElements(JNIEnv* env,jclass __unused,jobject classLoader,jstring e
     jint newLen = oldLen;
     const char *removeElementNameChs = env->GetStringUTFChars(elementName,nullptr);
 
-    //推导需要移除的项
     for(int i = 0;i < oldLen;i++) {
         jobject elementObj = env->GetObjectArrayElement(dexElements, i);
 
@@ -125,7 +128,7 @@ void removeDexElements(JNIEnv* env,jclass __unused,jobject classLoader,jstring e
     DLOGD("removeDexElements oldlen = %d , newlen = %d",oldLen,newLen);
 
     jint newArrayIndex = 0;
-    //填充新数组
+
     for(int i = 0;i < oldLen;i++) {
         jobject elementObj = env->GetObjectArrayElement(dexElements, i);
 
