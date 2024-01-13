@@ -5,11 +5,11 @@ project("dpt")
 set(DPT_NATIVE_SOURCE
         dpt.cpp
         dpt_hook.cpp
-        dex/MultiDexCode.cpp
-        dex/CodeItem.cpp
         dpt_jni.cpp
         dpt_util.cpp
         dex/dex_file.cpp
+        dex/MultiDexCode.cpp
+        dex/CodeItem.cpp
         reflect/dalvik_system_BaseDexClassLoader.cpp
         reflect/dalvik_system_DexPathList.cpp
         reflect/java_io_File.cpp
@@ -21,12 +21,13 @@ set(DPT_NATIVE_SOURCE
         reflect/android_app_LoadedApk.cpp
         reflect/android_app_ContextImpl.cpp
         )
+
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -Werror")
 
 
 if(${CMAKE_BUILD_TYPE} STREQUAL "Debug")
     add_definitions(-DDEBUG)
-    message("WARNNING:opened log")
+    message(WARNING "!!!WARNNING:opened log!!!")
 else()
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fvisibility=hidden")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fvisibility=hidden")
