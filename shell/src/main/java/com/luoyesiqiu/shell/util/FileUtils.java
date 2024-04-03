@@ -10,10 +10,13 @@ import java.io.BufferedOutputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.Closeable;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Enumeration;
+import java.util.zip.CRC32;
+import java.util.zip.CheckedInputStream;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
@@ -24,18 +27,42 @@ import java.util.zip.ZipFile;
          String abiName = EnvUtils.getAbiDirName(sourceDir);
 
          File libsOutDir = new File(dataDir + File.separator + Global.LIB_DIR + File.separator + abiName);
-         File shellSoFile = new File(libsOutDir.getAbsolutePath(),Global.SHELL_SO_NAME);
-         if(!shellSoFile.exists()) {
-             FileUtils.unzip(sourceDir,
-                     "assets/" + Global.ZIP_LIB_DIR + "/" + abiName + "/", /* 注意最后一个斜杠 */
-                     libsOutDir.getAbsolutePath());
-         }
+         FileUtils.unzipInNeeded(sourceDir,
+                 "assets/" + Global.ZIP_LIB_DIR + "/" + abiName + "/", /* 注意最后一个斜杠 */
+                 libsOutDir.getAbsolutePath());
      }
-     public static void unzip(String zipFilePath,String entryName,String outDir){
+
+     public static long getCrc32(File f) {
+         FileInputStream fileInputStream = null;
+         CheckedInputStream checkedInputStream = null;
+         long crcResult = 0L;
+         try {
+             fileInputStream = new FileInputStream(f);
+             checkedInputStream = new CheckedInputStream(fileInputStream,new CRC32());
+             int len = -1;
+             byte[] buf = new byte[4096];
+             while((len = checkedInputStream.read(buf)) != -1) {
+             }
+             crcResult = checkedInputStream.getChecksum().getValue();
+         }
+         catch (Throwable e){
+         }
+         finally {
+             FileUtils.close(checkedInputStream);
+         }
+         return crcResult;
+     }
+     public static void unzipInNeeded(String zipFilePath, String entryName, String outDir){
          long start = System.currentTimeMillis();
          File out = new File(outDir);
          if(!out.exists()){
              out.mkdirs();
+         }
+
+         long localFileCrc = 0L;
+         File entryFile = new File(outDir + File.separator  + Global.SHELL_SO_NAME);
+         if(entryFile.exists()){
+             localFileCrc = getCrc32(entryFile);
          }
          try {
              ZipFile zip = new ZipFile(zipFilePath);
@@ -44,15 +71,23 @@ import java.util.zip.ZipFile;
                  ZipEntry entry = entries.nextElement();
 
                  if(entry.getName().startsWith(entryName)) {
-                     byte[] buf = new byte[4096];
-                     int len = -1;
-                     File entryFile = new File(outDir + File.separator  + Global.SHELL_SO_NAME);
-                     BufferedOutputStream bufferedOutputStream = new BufferedOutputStream(new FileOutputStream(entryFile));
-                     BufferedInputStream bufferedInputStream = new BufferedInputStream(zip.getInputStream(entry));
-                     while ((len = bufferedInputStream.read(buf)) != -1) {
-                         bufferedOutputStream.write(buf, 0, len);
+                     if(localFileCrc != entry.getCrc()) {
+                         byte[] buf = new byte[4096];
+                         int len = -1;
+
+                         FileOutputStream fileOutputStream = new FileOutputStream(entryFile);
+                         BufferedOutputStream bufferedOutputStream = new BufferedOutputStream(fileOutputStream);
+                         BufferedInputStream bufferedInputStream = new BufferedInputStream(zip.getInputStream(entry));
+                         while ((len = bufferedInputStream.read(buf)) != -1) {
+                             bufferedOutputStream.write(buf, 0, len);
+                         }
+                         Log.d(TAG, "unzip '" + entry.getName() + "' success. local = " + localFileCrc + ", zip = " + entry.getCrc());
+
+                         FileUtils.close(bufferedOutputStream);
                      }
-                     FileUtils.close(bufferedOutputStream);
+                     else {
+                         Log.w(TAG, "no need unzip");
+                     }
                      break;
                  }
              }
