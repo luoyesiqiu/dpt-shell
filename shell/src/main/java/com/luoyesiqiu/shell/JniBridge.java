@@ -38,6 +38,7 @@ public class JniBridge {
                     for(String libName : allowLibNames) {
                         String libSuffix = File.separator + libName;
                         if(fullLibPath.endsWith(libSuffix)) {
+                            Log.d(TAG, "loadShellLibs: " + fullLibPath);
                             System.load(fullLibPath);
                         }
                     }
