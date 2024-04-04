@@ -27,8 +27,4 @@ static void* (*g_originDefineClass)(void* thiz,
 
 void hook_DefineClass();
 void hook_mmap();
-void hook_GetOatDexFile();
-static void (*g_GetOatDexFile)(const char* dex_location,
-                         const uint32_t* dex_location_checksum,
-                         std::string* error_msg) = nullptr;
 #endif //DPT_DPT_HOOK_H

@@ -41,7 +41,6 @@ jstring getApkPathExport(JNIEnv *env,jclass __unused);
 void getCompressedDexesPath(JNIEnv *env,char *outDexZipPath,size_t max_len);
 void getCodeCachePath(JNIEnv *env,char *outCodeCachePath,size_t max_len);
 jstring getCompressedDexesPathExport(JNIEnv *,jclass __unused);
-int endWith(const char *str,const char* sub);
 void appendLog(const char* log);
 void hexDump(const char* name,const void* data, size_t size);
 void load_zip(const char* zip_file_path,void **zip_addr,off_t *zip_size);

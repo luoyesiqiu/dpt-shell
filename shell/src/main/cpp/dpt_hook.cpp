@@ -17,7 +17,6 @@ void dpt_hook() {
     bytehook_init(BYTEHOOK_MODE_AUTOMATIC,false);
     g_sdkLevel = android_get_device_api_level();
     hook_mmap();
-    hook_GetOatDexFile();
     hook_DefineClass();
 }
 
@@ -229,28 +228,33 @@ const char *getArtLibName() {
 
 void* fake_mmap(void* __addr, size_t __size, int __prot, int __flags, int __fd, off_t __offset){
     BYTEHOOK_STACK_SCOPE();
+
+    int prot = __prot;
     int hasRead = (__prot & PROT_READ) == PROT_READ;
     int hasWrite = (__prot & PROT_WRITE) == PROT_WRITE;
-    int prot = __prot;
+
+    char link_path[128] = {0};
+    snprintf(link_path,sizeof(link_path),"/proc/%d/fd/%d",getpid(),__fd);
+    char fd_path[256] = {0};
+    readlink(link_path,fd_path,sizeof(fd_path));
+
+    if(strstr(fd_path,"webview.vdex") != nullptr) {
+        DLOGW("fake_mmap link path: %s, no need to change prot",fd_path);
+        goto tail;
+    }
 
     if(hasRead && !hasWrite) {
         prot = prot | PROT_WRITE;
         DLOGD("fake_mmap call fd = %d,size = %zu, prot = %d,flag = %d",__fd,__size, prot,__flags);
     }
+
     if(g_sdkLevel == 30){
-        char link_path[128] = {0};
-        snprintf(link_path,sizeof(link_path),"/proc/%d/fd/%d",getpid(),__fd);
-        char fd_path[256] = {0};
-        readlink(link_path,fd_path,sizeof(fd_path));
-
-        DLOGD("fake_mmap link path = %s",fd_path);
-
-        if(strstr(fd_path,"base.vdex") ){
+        if(strstr(fd_path,"base.vdex") != nullptr){
             DLOGE("fake_mmap want to mmap base.vdex");
             __flags = 0;
         }
     }
-
+    tail:
     void *addr = BYTEHOOK_CALL_PREV(fake_mmap,__addr,  __size, prot,  __flags,  __fd,  __offset);
     return addr;
 }
@@ -265,35 +269,5 @@ void hook_mmap(){
             nullptr);
     if(stub != nullptr){
         DLOGD("mmap hook success!");
-    }
-}
-
-void *fake_GetOatDexFile(const char* __unused,
-              const uint32_t* __unused,
-              std::string* __unused){
-    DLOGD("fake_GetOatDexFile call!");
-
-    return nullptr;
-}
-
-void hook_GetOatDexFile(){
-    const char *getOatDexFileSymbol = find_symbol_in_elf_file(GetArtLibPath(),2,"OatFile","GetOatDexFile");
-    DLOGD("getOatDexFile symbol = %s",getOatDexFileSymbol);
-    void *sym = DobbySymbolResolver(GetArtLibPath(),getOatDexFileSymbol);
-    if(sym != nullptr){
-        switch (g_sdkLevel) {
-            case 24:
-            case 25:
-            case 26:
-            case 27:
-            case 28:
-            case 29:
-            case 30:
-            case 31:
-            case 32:
-            case 33:
-                DobbyHook(sym,(void *)fake_GetOatDexFile,(void **)&g_GetOatDexFile);
-                break;
-        }
     }
 }
