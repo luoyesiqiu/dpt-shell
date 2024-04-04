@@ -4,7 +4,7 @@
 
 ## 介绍
 
-简体中文 | [English](./README.md) 
+[English](./README.md) | 简体中文 
 
 dpt-shell是一种将dex文件中的函数代码抽空，然后在程序运行时将函数代码填回的那么一种壳。
 
