@@ -1,6 +1,7 @@
 package com.luoye.dpt.plugin.asm;
 
 import static org.objectweb.asm.Opcodes.ACC_PUBLIC;
+import static org.objectweb.asm.Opcodes.ATHROW;
 import static groovyjarjarasm.asm.Opcodes.V1_8;
 
 import org.apache.commons.io.FileUtils;
@@ -22,13 +23,13 @@ public class JunkCodeGenerator {
     }
 
     private static String generateIdentifier() {
-        SecureRandom rd = new SecureRandom();
-        final int cnt = rd.nextInt(2) + 3;
+        SecureRandom secureRandom = new SecureRandom();
+        final int cnt = secureRandom.nextInt(2) + 3;
         StringBuilder sb = new StringBuilder();
         for(int i = 0;i < cnt;i++) {
-            char baseChar = rd.nextBoolean() ? 'A' : 'a';
+            char baseChar = secureRandom.nextBoolean() ? 'A' : 'a';
 
-            int index = rd.nextInt(26);
+            int index = secureRandom.nextInt(26);
             char ch = (char) (baseChar + index);
             sb.append(ch);
         }
@@ -37,26 +38,34 @@ public class JunkCodeGenerator {
     }
 
     private static void generateClass(File dir) throws IOException {
-        SecureRandom rd = new SecureRandom();
-        final int generateClassCount = rd.nextInt(50) + 100;
+        SecureRandom secureRandom = new SecureRandom();
+        final int generateClassCount = secureRandom.nextInt(50) + 50;
         for(int i = 0;i < generateClassCount;i++) {
             String className = generateIdentifier();
             if(identifierSet.contains(className)){
                 className = generateIdentifier();
             }
             identifierSet.add(className);
-            String methodName = generateIdentifier();
+
             ClassWriter classWriter = new ClassWriter(0);
             classWriter.visit(V1_8, ACC_PUBLIC, className, null, "java/lang/Object", null);
+
             // generate constructor
             MethodVisitor constructorMethodVisitor = classWriter.visitMethod(ACC_PUBLIC, "<init>", "()V", null, null);
             insertExitCode(constructorMethodVisitor);
             insertReturnCode(constructorMethodVisitor);
 
             // generate normal method
-            MethodVisitor methodVisitor = classWriter.visitMethod(ACC_PUBLIC, methodName, "()V", null, null);
-            insertExitCode(methodVisitor);
-            insertReturnCode(methodVisitor);
+            int methodCount = secureRandom.nextInt(2) + 3;
+            for (int j = 0; j < methodCount; j++) {
+                String methodName = generateIdentifier();
+
+                MethodVisitor methodVisitor = classWriter.visitMethod(ACC_PUBLIC, methodName, "()V", null, null);
+                insertNullExceptionCode(methodVisitor);
+                insertReturnCode(methodVisitor);
+
+            }
+
             classWriter.visitEnd();
 
             //write to file
@@ -72,6 +81,14 @@ public class JunkCodeGenerator {
         methodVisitor.visitMethodInsn(Opcodes.INVOKESTATIC,"java/lang/System",
                 "exit","(I)V",
                 false);
+    }
+
+    private static void insertNullExceptionCode(MethodVisitor methodVisitor) {
+        methodVisitor.visitCode();
+        methodVisitor.visitTypeInsn(Opcodes.NEW, "java/lang/NullPointerException");
+        methodVisitor.visitInsn(Opcodes.DUP);
+        methodVisitor.visitMethodInsn(Opcodes.INVOKESPECIAL, "java/lang/NullPointerException", "<init>", "()V", false);
+        methodVisitor.visitInsn(ATHROW);
     }
 
     private static void insertReturnCode(MethodVisitor methodVisitor) {

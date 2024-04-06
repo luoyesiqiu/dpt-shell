@@ -92,18 +92,5 @@ public class JunkCodeTransform extends Transform {
         FileUtils.copyDirectory(directoryInput.getFile(), dest);
     }
 
-    private static void deleteFilesInDirectory(File dir) throws IOException {
-        File[] files = dir.listFiles();
-        if(files != null){
-            for (File file : files) {
-                if(file.isDirectory()) {
-                    FileUtils.deleteDirectory(file);
-                }
-                else {
-                    FileUtils.forceDelete(file);
-                }
-            }
-        }
-    }
 
 }
