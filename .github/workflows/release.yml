@@ -23,10 +23,8 @@ jobs:
 
     - name: Grant execute permission for gradlew
       run: chmod +x gradlew
-    - name: Build shell module
-      run: ./gradlew shell:build
-    - name: Build dpt module
-      run: ./gradlew dpt:build
+    - name: Building project
+      run: ./gradlew build
     - name: Compress files
       run:  zip -r -q executable.zip executable/
     - uses: "marvinpinto/action-automatic-releases@latest"
