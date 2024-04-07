@@ -84,6 +84,8 @@ void mergeDexElements(JNIEnv* env,jclass klass, jobject targetClassLoader) {
 
     mergeDexElement(env,klass,targetClassLoader,compressedDexesPathChs);
 
+    junkCodeDexProtect(env);
+
     DLOGD("mergeDexElements success");
 }
 

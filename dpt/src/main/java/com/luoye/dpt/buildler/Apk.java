@@ -116,6 +116,7 @@ public class Apk extends AndroidPackage {
         apk.setPackageName(packageName);
         apk.extractDexCode(apkMainProcessPath);
 
+        apk.addJunkCodeDex(apkMainProcessPath);
         apk.compressDexFiles(apkMainProcessPath);
         apk.deleteAllDexFiles(apkMainProcessPath);
 
@@ -237,6 +238,11 @@ public class Apk extends AndroidPackage {
     private void addProxyDex(String apkDir){
         String proxyDexPath = "shell-files/dex/classes.dex";
         addDex(proxyDexPath,apkDir);
+    }
+
+    protected void addJunkCodeDex(String apkDir) {
+        String junkCodeDexPath = "shell-files/dex/junkcode.dex";
+        addDex(junkCodeDexPath,apkDir);
     }
 
     private void compressDexFiles(String apkDir){
