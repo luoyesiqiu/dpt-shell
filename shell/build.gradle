@@ -1,10 +1,9 @@
 plugins {
     id 'com.android.application'
-    id "junkcode"
 }
 
 android {
-    compileSdkVersion 34
+    compileSdk 34
 
     defaultConfig {
         applicationId "com.luoye.dpt"
@@ -70,7 +69,11 @@ def afterAssembleCopy(Project project, Map archMap, boolean debug) {
 
     println("[" + project.name + "] " + sourceSoLibsDir.absolutePath + " -> " + targetSoLibsDir.absolutePath)
 
-    delete(targetDir)
+    def status = delete(fileTree(targetDir.absolutePath ) {
+        include '/dex/classes.dex',"/libs/**/*.so"
+    })
+
+    println("excutable libs delete status: " + status)
 
     copy {
         from project.buildDir.absolutePath + File.separator + "intermediates" + File.separator + "dex" + File.separator + buildTypeName + File.separator + dexSourceDirName + File.separator + "classes.dex"
@@ -109,7 +112,11 @@ def afterNativeBuildCopy(Project project, Map archMap, boolean debug) {
             + "vwwwwwvwww")
 
     println("[" + project.name + "] " + sourceDir.absolutePath + " -> " + targetDir.absolutePath)
-    delete(targetDir)
+    def status = delete(fileTree(targetDir.absolutePath) {
+        include "/**/*.so"
+    })
+
+    println("demo libs delete status: " + status)
 
     for(e in archMap) {
         copy {

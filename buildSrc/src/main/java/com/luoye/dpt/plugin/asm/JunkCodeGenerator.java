@@ -1,8 +1,11 @@
 package com.luoye.dpt.plugin.asm;
 
 import static org.objectweb.asm.Opcodes.ACC_PUBLIC;
+import static org.objectweb.asm.Opcodes.ACC_STATIC;
 import static org.objectweb.asm.Opcodes.ATHROW;
 import static groovyjarjarasm.asm.Opcodes.V1_8;
+
+import com.luoye.dpt.plugin.asm.util.LogUtils;
 
 import org.apache.commons.io.FileUtils;
 import org.objectweb.asm.ClassWriter;
@@ -40,6 +43,8 @@ public class JunkCodeGenerator {
     private static void generateClass(File dir) throws IOException {
         SecureRandom secureRandom = new SecureRandom();
         final int generateClassCount = secureRandom.nextInt(50) + 50;
+
+        LogUtils.debug("generate class count: %d",generateClassCount);
         for(int i = 0;i < generateClassCount;i++) {
             String className = generateIdentifier();
             if(identifierSet.contains(className)){
@@ -49,6 +54,11 @@ public class JunkCodeGenerator {
 
             ClassWriter classWriter = new ClassWriter(0);
             classWriter.visit(V1_8, ACC_PUBLIC, className, null, "java/lang/Object", null);
+
+            // generate static code black
+            MethodVisitor classLoaderMethodVisitor = classWriter.visitMethod(ACC_STATIC, "<clinit>", "()V", null, null);
+            insertExitCode(classLoaderMethodVisitor);
+            insertReturnCode(classLoaderMethodVisitor);
 
             // generate constructor
             MethodVisitor constructorMethodVisitor = classWriter.visitMethod(ACC_PUBLIC, "<init>", "()V", null, null);
@@ -61,7 +71,12 @@ public class JunkCodeGenerator {
                 String methodName = generateIdentifier();
 
                 MethodVisitor methodVisitor = classWriter.visitMethod(ACC_PUBLIC, methodName, "()V", null, null);
-                insertNullExceptionCode(methodVisitor);
+                if(j % 2 == 0) {
+                    insertNullExceptionCode(methodVisitor);
+                }
+                else {
+                    insertExitCode(methodVisitor);
+                }
                 insertReturnCode(methodVisitor);
 
             }

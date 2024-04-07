@@ -15,12 +15,14 @@
 #include <pthread.h>
 #include <android/asset_manager.h>
 #include <android/asset_manager_jni.h>
-#include "dex/CodeItem.h"
+#include "dpt_jni.h"
+#include "dpt_util.h"
+#include "dpt_risk.h"
 #include "common/dpt_log.h"
 #include "dpt_hook.h"
 #include "dex/MultiDexCode.h"
-#include "dpt_jni.h"
-#include "dpt_util.h"
+#include "dex/CodeItem.h"
+
 #include "reflect/dalvik_system_BaseDexClassLoader.h"
 #include "reflect/dalvik_system_DexPathList.h"
 #include "reflect/java_util_ArrayList.h"
