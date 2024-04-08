@@ -191,6 +191,7 @@ jstring readApplicationName(JNIEnv *env, jclass __unused) {
 void init_dpt() {
     DLOGI("init_dpt call!");
     dpt_hook();
+    detectFrida();
 }
 
 jclass getRealApplicationClass(JNIEnv *env, const char *applicationClassName) {

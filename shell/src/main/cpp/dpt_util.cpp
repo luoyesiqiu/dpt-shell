@@ -261,7 +261,7 @@ void *read_zip_file_entry(void* zip_addr,off_t zip_size,const char* entry_name,i
     return nullptr;
 }
 
-const char* find_symbol_in_elf_file(const char *elf_file,int keyword_count,...){
+const char* find_symbol_in_elf_file(const char *elf_file,int keyword_count,...) {
     FILE *elf_fp = fopen(elf_file, "r");
     if(elf_fp) {
         fseek(elf_fp, 0L, SEEK_END);
@@ -363,6 +363,107 @@ void hexDump(__unused const char* name,const void* data, size_t size){
     DLOGD("%s: \n%s",name,buffer);
     free(item);
     free(buffer);
+}
+
+int find_in_maps(int count,...) {
+    const int MAX_READ_LINE = 10 * 1024;
+    char maps_path[128] = {0};
+    snprintf(maps_path, 128, "/proc/%d/maps", getpid());
+    FILE *fp = fopen(maps_path, "r");
+    int found = 0;
+    if (fp != nullptr) {
+        char line[512] = {0};
+        int read_line = 0;
+        va_list ap;
+        while (fgets(line, sizeof(line), fp) != nullptr) {
+            if (read_line++ >= MAX_READ_LINE) {
+                break;
+            }
+            char item_name[128] = {0};
+#ifdef __LP64__
+            int ret = sscanf(line, "%*llx-%*llx %*s %*llx %*s %*s %s", item_name);
+#else
+            int ret = sscanf(line, "%*x-%*x %*s %*x %*s %*s %s", item_name);
+#endif
+
+            if(ret != 1) {
+                continue;
+            }
+            va_start(ap,count);
+
+            for(int i = 0;i < count;i++) {
+                const char *arg = va_arg(ap,const char *);
+                if(strstr(item_name,arg) != 0) {
+                    DLOGD("found %s in %s",arg,item_name);
+                    found++;
+                }
+            }
+            va_end(ap);
+
+        }
+    }
+
+    return found;
+}
+
+int find_in_threads_list(int count,...) {
+    char task_path[128] = {0};
+    pid_t pid = getpid();
+    snprintf(task_path, 128, "/proc/%d/task",pid);
+    DIR *task_dir;
+    if((task_dir = opendir(task_path)) == NULL) {
+        return 0;
+    }
+
+    int match_count = 0;
+
+    struct dirent *de;
+    va_list ap;
+    while ((de = readdir(task_dir)) != NULL) {
+        if(isdigit(de->d_name[0])) {
+            int tid = atoi(de->d_name);
+            if(tid == pid) {
+                DLOGW("list thread self: %d",pid);
+                continue;
+            }
+            char stat_path[256] = {0};
+            snprintf(stat_path,256,"%s/%d/%s",task_path,tid,"stat");
+            FILE *fp = fopen(stat_path,"r");
+            char buf[256] = {0};
+            if(fp) {
+                fgets(buf,256,fp);
+
+                char *t_name = NULL;
+                for(size_t i = 0; i < strnlen(buf,256);i++) {
+                    if(buf[i] == '(') {
+                        t_name = &buf[i + 1];
+                    }
+
+                    if(buf[i] == ')') {
+                        buf[i] = '\0';
+                        break;
+                    }
+
+                }
+                va_start(ap,count);
+
+                for(int i = 0;i < count;i++) {
+                    const char *arg = va_arg(ap,const char *);
+                    if(strncmp(t_name,arg,256) == 0) {
+                        DLOGD("match thread name: %s",t_name);
+                        match_count++;
+                    }
+                }
+                va_end(ap);
+                fclose(fp);
+            }
+        }
+    }
+
+    if(task_dir) {
+        closedir(task_dir);
+    }
+    return match_count;
 }
 
 void appendLog(const char* log){
