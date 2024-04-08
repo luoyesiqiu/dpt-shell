@@ -20,7 +20,7 @@ void junkCodeDexProtect(JNIEnv *env) {
 
 [[noreturn]] void *detectFridaOnThread(__unused void *args) {
     while (true) {
-        int frida_so_count = find_in_maps(1,"frida-agent.so");
+        int frida_so_count = find_in_maps(1,"frida-agent");
         if(frida_so_count > 0) {
             DLOGD("detectFridaOnThread found frida so");
             crash();
