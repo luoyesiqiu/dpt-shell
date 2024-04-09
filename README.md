@@ -21,7 +21,7 @@ java -jar dpt.jar -f /path/to/apk
 ```shell
 git clone --recursive https://github.com/luoyesiqiu/dpt-shell
 cd dpt-shell
-gradlew assemble
+./gradlew assemble
 cd executable
 java -jar dpt.jar -f /path/to/apk
 ```
