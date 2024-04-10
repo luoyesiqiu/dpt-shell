@@ -42,7 +42,7 @@ public class JunkCodeGenerator {
 
     private static void generateClass(File dir) throws IOException {
         SecureRandom secureRandom = new SecureRandom();
-        final int generateClassCount = secureRandom.nextInt(50) + 50;
+        final int generateClassCount = secureRandom.nextInt(10) + 10;
 
         LogUtils.debug("generate class count: %d",generateClassCount);
         for(int i = 0;i < generateClassCount;i++) {
@@ -66,7 +66,7 @@ public class JunkCodeGenerator {
             insertReturnCode(constructorMethodVisitor);
 
             // generate normal method
-            int methodCount = secureRandom.nextInt(2) + 3;
+            int methodCount = secureRandom.nextInt(2) + 2;
             for (int j = 0; j < methodCount; j++) {
                 String methodName = generateIdentifier();
 

@@ -7,7 +7,7 @@ android {
 
     defaultConfig {
         applicationId "com.luoye.dpt"
-        minSdkVersion 23
+        minSdkVersion 21
         targetSdkVersion 34
         versionCode 1
         versionName "1.0"
@@ -47,10 +47,6 @@ android {
 }
 
 def afterAssembleCopy(Project project, Map archMap, boolean debug) {
-    if (project.name != "shell") {
-        printf("project %s skip\n", project.name)
-        return
-    }
     def buildTypeName = "release"
     def dexSourceDirName = "minifyReleaseWithR8"
     if(debug) {
@@ -69,11 +65,11 @@ def afterAssembleCopy(Project project, Map archMap, boolean debug) {
 
     println("[" + project.name + "] " + sourceSoLibsDir.absolutePath + " -> " + targetSoLibsDir.absolutePath)
 
-    def status = delete(fileTree(targetDir.absolutePath ) {
-        include '/dex/classes.dex',"/libs/**/*.so"
+    def status = delete(fileTree(targetDir.absolutePath) {
+        include 'dex/classes.dex',"libs/**/*.so"
     })
 
-    println("excutable libs delete status: " + status)
+    println("afterAssembleCopy shell-files delete status: " + status)
 
     copy {
         from project.buildDir.absolutePath + File.separator + "intermediates" + File.separator + "dex" + File.separator + buildTypeName + File.separator + dexSourceDirName + File.separator + "classes.dex"
@@ -91,10 +87,6 @@ def afterAssembleCopy(Project project, Map archMap, boolean debug) {
 }
 
 def afterNativeBuildCopy(Project project, Map archMap, boolean debug) {
-    if (project.name != "shell") {
-        printf("project: %s skip\n", project.name)
-        return
-    }
     def buildTypeName = "release"
     if(debug) {
         buildTypeName = "debug"
@@ -116,7 +108,7 @@ def afterNativeBuildCopy(Project project, Map archMap, boolean debug) {
         include "/**/*.so"
     })
 
-    println("demo libs delete status: " + status)
+    println("afterNativeBuildCopy demo libs delete status: " + status)
 
     for(e in archMap) {
         copy {
@@ -129,6 +121,11 @@ def afterNativeBuildCopy(Project project, Map archMap, boolean debug) {
 }
 
 afterEvaluate { Project project ->
+    if (project.name != "shell") {
+        printf("project %s skip\n", project.name)
+        return
+    }
+
     def assembleTask = project.tasks.getByName("assemble")
     def assembleDebugTask = project.tasks.getByName("assembleDebug")
     def assembleReleaseTask = project.tasks.getByName("assembleRelease")
@@ -154,17 +151,17 @@ afterEvaluate { Project project ->
     def buildTask = assembleTask
     def nativeBuildTask = nativeReleaseBuildTask
     def debug = false
-    if(firstTaskName == "shell:assemble") {
+    if(firstTaskName == "shell:assemble" || firstTaskName == "assemble") {
         buildTask = assembleTask
         nativeBuildTask = nativeReleaseBuildTask
         debug = false
     }
-    else if(firstTaskName == "shell:assembleRelease") {
+    else if(firstTaskName == "shell:assembleRelease" || firstTaskName == "assembleRelease") {
         buildTask = assembleReleaseTask
         nativeBuildTask = nativeReleaseBuildTask
         debug = false
     }
-    else if(firstTaskName == "shell:assembleDebug") {
+    else if(firstTaskName == "shell:assembleDebug" || firstTaskName == "assembleDebug") {
         buildTask = assembleDebugTask
         nativeBuildTask = nativeDebugBuildTask
         debug = true

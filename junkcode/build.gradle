@@ -13,13 +13,15 @@ android {
         targetSdk 34
         versionCode 1
         versionName "1.0"
-
-        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
 
     buildTypes {
         release {
-            minifyEnabled false
+            minifyEnabled true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+        debug {
+            minifyEnabled true
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
     }
@@ -30,35 +32,37 @@ android {
 }
 
 def afterAssembleCopy(Project project, boolean debug) {
-    if (project.name != "junkcode") {
-        printf("project %s skip\n", project.name)
-        return
-    }
     def buildTypeName = "release"
-    def dexSourceDirName = "mergeDexRelease"
+    def dexSourceDirName = "minifyReleaseWithR8"
     if(debug) {
         buildTypeName = "debug"
-        dexSourceDirName = "mergeDexDebug"
+        dexSourceDirName = "minifyDebugWithR8"
     }
 
     def targetDir = file(project.rootDir.absolutePath + File.separator + "executable" + File.separator + "shell-files")
     def sourceDir = file(project.buildDir.absolutePath + File.separator + "intermediates" + File.separator + "dex" + File.separator + buildTypeName + File.separator + dexSourceDirName)
     println(">> " + sourceDir + " -> " + targetDir)
-    delete(fileTree(targetDir.absolutePath + File.separator + "dex") {
-        include 'junkcode.dex'
+    def status = delete(fileTree(targetDir.absolutePath) {
+        include 'dex/junkcode.dex'
     })
+
+    println("afterAssembleCopy junk dex delete status: " + status)
 
     copy {
         from sourceDir.absolutePath + File.separator + "classes.dex"
-        into targetDir.absolutePath + File.separator + "dex"
         rename { fileName ->
             fileName.replace("classes.dex","junkcode.dex")
         }
+        into targetDir.absolutePath + File.separator + "dex"
     }
 
 }
 
 afterEvaluate { Project project ->
+    if (project.name != "junkcode") {
+        printf("project %s skip\n", project.name)
+        return
+    }
     def assembleTask = project.tasks.getByName("assemble")
     def assembleDebugTask = project.tasks.getByName("assembleDebug")
     def assembleReleaseTask = project.tasks.getByName("assembleRelease")
@@ -74,15 +78,15 @@ afterEvaluate { Project project ->
 
     def buildTask = assembleTask
     def debug = false
-    if(firstTaskName == "shell:assemble") {
+    if(firstTaskName == "junkcode:assemble" || firstTaskName == "assemble") {
         buildTask = assembleTask
         debug = false
     }
-    else if(firstTaskName == "shell:assembleRelease") {
+    else if(firstTaskName == "junkcode:assembleRelease" || firstTaskName == "assembleRelease") {
         buildTask = assembleReleaseTask
         debug = false
     }
-    else if(firstTaskName == "shell:assembleDebug") {
+    else if(firstTaskName == "junkcode:assembleDebug" || firstTaskName == "assembleDebug") {
         buildTask = assembleDebugTask
         debug = true
     }
@@ -95,7 +99,4 @@ afterEvaluate { Project project ->
 
 
 dependencies {
-    testImplementation 'junit:junit:4.13.2'
-    androidTestImplementation 'androidx.test.ext:junit:1.1.5'
-    androidTestImplementation 'androidx.test.espresso:espresso-core:3.5.1'
 }
