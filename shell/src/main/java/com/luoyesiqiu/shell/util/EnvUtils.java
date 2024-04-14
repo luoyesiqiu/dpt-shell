@@ -11,7 +11,6 @@ public class EnvUtils {
     private static final String TAG = "EnvUtils";
     public static String getAbiDirName(String apkPath) {
         String[] abiArray = {"arm", "arm64", "x86", "x86_64"};
-        Log.d(TAG, "getAbiDirName: " + android.os.Process.is64Bit());
 
         for (String abi : abiArray) {
             File nativeLibPath = new File(apkPath.substring(0,apkPath.lastIndexOf("/")) + File.separator + "lib" ,abi);
