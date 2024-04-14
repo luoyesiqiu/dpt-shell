@@ -5,7 +5,6 @@ package com.luoyesiqiu.shell;
  */
 public class Global {
     public static final String APACHE_HTTP_LIB = "/system/framework/org.apache.http.legacy.jar";
-    public static final String FAKE_APK_NAME = "i11111i111";
     public static final String ZIP_LIB_DIR = "vwwwwwvwww";
     public static final String LIB_DIR = "dpt-libs";
     public static final String SHELL_SO_NAME = "libdpt.so";
