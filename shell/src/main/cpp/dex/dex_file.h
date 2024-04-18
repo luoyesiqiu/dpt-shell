@@ -156,7 +156,8 @@ public:
     static size_t readFields(uint8_t *data, dpt::dex::ClassDataField *field, uint64_t count);
     static size_t readMethods(uint8_t *data, dpt::dex::ClassDataMethod *method, uint64_t count);
 };
-namespace V23 {
+
+namespace V21 {
     class DexFile {
     public:
         //vtable pointer
@@ -201,7 +202,7 @@ namespace V23 {
         const dex::ClassDef* const class_defs_;
 
     };
-} //namespace V23
+} //namespace V21
 
 namespace V28 {
     class DexFile {

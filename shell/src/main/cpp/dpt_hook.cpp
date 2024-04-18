@@ -84,7 +84,6 @@ void patchMethod(uint8_t *begin,__unused const char *location,uint32_t dexSize,i
     auto dexIt = dexMap.find(dexIndex);
     if (LIKELY(dexIt != dexMap.end())) {
         auto dexMemIt = dexMemMap.find(dexIndex);
-        //没有放进去过，则放进去
         if(UNLIKELY(dexMemIt == dexMemMap.end())){
             change_dex_protective(begin,dexSize,dexIndex);
         }
@@ -108,110 +107,140 @@ void patchMethod(uint8_t *begin,__unused const char *location,uint32_t dexSize,i
     }
 }
 
-void* DefineClass(void* thiz,void* self,
+void patchClass(const char* descriptor,
+                 const void* dex_file,
+                 const void* dex_class_def) {
+
+    if(LIKELY(dex_file != nullptr)){
+        std::string location;
+        uint8_t *begin = nullptr;
+        uint64_t dexSize = 0;
+        if(g_sdkLevel >= __ANDROID_API_P__){
+            auto* dexFileV28 = (V28::DexFile *)dex_file;
+            location = dexFileV28->location_;
+            begin = (uint8_t *)dexFileV28->begin_;
+            dexSize = dexFileV28->size_;
+        }
+        else {
+            auto* dexFileV21 = (V21::DexFile *)dex_file;
+            location = dexFileV21->location_;
+            begin = (uint8_t *)dexFileV21->begin_;
+            dexSize = dexFileV21->size_;
+        }
+
+        DLOGD("DefineClass desc = %s, loc = %s",descriptor,location.c_str());
+
+
+        if(location.rfind(DEXES_ZIP_NAME) != std::string::npos && dex_class_def){
+            int dexIndex = parse_dex_number(&location);
+
+            auto* class_def = (dex::ClassDef *)dex_class_def;
+            NLOG("[+] DefineClass class_idx_ = 0x%x,class data off = 0x%x",class_def->class_idx_,class_def->class_data_off_);
+
+            if(LIKELY(class_def->class_data_off_ != 0)) {
+                size_t read = 0;
+                auto *class_data = (uint8_t *) ((uint8_t *) begin + class_def->class_data_off_);
+
+                uint64_t static_fields_size = 0;
+                read += DexFileUtils::readUleb128(class_data, &static_fields_size);
+                NLOG("[-] DefineClass static_fields_size = %lu,read = %zu", static_fields_size,
+                     read);
+
+                uint64_t instance_fields_size = 0;
+                read += DexFileUtils::readUleb128(class_data + read, &instance_fields_size);
+                NLOG("[-] DefineClass instance_fields_size = %lu,read = %zu",
+                     instance_fields_size, read);
+
+                uint64_t direct_methods_size = 0;
+                read += DexFileUtils::readUleb128(class_data + read, &direct_methods_size);
+                NLOG("[-] DefineClass direct_methods_size = %lu,read = %zu",
+                     direct_methods_size, read);
+
+                uint64_t virtual_methods_size = 0;
+                read += DexFileUtils::readUleb128(class_data + read, &virtual_methods_size);
+                NLOG("[-] DefineClass virtual_methods_size = %lu,read = %zu",
+                     virtual_methods_size, read);
+
+                dex::ClassDataField staticFields[static_fields_size];
+                read += DexFileUtils::readFields(class_data + read, staticFields,
+                                                 static_fields_size);
+
+                dex::ClassDataField instanceFields[instance_fields_size];
+                read += DexFileUtils::readFields(class_data + read, instanceFields,
+                                                 instance_fields_size);
+
+                dex::ClassDataMethod directMethods[direct_methods_size];
+                read += DexFileUtils::readMethods(class_data + read, directMethods,
+                                                  direct_methods_size);
+
+                dex::ClassDataMethod virtualMethods[virtual_methods_size];
+                read += DexFileUtils::readMethods(class_data + read, virtualMethods,
+                                                  virtual_methods_size);
+
+                for (uint64_t i = 0; i < direct_methods_size; i++) {
+                    auto method = directMethods[i];
+                    NLOG("[-] DefineClass directMethods[%lu] methodIndex = %u,code_off = 0x%x",
+                         i, method.method_idx_delta_, method.code_off_);
+                    patchMethod(begin, location.c_str(), dexSize, dexIndex,
+                                method.method_idx_delta_, method.code_off_);
+                }
+
+                for (uint64_t i = 0; i < virtual_methods_size; i++) {
+                    auto method = virtualMethods[i];
+                    NLOG("[-] DefineClass virtualMethods[%lu] methodIndex = %u,code_off = 0x%x",
+                         i, method.method_idx_delta_, method.code_off_);
+                    patchMethod(begin, location.c_str(), dexSize, dexIndex,
+                                method.method_idx_delta_, method.code_off_);
+                }
+            }
+            else {
+                NLOG("class_def->class_data_off_ is zero");
+            }
+        }
+    }
+}
+
+
+void *DefineClassV22(void* thiz,void* self,
                  const char* descriptor,
                  size_t hash,
                  void* class_loader,
                  const void* dex_file,
                  const void* dex_class_def) {
 
-    if(LIKELY(g_originDefineClass != nullptr)){
+    if(LIKELY(g_originDefineClassV22 != nullptr)) {
 
-        if(LIKELY(dex_file != nullptr)){
-            std::string location;
-            uint8_t *begin = nullptr;
-            uint64_t dexSize = 0;
-            if(g_sdkLevel >= 28){
-                auto* dexFileV28 = (V28::DexFile *)dex_file;
-                location = dexFileV28->location_;
-                begin = (uint8_t *)dexFileV28->begin_;
-                dexSize = dexFileV28->size_;
-            }
-            else{
-                auto* dexFileV23 = (V23::DexFile *)dex_file;
-                location = dexFileV23->location_;
-                begin = (uint8_t *)dexFileV23->begin_;
-                dexSize = dexFileV23->size_;
-            }
+        patchClass(descriptor,dex_file,dex_class_def);
 
-            if(location.rfind(DEXES_ZIP_NAME) != std::string::npos && dex_class_def){
-                int dexIndex = parse_dex_number(&location);
-
-                auto* class_def = (dex::ClassDef *)dex_class_def;
-                NLOG("[+] DefineClass class_idx_ = 0x%x,class data off = 0x%x",class_def->class_idx_,class_def->class_data_off_);
-
-                if(LIKELY(class_def->class_data_off_ != 0)) {
-                    size_t read = 0;
-                    auto *class_data = (uint8_t *) ((uint8_t *) begin + class_def->class_data_off_);
-
-                    uint64_t static_fields_size = 0;
-                    read += DexFileUtils::readUleb128(class_data, &static_fields_size);
-                    NLOG("[-] DefineClass static_fields_size = %lu,read = %zu", static_fields_size,
-                         read);
-
-                    uint64_t instance_fields_size = 0;
-                    read += DexFileUtils::readUleb128(class_data + read, &instance_fields_size);
-                    NLOG("[-] DefineClass instance_fields_size = %lu,read = %zu",
-                         instance_fields_size, read);
-
-                    uint64_t direct_methods_size = 0;
-                    read += DexFileUtils::readUleb128(class_data + read, &direct_methods_size);
-                    NLOG("[-] DefineClass direct_methods_size = %lu,read = %zu",
-                         direct_methods_size, read);
-
-                    uint64_t virtual_methods_size = 0;
-                    read += DexFileUtils::readUleb128(class_data + read, &virtual_methods_size);
-                    NLOG("[-] DefineClass virtual_methods_size = %lu,read = %zu",
-                         virtual_methods_size, read);
-
-                    dex::ClassDataField staticFields[static_fields_size];
-                    read += DexFileUtils::readFields(class_data + read, staticFields,
-                                                     static_fields_size);
-
-                    dex::ClassDataField instanceFields[instance_fields_size];
-                    read += DexFileUtils::readFields(class_data + read, instanceFields,
-                                                     instance_fields_size);
-
-                    dex::ClassDataMethod directMethods[direct_methods_size];
-                    read += DexFileUtils::readMethods(class_data + read, directMethods,
-                                                      direct_methods_size);
-
-                    dex::ClassDataMethod virtualMethods[virtual_methods_size];
-                    read += DexFileUtils::readMethods(class_data + read, virtualMethods,
-                                                      virtual_methods_size);
-
-                    for (uint64_t i = 0; i < direct_methods_size; i++) {
-                        auto method = directMethods[i];
-                        NLOG("[-] DefineClass directMethods[%lu] methodIndex = %u,code_off = 0x%x",
-                             i, method.method_idx_delta_, method.code_off_);
-                        patchMethod(begin, location.c_str(), dexSize, dexIndex,
-                                    method.method_idx_delta_, method.code_off_);
-                    }
-
-                    for (uint64_t i = 0; i < virtual_methods_size; i++) {
-                        auto method = virtualMethods[i];
-                        NLOG("[-] DefineClass virtualMethods[%lu] methodIndex = %u,code_off = 0x%x",
-                             i, method.method_idx_delta_, method.code_off_);
-                        patchMethod(begin, location.c_str(), dexSize, dexIndex,
-                                    method.method_idx_delta_, method.code_off_);
-                    }
-                }
-                else {
-                    NLOG("class_def->class_data_off_ is zero");
-                }
-            }
-        }
-        return g_originDefineClass( thiz,self,descriptor,hash,class_loader, dex_file, dex_class_def);
+        return g_originDefineClassV22( thiz,self,descriptor,hash,class_loader, dex_file, dex_class_def);
 
     }
+    return nullptr;
+}
 
+void *DefineClassV21(void* thiz,
+                     const char* descriptor,
+                     void* class_loader,
+                     const void* dex_file,
+                     const void* dex_class_def) {
+
+    if(LIKELY(g_originDefineClassV21 != nullptr)) {
+        patchClass(descriptor,dex_file,dex_class_def);
+        return g_originDefineClassV21( thiz,descriptor,class_loader, dex_file, dex_class_def);
+
+    }
     return nullptr;
 }
 
 void hook_DefineClass(){
     void* defineClassAddress = DobbySymbolResolver(GetClassLinkerDefineClassLibPath(),getClassLinkerDefineClassSymbol());
+    if(g_sdkLevel >= __ANDROID_API_L_MR1__) {
+        DobbyHook(defineClassAddress, (void *) DefineClassV22, (void **) &g_originDefineClassV22);
+    }
+    else {
+        DobbyHook(defineClassAddress, (void *) DefineClassV21, (void **) &g_originDefineClassV21);
 
-    DobbyHook(defineClassAddress, (void *) DefineClass,(void**)&g_originDefineClass);
+    }
 }
 
 const char *getArtLibName() {

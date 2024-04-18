@@ -9,13 +9,13 @@
 #define KEEP_SYMBOL __attribute__((visibility("default")))
 #define INIT_ARRAY_SECTION __attribute__ ((constructor))
 
-#define DEXES_ZIP_NAME "i11111i111"
+#define DEXES_ZIP_NAME "i11111i111.zip"
 #define CACHE_DIR "code_cache"
 
 #define ACF_NAME_IN_ZIP "assets/app_acf"
 #define APP_NAME_IN_ZIP "assets/app_name"
 #define CODE_ITEM_NAME_IN_ZIP "assets/OoooooOooo"
-#define DEX_FILES_NAME_IN_ZIP "assets/i11111i111"
+#define DEX_FILES_NAME_IN_ZIP "assets/i11111i111.zip"
 
 #define CODE_ITEM_NAME_IN_ASSETS "OoooooOooo"
 

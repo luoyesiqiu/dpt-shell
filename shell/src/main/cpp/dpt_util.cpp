@@ -27,8 +27,8 @@ static int separate_dex_number(std::string *str) {
     return sum;
 }
 /**
- * location中提取dex的索引
- * 比如：base.apk!classes2.dex会转成1
+ * Get dex index from dex location
+ * e.g. base.apk!classes2.dex will get 1
  */
 int parse_dex_number(std::string *location) {
     int raw_dex_index = 1;

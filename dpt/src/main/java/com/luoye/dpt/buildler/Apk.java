@@ -246,7 +246,7 @@ public class Apk extends AndroidPackage {
     }
 
     private void compressDexFiles(String apkDir){
-        ZipUtils.compress(getDexFiles(apkDir),getOutAssetsDir(apkDir).getAbsolutePath()+File.separator + "i11111i111");
+        ZipUtils.compress(getDexFiles(apkDir),getOutAssetsDir(apkDir).getAbsolutePath()+File.separator + "i11111i111.zip");
     }
 
     private void copyNativeLibs(String apkDir){

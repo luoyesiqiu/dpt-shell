@@ -28,6 +28,9 @@ namespace dpt{
                 static jobjectArray makePathElements(JNIEnv *env, jobject files, jobject optimizedDirectory,
                                         jobject suppressedExceptions);
 
+                static jobjectArray makeDexElements(JNIEnv *env, jobject files, jobject optimizedDirectory,
+                                                 jobject suppressedExceptions);
+
             protected:
                 const char *getClassName() {
                     return "dalvik/system/DexPathList";
