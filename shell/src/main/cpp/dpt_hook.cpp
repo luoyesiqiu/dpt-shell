@@ -107,7 +107,7 @@ void patchMethod(uint8_t *begin,__unused const char *location,uint32_t dexSize,i
     }
 }
 
-void patchClass(const char* descriptor,
+void patchClass(__unused const char* descriptor,
                  const void* dex_file,
                  const void* dex_class_def) {
 
