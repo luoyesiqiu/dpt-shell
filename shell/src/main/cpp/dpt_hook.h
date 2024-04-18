@@ -17,13 +17,19 @@
 
 void dpt_hook();
 
-static void* (*g_originDefineClass)(void* thiz,
+static void* (*g_originDefineClassV22)(void* thiz,
         void* self,
         const char* descriptor,
         size_t hash,
         void* class_loader,
         const void* dex_file,
         const void* dex_class_def);
+
+static void* (*g_originDefineClassV21)(void* thiz,
+                                    const char* descriptor,
+                                    void* class_loader,
+                                    const void* dex_file,
+                                    const void* dex_class_def);
 
 void hook_DefineClass();
 void hook_mmap();

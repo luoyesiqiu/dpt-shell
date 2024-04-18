@@ -29,7 +29,7 @@ public class ZipUtils {
     private static List<String> storeList = Arrays.asList(
             "assets/app_acf",
             "assets/app_name",
-            "assets/i11111i111",
+            "assets/i11111i111.zip",
             "assets/OoooooOooo"
     );
 

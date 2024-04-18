@@ -36,11 +36,19 @@ jobjectArray makePathElements(JNIEnv* env,const char *pathChs) {
     java_util_ArrayList suppressedExceptions(env);
 
     clock_t cl = clock();
-    jobjectArray elements = dalvik_system_DexPathList::makePathElements(env,
-                                                                        files.getInstance(),
-                                                                        nullptr,
-                                                                        suppressedExceptions.getInstance());
-
+    jobjectArray elements;
+    if(android_get_device_api_level() >= __ANDROID_API_M__) {
+        elements = dalvik_system_DexPathList::makePathElements(env,
+                                                    files.getInstance(),
+                                                    nullptr,
+                                                    suppressedExceptions.getInstance());
+    }
+    else {
+        elements = dalvik_system_DexPathList::makeDexElements(env,
+                                                    files.getInstance(),
+                                                    nullptr,
+                                                    suppressedExceptions.getInstance());
+    }
     printTime("makePathElements success,took = ",cl);
     return elements;
 }
@@ -75,7 +83,7 @@ void mergeDexElement(JNIEnv* env,jclass __unused, jobject targetClassLoader,cons
 
     targetDexPathList.setDexElements(newDexElements);
 
-    DLOGD("mergeDexElements success");
+    DLOGD("mergeDexElement success");
 }
 
 void mergeDexElements(JNIEnv* env,jclass klass, jobject targetClassLoader) {
