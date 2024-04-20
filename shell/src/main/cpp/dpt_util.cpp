@@ -232,7 +232,7 @@ void *read_zip_file_entry(void* zip_addr,off_t zip_size,const char* entry_name,i
                     size_t bytes_read = mz_zip_entry_read(zip_handle, entry_data,
                                                    file_info->uncompressed_size);
 
-                    DLOGD("read_zip_file_entry reading entry: %s,read size: %d", entry_name,
+                    DLOGD("read_zip_file_entry reading entry: %s,read size: %zu", entry_name,
                           bytes_read);
 
                     *entry_size = file_info->uncompressed_size;
