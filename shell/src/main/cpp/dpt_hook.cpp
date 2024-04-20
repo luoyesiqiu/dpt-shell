@@ -97,6 +97,8 @@ void patchMethod(uint8_t *begin,__unused const char *location,uint32_t dexSize,i
 
             NLOG("[*] patchMethod codeItem patch, methodIndex = %d,insnsSize = %d >>> %p(0x%lx)",codeItem->getMethodIdx(), codeItem->getInsnsSize(), realCodeItemPtr,(realCodeItemPtr - begin));
             memcpy(realCodeItemPtr,codeItem->getInsns(),codeItem->getInsnsSize());
+            codeItemMap->erase(codeItemIt);
+            delete codeItem;
         }
         else{
             NLOG("[*] patchMethod cannot find  methodId: %d in codeitem map, dex index: %d(%s)",methodIdx,dexIndex,location);
@@ -127,9 +129,6 @@ void patchClass(__unused const char* descriptor,
             begin = (uint8_t *)dexFileV21->begin_;
             dexSize = dexFileV21->size_;
         }
-
-        DLOGD("DefineClass desc = %s, loc = %s",descriptor,location.c_str());
-
 
         if(location.rfind(DEXES_ZIP_NAME) != std::string::npos && dex_class_def){
             int dexIndex = parse_dex_number(&location);

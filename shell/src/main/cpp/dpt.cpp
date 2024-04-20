@@ -348,12 +348,16 @@ static void loadApk(JNIEnv *env){
 
 static void writeDexAchieve(const char *dexAchievePath) {
     int64_t dex_files_size = 0;
-    void *dexFilesData = read_zip_file_entry(zip_addr,zip_size,DEX_FILES_NAME_IN_ZIP,&dex_files_size);
     DLOGD("zipCode open = %s",dexAchievePath);
     int fd = open(dexAchievePath, O_CREAT | O_WRONLY  ,S_IRWXU);
     if(fd > 0){
-        write(fd,dexFilesData,dex_files_size);
-        close(fd);
+        void *dexFilesData = read_zip_file_entry(zip_addr,zip_size,DEX_FILES_NAME_IN_ZIP,&dex_files_size);
+        if(dexFilesData != nullptr) {
+            write(fd, dexFilesData, dex_files_size);
+            close(fd);
+            free(dexFilesData);
+        }
+
     }
     else {
         DLOGE("WTF! zipCode write fail: %s", strerror(fd));
@@ -395,7 +399,11 @@ void init_app(JNIEnv *env, jclass __unused, jobject context) {
     if (nullptr == context) {
         int64_t entry_size = 0;
         if(codeItemFilePtr == nullptr) {
+            // DO NOT free this memory area
             codeItemFilePtr = read_zip_file_entry(zip_addr,zip_size,CODE_ITEM_NAME_IN_ZIP,&entry_size);
+        }
+        else {
+            DLOGD("no need read codeitem from zip");
         }
         readCodeItem((uint8_t*)codeItemFilePtr,entry_size);
 
