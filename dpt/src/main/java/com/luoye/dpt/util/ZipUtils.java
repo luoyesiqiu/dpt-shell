@@ -13,13 +13,19 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.zip.CRC32;
+import java.util.zip.CheckedInputStream;
+import java.util.zip.CheckedOutputStream;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
+import java.util.zip.ZipOutputStream;
 
 public class ZipUtils {
 
@@ -232,5 +238,171 @@ public class ZipUtils {
         } catch (Exception e) {
             e.printStackTrace();
         }
+    }
+
+    private static List<String> doNotCompress = new ArrayList<>(storeList);//不压缩的文件
+    private static Map<String, String> resConflictFiles = new HashMap<>();//资源文件名冲突的文件
+
+    /**
+     * 解压apk
+     *
+     * @param zipPath apk文件
+     * @param dirPath 解压目录
+     */
+    public static void unZip(String zipPath, String dirPath) {
+        try {
+            File zip = new File(zipPath);
+            File dir = new File(dirPath);
+            if (dir.exists()) {
+                FileUtils.deleteRecurse(dir);
+            }
+            java.util.zip.ZipFile zipFile = new java.util.zip.ZipFile(zip);
+            Enumeration<? extends ZipEntry> entries = zipFile.entries();
+            while (entries.hasMoreElements()) {
+                ZipEntry zipEntry = entries.nextElement();
+                String name = zipEntry.getName();
+                if (name.equals("META-INF/CERT.RSA") || name.equals("META-INF/CERT.SF")
+                        || name.equals("META-INF/MANIFEST.MF")) {
+                    continue;
+                }
+                if (!zipEntry.isDirectory()) {
+                    File file = new File(dir, name);
+                    if (file.exists()) {
+                        String fileName = file.getName();
+                        int count = 1;
+                        for (String v : resConflictFiles.values()) {
+                            if (v.equalsIgnoreCase(fileName)) {
+                                count++;
+                            }
+                        }
+                        String rename;
+                        do {
+                            rename = count + fileName;
+                            file = new File(file.getParentFile(), rename);
+                            count++;
+                        } while (file.exists());
+                        resConflictFiles.put(rename, fileName);
+                    }
+                    if (!file.getParentFile().exists()) {
+                        file.getParentFile().mkdirs();
+                    }
+                    if (doNotCompress != null && zipEntry.getCompressedSize() == zipEntry.getSize()) {
+                        doNotCompress.add(file.getAbsolutePath().replace(dir.getAbsolutePath() + File.separator, ""));
+                    }
+                    FileOutputStream fos = new FileOutputStream(file);
+                    InputStream is = zipFile.getInputStream(zipEntry);
+                    byte[] buffer = new byte[1024];
+                    int len;
+                    while ((len = is.read(buffer)) != -1) {
+                        fos.write(buffer, 0, len);
+                    }
+                    is.close();
+                    fos.close();
+                }
+            }
+            zipFile.close();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     * 打包apk
+     *
+     * @param dirPath apk解压后的文件夹路径
+     * @param zipPath 输出打包后的apk
+     * @throws Exception
+     */
+    public static void zip(String dirPath, String zipPath) {
+        try {
+            File zip = new File(zipPath);
+            File dir = new File(dirPath);
+            zip.delete();
+            CheckedOutputStream cos = new CheckedOutputStream(new FileOutputStream(zip), new CRC32());
+            ZipOutputStream zos = new ZipOutputStream(cos);
+            compress(dir, zos, "", doNotCompress, resConflictFiles);
+            zos.flush();
+            zos.close();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    private static void compress(File srcFile, ZipOutputStream zos, String basePath,
+                                 List<String> doNotCompress, Map<String, String> resConflictFiles) throws Exception {
+        if (srcFile.isDirectory()) {
+            compressDir(srcFile, zos, basePath, doNotCompress, resConflictFiles);
+        } else {
+            compressFile(srcFile, zos, basePath, doNotCompress, resConflictFiles);
+        }
+    }
+
+    private static void compressDir(File dir, ZipOutputStream zos, String basePath,
+                                    List<String> doNotCompress, Map<String, String> resConflictFiles) throws Exception {
+        File[] files = dir.listFiles();
+        if (files == null) {
+            return;
+        }
+        if (files.length < 1) {
+            ZipEntry entry = new ZipEntry(basePath + dir.getName() + "/");
+            zos.putNextEntry(entry);
+            zos.closeEntry();
+        }
+        for (File file : files) {
+            compress(file, zos, basePath + dir.getName() + "/", doNotCompress, resConflictFiles);
+        }
+    }
+
+    private static void compressFile(File file, ZipOutputStream zos, String dir,
+                                     List<String> doNotCompress, Map<String, String> resConflictFiles) throws Exception {
+        String fileName = file.getName();
+        if (resConflictFiles.containsKey(fileName)) {
+            fileName = resConflictFiles.get(fileName);
+        }
+        String dirName = dir + fileName;
+        String[] dirNameNew = dirName.split("/");
+
+        StringBuilder buffer = new StringBuilder();
+
+        if (dirNameNew.length > 1) {
+            for (int i = 1; i < dirNameNew.length; i++) {
+                buffer.append("/");
+                buffer.append(dirNameNew[i]);
+
+            }
+        } else {
+            buffer.append("/");
+        }
+
+        ZipEntry entry = new ZipEntry(buffer.substring(1));
+        String rawPath = file.getAbsolutePath();
+        int index = rawPath.indexOf(dirNameNew[0]);
+        if (index != -1 && doNotCompress.contains(rawPath.substring(index + 1 + dirNameNew[0].length()))) { // 打包时不能压缩
+            entry.setMethod(ZipEntry.STORED);
+            entry.setSize(file.length());
+            entry.setCrc(calFileCRC32(file));
+        }
+        zos.putNextEntry(entry);
+        BufferedInputStream bis = new BufferedInputStream(new FileInputStream(file));
+        int count;
+        byte data[] = new byte[1024];
+        while ((count = bis.read(data, 0, 1024)) != -1) {
+            zos.write(data, 0, count);
+        }
+        bis.close();
+        zos.closeEntry();
+    }
+
+    private static long calFileCRC32(File file) throws IOException {
+        FileInputStream fi = new FileInputStream(file);
+        CheckedInputStream checksum = new CheckedInputStream(fi, new CRC32());
+        BufferedInputStream in = new BufferedInputStream(checksum);
+        while (in.read() != -1) {
+        }
+        long temp = checksum.getChecksum().getValue();
+        fi.close();
+        in.close();
+        checksum.close();
+        return temp;
     }
 }
