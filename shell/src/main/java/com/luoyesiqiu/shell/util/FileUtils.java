@@ -88,7 +88,6 @@ import java.util.zip.ZipFile;
                      else {
                          Log.w(TAG, "no need unzip");
                      }
-                     break;
                  }
              }
          }
