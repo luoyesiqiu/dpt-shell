@@ -243,13 +243,8 @@ void hook_DefineClass(){
 }
 
 const char *getArtLibName() {
-    switch (g_sdkLevel) {
-        case 29:
-        case 30:
-        case 31:
-        case 32:
-        case 33:
-            return "libartbase.so";
+    if (g_sdkLevel >= 29) {
+        return "libartbase.so";
     }
     return "libart.so";
 }
