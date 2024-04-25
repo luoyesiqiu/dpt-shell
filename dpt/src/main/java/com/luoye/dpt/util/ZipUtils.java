@@ -13,6 +13,7 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Enumeration;
@@ -20,6 +21,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.regex.Matcher;
 import java.util.zip.CRC32;
 import java.util.zip.CheckedInputStream;
 import java.util.zip.CheckedOutputStream;
@@ -240,14 +242,20 @@ public class ZipUtils {
         }
     }
 
-    private static List<String> doNotCompress = new ArrayList<>(storeList);//不压缩的文件
-    private static Map<String, String> resConflictFiles = new HashMap<>();//资源文件名冲突的文件
+    /**
+     * don not compress file list
+     */
+    private static List<String> doNotCompress = new ArrayList<>(storeList);
+    /**
+     * when unzip apk on window,the file name maybe conflict.this is fix it
+     */
+    private static Map<String, String> resConflictFiles = new HashMap<>();
 
     /**
-     * 解压apk
+     * unzip apk
      *
-     * @param zipPath apk文件
-     * @param dirPath 解压目录
+     * @param zipPath apk path
+     * @param dirPath unzip dir path
      */
     public static void unZip(String zipPath, String dirPath) {
         try {
@@ -307,19 +315,23 @@ public class ZipUtils {
     }
 
     /**
-     * 打包apk
+     * zip apk
      *
-     * @param dirPath apk解压后的文件夹路径
-     * @param zipPath 输出打包后的apk
-     * @throws Exception
+     * @param dirPath apk unzip dir path
+     * @param zipPath zip apk path
      */
     public static void zip(String dirPath, String zipPath) {
         try {
             File zip = new File(zipPath);
             File dir = new File(dirPath);
             zip.delete();
-            CheckedOutputStream cos = new CheckedOutputStream(new FileOutputStream(zip), new CRC32());
+            CheckedOutputStream cos = new CheckedOutputStream(Files.newOutputStream(zip.toPath()), new CRC32());
             ZipOutputStream zos = new ZipOutputStream(cos);
+            for (int i = 0; i < doNotCompress.size(); i++) {
+                String check = doNotCompress.get(i);
+                check = check.replaceAll("/", Matcher.quoteReplacement(File.separator));
+                doNotCompress.set(i, check);
+            }
             compress(dir, zos, "", doNotCompress, resConflictFiles);
             zos.flush();
             zos.close();
