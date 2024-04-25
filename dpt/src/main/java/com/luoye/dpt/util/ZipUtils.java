@@ -389,7 +389,7 @@ public class ZipUtils {
         ZipEntry entry = new ZipEntry(buffer.substring(1));
         String rawPath = file.getAbsolutePath();
         int index = rawPath.indexOf(dirNameNew[0]);
-        if (index != -1 && doNotCompress.contains(rawPath.substring(index + 1 + dirNameNew[0].length()))) { // 打包时不能压缩
+        if (index != -1 && doNotCompress.contains(rawPath.substring(index + 1 + dirNameNew[0].length()))) {
             entry.setMethod(ZipEntry.STORED);
             entry.setSize(file.length());
             entry.setCrc(calFileCRC32(file));
