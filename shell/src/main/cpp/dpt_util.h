@@ -35,6 +35,9 @@
 static AAssetManager *g_AssetMgrInstance = nullptr;
 static jclass g_ContextClass = nullptr;
 
+extern void* g_apk_addr;
+extern size_t g_apk_size;
+
 int parse_dex_number(std::string *location);
 jclass getContextClass(JNIEnv *env);
 AAssetManager *getAssetMgr(JNIEnv *env, jobject assetManager);
@@ -46,14 +49,14 @@ void getCompressedDexesPath(JNIEnv *env,char *outDexZipPath,size_t max_len);
 void getCodeCachePath(JNIEnv *env,char *outCodeCachePath,size_t max_len);
 jstring getCompressedDexesPathExport(JNIEnv *,jclass __unused);
 void appendLog(const char* log);
-void hexDump(const char* name,const void* data, size_t size);
-void load_zip(const char* zip_file_path,void **zip_addr,off_t *zip_size);
-void *read_zip_file_entry(void* zip_addr,off_t zip_size,const char* entry_name,int64_t *entry_size);
+void hexdump(const char* name,const void* data, size_t size);
+void load_apk(JNIEnv *env);
+bool read_zip_file_entry(void* zip_addr,off_t zip_size,const char* entry_name, void ** entry_addr,uint64_t *entry_size);
 int find_in_maps(int count,...);
 int find_in_threads_list(int count,...);
 const char* find_symbol_in_elf_file(const char *elf_file,int keyword_count,...);
-void readPackageName(char *packageName,size_t max_len);
-void getClassName(JNIEnv *env,jobject obj,char *destClassName);
+
+void getClassName(JNIEnv *env,jobject obj,char *destClassName,size_t max_len);
 void parseClassName(const char *src, char *dest);
 void printTime(const char* msg,clock_t start);
 const char* getThreadName();

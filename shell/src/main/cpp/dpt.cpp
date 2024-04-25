@@ -8,8 +8,6 @@ using namespace dpt;
 
 static jobject g_realApplicationInstance = nullptr;
 static jclass g_realApplicationClass = nullptr;
-void* zip_addr = nullptr;
-off_t zip_size;
 char *appComponentFactoryChs = nullptr;
 char *applicationNameChs = nullptr;
 void *codeItemFilePtr = nullptr;
@@ -88,12 +86,13 @@ void mergeDexElement(JNIEnv* env,jclass __unused, jobject targetClassLoader,cons
 
 void mergeDexElements(JNIEnv* env,jclass klass, jobject targetClassLoader) {
     char compressedDexesPathChs[256] = {0};
-    getCompressedDexesPath(env,compressedDexesPathChs, 256);
+    getCompressedDexesPath(env,compressedDexesPathChs, ARRAY_LENGTH(compressedDexesPathChs));
 
     mergeDexElement(env,klass,targetClassLoader,compressedDexesPathChs);
 
+#ifndef DEBUG
     junkCodeDexProtect(env);
-
+#endif
     DLOGD("mergeDexElements success");
 }
 
@@ -167,30 +166,45 @@ void removeDexElements(JNIEnv* env,jclass __unused,jobject classLoader,jstring e
 }
 
 jstring readAppComponentFactory(JNIEnv *env, jclass __unused) {
-    int64_t entry_size;
-    if(zip_addr == nullptr){
-        char apkPathChs[256] = {0};
-        getApkPath(env,apkPathChs,256);
-        load_zip(apkPathChs,&zip_addr,&zip_size);
-    }
+    load_apk(env);
 
     if(appComponentFactoryChs == nullptr) {
-        appComponentFactoryChs = (char*)read_zip_file_entry(zip_addr, zip_size,ACF_NAME_IN_ZIP, &entry_size);
+        uint64_t entry_size = 0;
+        void *entry_addr = 0;
+        bool needFree = read_zip_file_entry(g_apk_addr, g_apk_size,ACF_NAME_IN_ZIP, &entry_addr, &entry_size);
+        if(!needFree) {
+            char *newChs = (char *) calloc(entry_size + 1, sizeof(char));
+            if (entry_size != 0) {
+                memcpy(newChs, entry_addr, entry_size);
+            }
+            appComponentFactoryChs = (char *)newChs;
+        }
+        else {
+            appComponentFactoryChs = (char *)entry_addr;
+        }
     }
     DLOGD("readAppComponentFactory = %s", appComponentFactoryChs);
     return env->NewStringUTF((appComponentFactoryChs));
 }
 
 jstring readApplicationName(JNIEnv *env, jclass __unused) {
-    int64_t entry_size;
-    if(zip_addr == nullptr){
-        char apkPathChs[256] = {0};
-        getApkPath(env,apkPathChs,256);
-        load_zip(apkPathChs,&zip_addr,&zip_size);
-    }
+    load_apk(env);
 
     if(applicationNameChs == nullptr) {
-        applicationNameChs = (char*)read_zip_file_entry(zip_addr, zip_size,APP_NAME_IN_ZIP, &entry_size);
+        uint64_t entry_size = 0;
+        void *entry_addr = nullptr;
+        bool needFree = read_zip_file_entry(g_apk_addr, g_apk_size,APP_NAME_IN_ZIP, &entry_addr, &entry_size);
+        if(!needFree) {
+            char *newChs = (char *) calloc(entry_size + 1, sizeof(char));
+            if (entry_size != 0) {
+                memcpy(newChs, entry_addr, entry_size);
+            }
+            applicationNameChs = newChs;
+        }
+        else {
+            applicationNameChs = (char *) entry_addr;
+        }
+
     }
     DLOGD("readApplicationName = %s", applicationNameChs);
     return env->NewStringUTF((applicationNameChs));
@@ -305,7 +319,7 @@ void replaceApplicationOnLoadedApk(JNIEnv *env, jclass __unused,jobject realAppl
     android_content_pm_ApplicationInfo applicationInfo(env,ApplicationInfoObj);
 
     char applicationName[128] = {0};
-    getClassName(env,realApplication,applicationName);
+    getClassName(env,realApplication,applicationName, ARRAY_LENGTH(applicationName));
 
     DLOGD("applicationName = %s",applicationName);
     char realApplicationNameChs[128] = {0};
@@ -337,75 +351,23 @@ static bool registerNativeMethods(JNIEnv *env) {
     return JNI_FALSE;
 }
 
-static void loadApk(JNIEnv *env){
-    char apkPathChs[256] = {0};
-    getApkPath(env,apkPathChs,256);
-
-    if(zip_addr == nullptr){
-        load_zip(apkPathChs,&zip_addr,&zip_size);
-    }
-}
-
-static void writeDexAchieve(const char *dexAchievePath) {
-    int64_t dex_files_size = 0;
-    DLOGD("zipCode open = %s",dexAchievePath);
-    int fd = open(dexAchievePath, O_CREAT | O_WRONLY  ,S_IRWXU);
-    if(fd > 0){
-        void *dexFilesData = read_zip_file_entry(zip_addr,zip_size,DEX_FILES_NAME_IN_ZIP,&dex_files_size);
-        if(dexFilesData != nullptr) {
-            write(fd, dexFilesData, dex_files_size);
-            close(fd);
-            free(dexFilesData);
-        }
-
-    }
-    else {
-        DLOGE("WTF! zipCode write fail: %s", strerror(fd));
-    }
-}
-
-static void extractDexes(JNIEnv *env){
-    char compressedDexesPathChs[256] = {0};
-    getCompressedDexesPath(env,compressedDexesPathChs, 256);
-
-    char codeCachePathChs[256] = {0};
-    getCodeCachePath(env,codeCachePathChs, 256);
-
-    if(access(codeCachePathChs, F_OK) == 0){
-        if(access(compressedDexesPathChs, F_OK) != 0) {
-            writeDexAchieve(compressedDexesPathChs);
-        }
-        else {
-            DLOGI("dex files is achieved!");
-        }
-    }
-    else {
-        if(mkdir(codeCachePathChs,0775) == 0){
-            writeDexAchieve(compressedDexesPathChs);
-        }
-        else {
-            DLOGE("WTF! cannot make code_cache directory!");
-        }
-    }
-}
 
 void init_app(JNIEnv *env, jclass __unused, jobject context) {
     DLOGD("init_app!");
     clock_t start = clock();
 
-    loadApk(env);
-    extractDexes(env);
+    load_apk(env);
 
     if (nullptr == context) {
-        int64_t entry_size = 0;
+        uint64_t entry_size = 0;
         if(codeItemFilePtr == nullptr) {
             // DO NOT free this memory area
-            codeItemFilePtr = read_zip_file_entry(zip_addr,zip_size,CODE_ITEM_NAME_IN_ZIP,&entry_size);
+            read_zip_file_entry(g_apk_addr,g_apk_size,CODE_ITEM_NAME_IN_ZIP,&codeItemFilePtr,&entry_size);
         }
         else {
             DLOGD("no need read codeitem from zip");
         }
-        readCodeItem((uint8_t*)codeItemFilePtr,entry_size);
+        readCodeItem((uint8_t *)codeItemFilePtr,entry_size);
 
     } else {
         AAsset *aAsset = getAsset(env, context, CODE_ITEM_NAME_IN_ASSETS);
@@ -465,3 +427,6 @@ JNIEXPORT jint JNI_OnLoad(JavaVM *vm, void *__unused) {
     return JNI_VERSION_1_4;
 }
 
+JNIEXPORT void JNI_OnUnload(__unused JavaVM* vm,__unused void* reserved) {
+    DLOGI("JNI_OnUnload called!");
+}
