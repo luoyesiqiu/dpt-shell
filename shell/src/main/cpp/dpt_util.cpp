@@ -13,9 +13,7 @@
 
 using namespace dpt;
 
-void* g_apk_addr = nullptr;
-size_t g_apk_size = 0;
-static pthread_mutex_t  g_write_dexes_mutex = PTHREAD_MUTEX_INITIALIZER;
+static pthread_mutex_t g_write_dexes_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 static int separate_dex_number(std::string *str) {
     int sum = 0;
@@ -167,13 +165,13 @@ jstring getCompressedDexesPathExport(JNIEnv *env,jclass __unused) {
     return env->NewStringUTF(dexesPath);
 }
 
-static void writeDexAchieve(const char *dexAchievePath) {
+static void writeDexAchieve(const char *dexAchievePath,void *apk_addr,size_t apk_size) {
     DLOGD("zipCode open = %s",dexAchievePath);
     FILE *fp = fopen(dexAchievePath, "wb");
     if(fp != nullptr){
         uint64_t dex_files_size = 0;
         void *dexFilesData = nullptr;
-        bool needFree = read_zip_file_entry(g_apk_addr,g_apk_size,DEX_FILES_NAME_IN_ZIP,&dexFilesData,&dex_files_size);
+        bool needFree = read_zip_file_entry(apk_addr,apk_size,DEX_FILES_NAME_IN_ZIP,&dexFilesData,&dex_files_size);
         if(dexFilesData != nullptr) {
             fwrite(dexFilesData, 1, dex_files_size, fp);
         }
@@ -187,7 +185,7 @@ static void writeDexAchieve(const char *dexAchievePath) {
     }
 }
 
-static void extractDexesInNeeded(JNIEnv *env){
+static void extractDexesInNeeded(JNIEnv *env,void *apk_addr,size_t apk_size){
     char compressedDexesPathChs[256] = {0};
     getCompressedDexesPath(env,compressedDexesPathChs, ARRAY_LENGTH(compressedDexesPathChs));
 
@@ -196,7 +194,7 @@ static void extractDexesInNeeded(JNIEnv *env){
 
     if(access(codeCachePathChs, F_OK) == 0){
         if(access(compressedDexesPathChs, F_OK) != 0) {
-            writeDexAchieve(compressedDexesPathChs);
+            writeDexAchieve(compressedDexesPathChs,apk_addr,apk_size);
             chmod(compressedDexesPathChs,0444);
             DLOGI("extractDexes %s write finish",compressedDexesPathChs);
 
@@ -207,7 +205,7 @@ static void extractDexesInNeeded(JNIEnv *env){
     }
     else {
         if(mkdir(codeCachePathChs,0775) == 0){
-            writeDexAchieve(compressedDexesPathChs);
+            writeDexAchieve(compressedDexesPathChs,apk_addr,apk_size);
             chmod(compressedDexesPathChs,0444);
         }
         else {
@@ -215,6 +213,7 @@ static void extractDexesInNeeded(JNIEnv *env){
         }
     }
 }
+
 
 static void load_zip_by_mmap(const char* zip_file_path,void **zip_addr,size_t *zip_size) {
     int fd = open(zip_file_path,O_RDONLY);
@@ -226,7 +225,7 @@ static void load_zip_by_mmap(const char* zip_file_path,void **zip_addr,size_t *z
     fstat(fd,&fst);
     const int page_size = sysconf(_SC_PAGESIZE);
     const size_t need_zip_size = (fst.st_size / page_size) * page_size + page_size;
-    DLOGD("load_zip fst.st_size = " FMT_INT64_T ",need size = %zu" ,fst.st_size,need_zip_size);
+    DLOGD("%s fst.st_size = " FMT_INT64_T ",need size = %zu" ,__FUNCTION__ ,fst.st_size,need_zip_size);
     *zip_addr = mmap64(nullptr,
                        need_zip_size,
                        PROT_READ ,
@@ -234,24 +233,32 @@ static void load_zip_by_mmap(const char* zip_file_path,void **zip_addr,size_t *z
                        fd,
                        0);
     *zip_size = fst.st_size;
+
+    DLOGD("%s addr:" FMT_POINTER " size: %zu" ,__FUNCTION__ ,(uintptr_t)*zip_addr,*zip_size);
 }
 
 static void load_zip(const char* zip_file_path,void **zip_addr,size_t *zip_size) {
     DLOGD("load_zip by mmap");
     load_zip_by_mmap(zip_file_path, zip_addr, zip_size);
 
-    DLOGD("load_zip start: %p size: %zu" , *zip_addr,*zip_size);
+    DLOGD("%s start: %p size: %zu" ,__FUNCTION__ , *zip_addr,*zip_size);
 }
 
-void load_apk(JNIEnv *env) {
+void load_apk(JNIEnv *env,void **apk_addr,size_t *apk_size) {
+    char apkPathChs[512] = {0};
+    getApkPath(env,apkPathChs,ARRAY_LENGTH(apkPathChs));
+    load_zip(apkPathChs,apk_addr,apk_size);
+
     pthread_mutex_lock(&g_write_dexes_mutex);
-    if(g_apk_addr == nullptr){
-        char apkPathChs[512] = {0};
-        getApkPath(env,apkPathChs,ARRAY_LENGTH(apkPathChs));
-        load_zip(apkPathChs,&g_apk_addr,&g_apk_size);
-        extractDexesInNeeded(env);
-    }
+    extractDexesInNeeded(env,*apk_addr,*apk_size);
     pthread_mutex_unlock(&g_write_dexes_mutex);
+}
+
+void unload_apk(void *apk_addr,size_t apk_size) {
+    if(apk_addr != nullptr) {
+        munmap(apk_addr,apk_size);
+        DLOGD("%s addr:" FMT_POINTER " size: %zu" ,__FUNCTION__ ,(uintptr_t)apk_addr,apk_size);
+    }
 }
 
 bool read_zip_file_entry(void* zip_addr,off_t zip_size,const char* entry_name,void **entry_addr,uint64_t *entry_size) {

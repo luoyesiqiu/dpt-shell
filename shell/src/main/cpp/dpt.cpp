@@ -166,12 +166,15 @@ void removeDexElements(JNIEnv* env,jclass __unused,jobject classLoader,jstring e
 }
 
 jstring readAppComponentFactory(JNIEnv *env, jclass __unused) {
-    load_apk(env);
 
     if(appComponentFactoryChs == nullptr) {
+        void *apk_addr = nullptr;
+        size_t apk_size = 0;
+        load_apk(env,&apk_addr,&apk_size);
+
         uint64_t entry_size = 0;
         void *entry_addr = 0;
-        bool needFree = read_zip_file_entry(g_apk_addr, g_apk_size,ACF_NAME_IN_ZIP, &entry_addr, &entry_size);
+        bool needFree = read_zip_file_entry(apk_addr, apk_size ,ACF_NAME_IN_ZIP, &entry_addr, &entry_size);
         if(!needFree) {
             char *newChs = (char *) calloc(entry_size + 1, sizeof(char));
             if (entry_size != 0) {
@@ -180,31 +183,37 @@ jstring readAppComponentFactory(JNIEnv *env, jclass __unused) {
             appComponentFactoryChs = (char *)newChs;
         }
         else {
-            appComponentFactoryChs = (char *)entry_addr;
+            appComponentFactoryChs = (char *) entry_addr;
+
         }
+        unload_apk(apk_addr,apk_size);
     }
+
     DLOGD("readAppComponentFactory = %s", appComponentFactoryChs);
     return env->NewStringUTF((appComponentFactoryChs));
 }
 
 jstring readApplicationName(JNIEnv *env, jclass __unused) {
-    load_apk(env);
 
     if(applicationNameChs == nullptr) {
+        void *apk_addr = nullptr;
+        size_t apk_size = 0;
+        load_apk(env,&apk_addr,&apk_size);
+
         uint64_t entry_size = 0;
         void *entry_addr = nullptr;
-        bool needFree = read_zip_file_entry(g_apk_addr, g_apk_size,APP_NAME_IN_ZIP, &entry_addr, &entry_size);
-        if(!needFree) {
+        bool needFree = read_zip_file_entry(apk_addr, apk_size, APP_NAME_IN_ZIP, &entry_addr,
+                                            &entry_size);
+        if (!needFree) {
             char *newChs = (char *) calloc(entry_size + 1, sizeof(char));
             if (entry_size != 0) {
                 memcpy(newChs, entry_addr, entry_size);
             }
             applicationNameChs = newChs;
-        }
-        else {
+        } else {
             applicationNameChs = (char *) entry_addr;
         }
-
+        unload_apk(apk_addr,apk_size);
     }
     DLOGD("readApplicationName = %s", applicationNameChs);
     return env->NewStringUTF((applicationNameChs));
@@ -356,18 +365,21 @@ void init_app(JNIEnv *env, jclass __unused, jobject context) {
     DLOGD("init_app!");
     clock_t start = clock();
 
-    load_apk(env);
-
     if (nullptr == context) {
+        void *apk_addr = nullptr;
+        size_t apk_size = 0;
+        load_apk(env,&apk_addr,&apk_size);
+
         uint64_t entry_size = 0;
         if(codeItemFilePtr == nullptr) {
             // DO NOT free this memory area
-            read_zip_file_entry(g_apk_addr,g_apk_size,CODE_ITEM_NAME_IN_ZIP,&codeItemFilePtr,&entry_size);
+            read_zip_file_entry(apk_addr,apk_size,CODE_ITEM_NAME_IN_ZIP,&codeItemFilePtr,&entry_size);
         }
         else {
             DLOGD("no need read codeitem from zip");
         }
         readCodeItem((uint8_t *)codeItemFilePtr,entry_size);
+        unload_apk(apk_addr,apk_size);
 
     } else {
         AAsset *aAsset = getAsset(env, context, CODE_ITEM_NAME_IN_ASSETS);
@@ -377,6 +389,7 @@ void init_app(JNIEnv *env, jclass __unused, jobject context) {
             readCodeItem(buf,len);
         }
     }
+
     printTime("read apk data took =" , start);
 }
 
