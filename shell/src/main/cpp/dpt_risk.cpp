@@ -45,3 +45,12 @@ void detectFrida() {
     pthread_t t;
     pthread_create(&t, nullptr,detectFridaOnThread,nullptr);
 }
+
+static void doPtrace() {
+    __unused int ret = sys_ptrace(PTRACE_TRACEME,0,0,0);
+    DLOGD("doPtrace result: %d",ret);
+}
+
+void antiDebugger() {
+    doPtrace();
+}
