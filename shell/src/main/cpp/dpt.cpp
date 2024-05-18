@@ -223,7 +223,6 @@ void init_dpt() {
     DLOGI("init_dpt call!");
     dpt_hook();
     detectFrida();
-    antiDebugger();
 }
 
 jclass getRealApplicationClass(JNIEnv *env, const char *applicationClassName) {
