@@ -28,7 +28,7 @@ import java.util.zip.ZipFile;
 
          File libsOutDir = new File(dataDir + File.separator + Global.LIB_DIR + File.separator + abiName);
          FileUtils.unzipInNeeded(sourceDir,
-                 "assets/" + Global.ZIP_LIB_DIR + "/" + abiName + "/", /* 注意最后一个斜杠 */
+                 "assets/" + Global.ZIP_LIB_DIR + "/" + abiName + "/" + Global.SHELL_SO_NAME,
                  libsOutDir.getAbsolutePath());
      }
 
@@ -70,7 +70,7 @@ import java.util.zip.ZipFile;
              while(entries.hasMoreElements()){
                  ZipEntry entry = entries.nextElement();
 
-                 if(entry.getName().startsWith(entryName)) {
+                 if(entry.getName().equals(entryName)) {
                      if(localFileCrc != entry.getCrc()) {
                          byte[] buf = new byte[4096];
                          int len = -1;
@@ -84,6 +84,7 @@ import java.util.zip.ZipFile;
                          Log.d(TAG, "unzip '" + entry.getName() + "' success. local = " + localFileCrc + ", zip = " + entry.getCrc());
 
                          FileUtils.close(bufferedOutputStream);
+                         break;
                      }
                      else {
                          Log.w(TAG, "no need unzip");
