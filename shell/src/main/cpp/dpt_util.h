@@ -48,6 +48,7 @@ jstring getCompressedDexesPathExport(JNIEnv *,jclass __unused);
 void appendLog(const char* log);
 void hexdump(const char* name,const void* data, size_t size);
 void load_apk(JNIEnv *env,void **apk_addr,size_t *apk_size);
+void extractDexesInNeeded(JNIEnv *env,void *apk_addr,size_t apk_size);
 void unload_apk(void *apk_addr,size_t apk_size);
 bool read_zip_file_entry(void* zip_addr,off_t zip_size,const char* entry_name, void ** entry_addr,uint64_t *entry_size);
 int find_in_maps(int count,...);

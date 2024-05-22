@@ -13,8 +13,6 @@
 
 using namespace dpt;
 
-static pthread_mutex_t g_write_dexes_mutex = PTHREAD_MUTEX_INITIALIZER;
-
 static int separate_dex_number(std::string *str) {
     int sum = 0;
     int mul = 1;
@@ -185,7 +183,7 @@ static void writeDexAchieve(const char *dexAchievePath,void *apk_addr,size_t apk
     }
 }
 
-static void extractDexesInNeeded(JNIEnv *env,void *apk_addr,size_t apk_size){
+void extractDexesInNeeded(JNIEnv *env,void *apk_addr,size_t apk_size) {
     char compressedDexesPathChs[256] = {0};
     getCompressedDexesPath(env,compressedDexesPathChs, ARRAY_LENGTH(compressedDexesPathChs));
 
@@ -249,9 +247,6 @@ void load_apk(JNIEnv *env,void **apk_addr,size_t *apk_size) {
     getApkPath(env,apkPathChs,ARRAY_LENGTH(apkPathChs));
     load_zip(apkPathChs,apk_addr,apk_size);
 
-    pthread_mutex_lock(&g_write_dexes_mutex);
-    extractDexesInNeeded(env,*apk_addr,*apk_size);
-    pthread_mutex_unlock(&g_write_dexes_mutex);
 }
 
 void unload_apk(void *apk_addr,size_t apk_size) {
