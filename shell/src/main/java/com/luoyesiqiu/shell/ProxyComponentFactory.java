@@ -71,7 +71,7 @@ public class ProxyComponentFactory extends AppComponentFactory {
             FileUtils.unzipLibs(sourceDir,dataDir);
             JniBridge.loadShellLibs(dataDir,sourceDir);
         }
-        JniBridge.ia(null);
+        JniBridge.ia();
 
         AppComponentFactory targetAppComponentFactory = null;
         String applicationName = JniBridge.rapn();
@@ -129,7 +129,7 @@ public class ProxyComponentFactory extends AppComponentFactory {
         FileUtils.unzipLibs(aInfo.sourceDir,aInfo.dataDir);
         JniBridge.loadShellLibs(aInfo.dataDir,aInfo.sourceDir);
 
-        JniBridge.ia(null);
+        JniBridge.ia();
 
         AppComponentFactory targetAppComponentFactory = getTargetAppComponentFactory(cl);
 

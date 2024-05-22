@@ -48,7 +48,7 @@ public class ProxyApplication extends Application {
             JniBridge.loadShellLibs(applicationInfo.dataDir,applicationInfo.sourceDir);
 
             Log.d(TAG,"ProxyApplication init");
-            JniBridge.ia(base);
+            JniBridge.ia();
 
             ClassLoader targetClassLoader = base.getClassLoader();
             JniBridge.mde(targetClassLoader);

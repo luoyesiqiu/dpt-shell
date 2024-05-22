@@ -6,6 +6,8 @@
 
 using namespace dpt;
 
+static pthread_mutex_t g_write_dexes_mutex = PTHREAD_MUTEX_INITIALIZER;
+
 static jobject g_realApplicationInstance = nullptr;
 static jclass g_realApplicationClass = nullptr;
 char *appComponentFactoryChs = nullptr;
@@ -15,7 +17,7 @@ void *codeItemFilePtr = nullptr;
 static JNINativeMethod gMethods[] = {
         {"craoc", "(Ljava/lang/String;)V",                               (void *) callRealApplicationOnCreate},
         {"craa",  "(Landroid/content/Context;Ljava/lang/String;)V",      (void *) callRealApplicationAttach},
-        {"ia",    "(Landroid/content/Context;)V", (void *) init_app},
+        {"ia",    "()V", (void *) init_app},
         {"gap",   "()Ljava/lang/String;",         (void *) getApkPathExport},
         {"gdp",   "()Ljava/lang/String;",         (void *) getCompressedDexesPathExport},
         {"rcf",   "()Ljava/lang/String;",         (void *) readAppComponentFactory},
@@ -361,35 +363,28 @@ static bool registerNativeMethods(JNIEnv *env) {
 }
 
 
-void init_app(JNIEnv *env, jclass __unused, jobject context) {
+void init_app(JNIEnv *env, jclass __unused) {
     DLOGD("init_app!");
     clock_t start = clock();
 
-    if (nullptr == context) {
-        void *apk_addr = nullptr;
-        size_t apk_size = 0;
-        load_apk(env,&apk_addr,&apk_size);
+    void *apk_addr = nullptr;
+    size_t apk_size = 0;
+    load_apk(env,&apk_addr,&apk_size);
 
-        uint64_t entry_size = 0;
-        if(codeItemFilePtr == nullptr) {
-            // DO NOT free this memory area
-            read_zip_file_entry(apk_addr,apk_size,CODE_ITEM_NAME_IN_ZIP,&codeItemFilePtr,&entry_size);
-        }
-        else {
-            DLOGD("no need read codeitem from zip");
-        }
-        readCodeItem((uint8_t *)codeItemFilePtr,entry_size);
-        unload_apk(apk_addr,apk_size);
-
-    } else {
-        AAsset *aAsset = getAsset(env, context, CODE_ITEM_NAME_IN_ASSETS);
-        if (aAsset != nullptr) {
-            int len = AAsset_getLength(aAsset);
-            auto buf = (uint8_t *) AAsset_getBuffer(aAsset);
-            readCodeItem(buf,len);
-        }
+    uint64_t entry_size = 0;
+    if(codeItemFilePtr == nullptr) {
+        read_zip_file_entry(apk_addr,apk_size,CODE_ITEM_NAME_IN_ZIP,&codeItemFilePtr,&entry_size);
     }
+    else {
+        DLOGD("no need read codeitem from zip");
+    }
+    readCodeItem((uint8_t *)codeItemFilePtr,entry_size);
 
+    pthread_mutex_lock(&g_write_dexes_mutex);
+    extractDexesInNeeded(env,apk_addr,apk_size);
+    pthread_mutex_unlock(&g_write_dexes_mutex);
+
+    unload_apk(apk_addr,apk_size);
     printTime("read apk data took =" , start);
 }
 
