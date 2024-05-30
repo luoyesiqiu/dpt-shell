@@ -23,7 +23,7 @@ public class JniBridge {
     public static native void rde(ClassLoader classLoader,String elementName);
     public static native String gap();
     public static native String gdp();
-    public static native void ra(String originApplicationClassName);
+    public static native Object ra(String originApplicationClassName);
     public static native String rapn();
 
     public static void loadShellLibs(String workspacePath,String apkPath) {

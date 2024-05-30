@@ -24,7 +24,7 @@ static JNINativeMethod gMethods[] = {
         {"rapn",   "()Ljava/lang/String;",         (void *) readApplicationName},
         {"mde",   "(Ljava/lang/ClassLoader;)V",        (void *) mergeDexElements},
         {"rde",   "(Ljava/lang/ClassLoader;Ljava/lang/String;)V",        (void *) removeDexElements},
-        {"ra", "(Ljava/lang/String;)V",                               (void *) replaceApplication}
+        {"ra", "(Ljava/lang/String;)Ljava/lang/Object;",                               (void *) replaceApplication}
 };
 
 jobjectArray makePathElements(JNIEnv* env,const char *pathChs) {
@@ -285,16 +285,17 @@ void callRealApplicationAttach(JNIEnv *env, jclass, jobject context,
 
 }
 
-void replaceApplication(JNIEnv *env, jclass klass, jstring realApplicationClassName){
+jobject replaceApplication(JNIEnv *env, jclass klass, jstring realApplicationClassName){
 
     jobject appInstance = getApplicationInstance(env, realApplicationClassName);
     if (appInstance == nullptr) {
         DLOGW("replaceApplication getApplicationInstance fail!");
-        return;
+        return nullptr;
     }
     replaceApplicationOnLoadedApk(env,klass,appInstance);
     replaceApplicationOnActivityThread(env,klass,appInstance);
     DLOGD("replace application success");
+    return appInstance;
 }
 
 void replaceApplicationOnActivityThread(JNIEnv *env,jclass __unused, jobject realApplication){
