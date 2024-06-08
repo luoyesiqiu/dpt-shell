@@ -2,8 +2,6 @@
 
 [![](https://img.shields.io/github/license/luoyesiqiu/dpt-shell)](https://github.com/luoyesiqiu/dpt-shell/blob/main/LICENSE) [![](https://img.shields.io/github/downloads/luoyesiqiu/dpt-shell/total?color=blue)](https://github.com/luoyesiqiu/dpt-shell/releases/latest) [![](https://img.shields.io/github/issues-raw/luoyesiqiu/dpt-shell?color=red)](https://github.com/luoyesiqiu/dpt-shell/issues) ![](https://img.shields.io/badge/Android-5.0%2B-brightgreen)
 
-## 介绍
-
 [English](./README.md) | 简体中文 
 
 dpt-shell是一种将dex文件中的函数代码抽空，然后在程序运行时将函数代码填回的那么一种壳。
