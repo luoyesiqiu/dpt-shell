@@ -36,7 +36,7 @@ usage: java -jar dpt.jar [option] -f <apk>
  -D,--debug            Make apk debuggable.
  -f,--apk-file <arg>   Need to protect apk file.
  -l,--noisy-log        Open noisy log.
- -s,--no-sign          Do not sign apk.
+ -x,--no-sign          Do not sign apk.
 ```
 
 ## Notice
@@ -55,3 +55,4 @@ This project has not too many tests, be careful use in prod environment. Otherwi
 - [minizip-ng](https://github.com/zlib-ng/minizip-ng)
 - [JSON-java](https://github.com/stleary/JSON-java)
 - [zip4j](https://github.com/srikanth-lingala/zip4j)
+- [commons-cli](https://github.com/apache/commons-cli)

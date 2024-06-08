@@ -38,7 +38,7 @@ usage: java -jar dpt.jar [option] -f <apk>
  -D,--debug            Make apk debuggable.
  -f,--apk-file <arg>   Need to protect apk file.
  -l,--noisy-log        Open noisy log.
- -s,--no-sign          Do not sign apk.
+ -x,--no-sign          Do not sign apk.
 ```
 
 ## 原理解析
@@ -49,7 +49,7 @@ usage: java -jar dpt.jar [option] -f <apk>
 
 本项目未经大量测试，仅用于学习交流，不要线上使用，否则自行承担后果。
 
-## 本项目使用或依赖以下开源项目
+## 使用或依赖以下项目
 
 - [dx](https://android.googlesource.com/platform/dalvik/+/refs/heads/master/dx/)
 - [Dobby](https://github.com/jmpews/Dobby)
@@ -61,3 +61,4 @@ usage: java -jar dpt.jar [option] -f <apk>
 - [minizip-ng](https://github.com/zlib-ng/minizip-ng)
 - [JSON-java](https://github.com/stleary/JSON-java)
 - [zip4j](https://github.com/srikanth-lingala/zip4j)
+- [commons-cli](https://github.com/apache/commons-cli)
