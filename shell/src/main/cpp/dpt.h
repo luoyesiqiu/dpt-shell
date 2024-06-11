@@ -45,7 +45,7 @@ jobjectArray makePathElements(JNIEnv* env,const char *pathChs);
 void mergeDexElement(JNIEnv* env,jclass __unused, jobject targetClassLoader,const char* pathChs);
 void mergeDexElements(JNIEnv* env,jclass __unused,jobject targetClassLoader);
 void removeDexElements(JNIEnv* env,jclass __unused,jobject classLoader,jstring elementName);
-void replaceApplication(JNIEnv *env, jclass __unused, jstring originApplication);
+jobject replaceApplication(JNIEnv *env, jclass __unused, jstring originApplication);
 void replaceApplicationOnActivityThread(JNIEnv *env,jclass __unused, jobject realApplication);
 void replaceApplicationOnLoadedApk(JNIEnv *env, jclass __unused, jobject realApplication);
 std::unordered_map<int,std::unordered_map<int,dpt::data::CodeItem*>*> dexMap;
