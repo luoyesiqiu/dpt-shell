@@ -472,7 +472,7 @@ int find_in_threads_list(int count,...) {
     pid_t pid = getpid();
     snprintf(task_path, ARRAY_LENGTH(task_path), "/proc/%d/task",pid);
     DIR *task_dir;
-    if((task_dir = opendir(task_path)) == NULL) {
+    if((task_dir = opendir(task_path)) == nullptr) {
         return 0;
     }
 
@@ -480,7 +480,7 @@ int find_in_threads_list(int count,...) {
 
     struct dirent *de;
     va_list ap;
-    while ((de = readdir(task_dir)) != NULL) {
+    while ((de = readdir(task_dir)) != nullptr) {
         if(isdigit(de->d_name[0])) {
             int tid = atoi(de->d_name);
             if(tid == pid) {
@@ -494,7 +494,7 @@ int find_in_threads_list(int count,...) {
             if(fp) {
                 fgets(buf,256,fp);
 
-                char *t_name = NULL;
+                char *t_name = nullptr;
                 for(size_t i = 0; i < strnlen(buf,256);i++) {
                     if(buf[i] == '(') {
                         t_name = &buf[i + 1];
@@ -506,16 +506,18 @@ int find_in_threads_list(int count,...) {
                     }
 
                 }
-                va_start(ap,count);
 
-                for(int i = 0;i < count;i++) {
-                    const char *arg = va_arg(ap,const char *);
-                    if(strncmp(t_name,arg,256) == 0) {
-                        DLOGD("match thread name: %s",t_name);
-                        match_count++;
+                if(t_name != nullptr) {
+                    va_start(ap,count);
+                    for (int i = 0; i < count; i++) {
+                        const char *arg = va_arg(ap, const char *);
+                        if (strncmp(t_name, arg, 256) == 0) {
+                            DLOGD("match thread name: %s", t_name);
+                            match_count++;
+                        }
                     }
+                    va_end(ap);
                 }
-                va_end(ap);
                 fclose(fp);
             }
         }
