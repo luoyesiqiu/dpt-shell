@@ -97,8 +97,6 @@ void patchMethod(uint8_t *begin,__unused const char *location,uint32_t dexSize,i
 
             NLOG("[*] patchMethod codeItem patch, methodIndex = %d,insnsSize = %d >>> %p(0x%lx)",codeItem->getMethodIdx(), codeItem->getInsnsSize(), realCodeItemPtr,(realCodeItemPtr - begin));
             memcpy(realCodeItemPtr,codeItem->getInsns(),codeItem->getInsnsSize());
-            codeItemMap->erase(codeItemIt);
-            delete codeItem;
         }
         else{
             NLOG("[*] patchMethod cannot find  methodId: %d in codeitem map, dex index: %d(%s)",methodIdx,dexIndex,location);
