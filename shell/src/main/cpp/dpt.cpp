@@ -221,10 +221,23 @@ jstring readApplicationName(JNIEnv *env, jclass __unused) {
     return env->NewStringUTF((applicationNameChs));
 }
 
+void createAntiRiskProcess() {
+    int child = fork();
+    if(child == 0) {
+        DLOGD("%s in child process", __FUNCTION__);
+        detectFrida();
+        doPtrace();
+    }
+    else {
+        DLOGD("%s in main process, child pid: %d", __FUNCTION__, getpid());
+        protectChildProcess(child);
+    }
+}
+
 void init_dpt() {
     DLOGI("init_dpt call!");
     dpt_hook();
-    detectFrida();
+    createAntiRiskProcess();
 }
 
 jclass getRealApplicationClass(JNIEnv *env, const char *applicationClassName) {
