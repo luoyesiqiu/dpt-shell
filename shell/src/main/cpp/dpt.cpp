@@ -231,6 +231,7 @@ void createAntiRiskProcess() {
     else {
         DLOGD("%s in main process, child pid: %d", __FUNCTION__, getpid());
         protectChildProcess(child);
+        detectFrida();
     }
 }
 
