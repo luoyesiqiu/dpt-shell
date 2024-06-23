@@ -223,7 +223,11 @@ jstring readApplicationName(JNIEnv *env, jclass __unused) {
 
 void createAntiRiskProcess() {
     int child = fork();
-    if(child == 0) {
+    if(child < 0) {
+        DLOGW("%s fork fail!", __FUNCTION__);
+        detectFrida();
+    }
+    else if(child == 0) {
         DLOGD("%s in child process", __FUNCTION__);
         detectFrida();
         doPtrace();
