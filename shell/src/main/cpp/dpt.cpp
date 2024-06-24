@@ -222,7 +222,7 @@ jstring readApplicationName(JNIEnv *env, jclass __unused) {
 }
 
 void createAntiRiskProcess() {
-    int child = fork();
+    pid_t child = fork();
     if(child < 0) {
         DLOGW("%s fork fail!", __FUNCTION__);
         detectFrida();
@@ -233,7 +233,7 @@ void createAntiRiskProcess() {
         doPtrace();
     }
     else {
-        DLOGD("%s in main process, child pid: %d", __FUNCTION__, getpid());
+        DLOGD("%s in main process, child pid: %d", __FUNCTION__, child);
         protectChildProcess(child);
         detectFrida();
     }
