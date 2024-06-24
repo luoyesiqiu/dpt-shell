@@ -64,16 +64,26 @@ void doPtrace() {
     DLOGD("doPtrace result: %d",ret);
 }
 
-void *protectProcessOnThread(__unused void *args) {
-    int pid = wait(NULL);
+void *protectProcessOnThread(void *args) {
+    pid_t child = *((pid_t *)args);
+
+    DLOGD("%s waitpid %d", __FUNCTION__ ,child);
+
+    free(args);
+
+    int pid = waitpid(child, nullptr, 0);
     if(pid > 0) {
-        DLOGD("%s detect child process %d exit!", __FUNCTION__, pid);
+        DLOGW("%s detect child process %d exited", __FUNCTION__, pid);
         crash();
     }
+    DLOGD("%s waitpid %d end", __FUNCTION__ ,child);
+
     return nullptr;
 }
 
-void protectChildProcess(int pid) {
+void protectChildProcess(pid_t pid) {
     pthread_t t;
-    pthread_create(&t, nullptr,protectProcessOnThread,&pid);
+    pid_t *child = (pid_t *) malloc(sizeof(pid_t));
+    *child = pid;
+    pthread_create(&t, nullptr,protectProcessOnThread,child);
 }

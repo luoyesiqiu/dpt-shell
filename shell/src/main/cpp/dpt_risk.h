@@ -24,7 +24,7 @@
 void crash();
 void detectFrida();
 void doPtrace();
-void protectChildProcess(int pid);
+void protectChildProcess(pid_t pid);
 void junkCodeDexProtect(JNIEnv *env);
 
 #endif //DPT_DPT_RISK_H
