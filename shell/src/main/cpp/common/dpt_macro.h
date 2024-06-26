@@ -10,6 +10,8 @@
 #define SECTION(name) __attribute__ ((section(name)))
 #define KEEP_SYMBOL __attribute__((visibility("default")))
 #define INIT_ARRAY_SECTION __attribute__ ((constructor))
+#define ALWAYS_INLINE static inline __attribute__((always_inline))
+#define SYS_INLINE ALWAYS_INLINE
 
 #define DEXES_ZIP_NAME "i11111i111.zip"
 #define CACHE_DIR "code_cache"
