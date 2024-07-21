@@ -1,4 +1,4 @@
-package com.luoye.dpt.buildler;
+package com.luoye.dpt.builder;
 
 import com.android.apksigner.ApkSignerTool;
 import com.iyxan23.zipalignjava.ZipAlign;

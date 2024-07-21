@@ -1,6 +1,6 @@
 package com.luoye.dpt;
 
-import com.luoye.dpt.buildler.Apk;
+import com.luoye.dpt.builder.Apk;
 import com.luoye.dpt.util.*;
 
 import org.apache.commons.cli.CommandLine;
