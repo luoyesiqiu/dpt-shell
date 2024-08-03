@@ -11,6 +11,7 @@
 #include <unordered_map>
 #include <vector>
 #include <dlfcn.h>
+#include <elf.h>
 #include <unistd.h>
 #include <pthread.h>
 #include <android/asset_manager.h>
@@ -19,6 +20,8 @@
 #include "dpt_util.h"
 #include "dpt_risk.h"
 #include "common/dpt_log.h"
+#include "common/dpt_macro.h"
+#include "rc4/rc4.h"
 #include "dpt_hook.h"
 #include "dex/MultiDexCode.h"
 #include "dex/CodeItem.h"

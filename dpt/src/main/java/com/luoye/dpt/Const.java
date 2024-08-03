@@ -26,4 +26,6 @@ public class Const {
     public static final String PROXY_APPLICATION_NAME = "com.luoyesiqiu.shell.ProxyApplication";
     public static final String PROXY_COMPONENT_FACTORY = "com.luoyesiqiu.shell.ProxyComponentFactory";
     public static final short MULTI_DEX_CODE_VERSION = 1;
+
+    public static final String DEFAULT_RC4_KEY = "ncWK&S5wbqU%IX6j";
 }

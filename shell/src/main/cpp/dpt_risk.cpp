@@ -48,7 +48,6 @@ void junkCodeDexProtect(JNIEnv *env) {
             DLOGD("detectFridaOnThread found frida threads");
             crash();
         }
-        DLOGD("detectFridaOnThread pass");
         sleep(10);
     }
 }

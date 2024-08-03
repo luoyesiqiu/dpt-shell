@@ -16,6 +16,8 @@
 #include <stdlib.h>
 #include <sys/prctl.h>
 #include <dirent.h>
+#include <elf.h>
+#include <dlfcn.h>
 #include <jni.h>
 #include <android/asset_manager.h>
 #include <android/asset_manager_jni.h>
@@ -54,6 +56,9 @@ bool read_zip_file_entry(void* zip_addr,off_t zip_size,const char* entry_name, v
 int find_in_maps(int count,...);
 int find_in_threads_list(int count,...);
 const char* find_symbol_in_elf_file(const char *elf_file,int keyword_count,...);
+void get_elf_section(Elf_Shdr *target,const char *elf_path,const char *sh_name);
+
+int dpt_mprotect(void *start,void *end,int prot);
 
 void getClassName(JNIEnv *env,jobject obj,char *destClassName,size_t max_len);
 void parseClassName(const char *src, char *dest);

@@ -68,7 +68,7 @@ void change_dex_protective(uint8_t * begin,int dexSize,int dexIndex){
     }
 }
 
-void patchMethod(uint8_t *begin,__unused const char *location,uint32_t dexSize,int dexIndex,uint32_t methodIdx,uint32_t codeOff){
+DPT_ENCRYPT void patchMethod(uint8_t *begin,__unused const char *location,uint32_t dexSize,int dexIndex,uint32_t methodIdx,uint32_t codeOff){
     if(codeOff == 0){
         NLOG("[*] patchMethod dex: %d methodIndex: %d no need patch!",dexIndex,methodIdx);
         return;
@@ -107,7 +107,7 @@ void patchMethod(uint8_t *begin,__unused const char *location,uint32_t dexSize,i
     }
 }
 
-void patchClass(__unused const char* descriptor,
+DPT_ENCRYPT void patchClass(__unused const char* descriptor,
                  const void* dex_file,
                  const void* dex_class_def) {
 
@@ -198,7 +198,7 @@ void patchClass(__unused const char* descriptor,
 }
 
 
-void *DefineClassV22(void* thiz,void* self,
+DPT_ENCRYPT void *DefineClassV22(void* thiz,void* self,
                  const char* descriptor,
                  size_t hash,
                  void* class_loader,
@@ -215,7 +215,7 @@ void *DefineClassV22(void* thiz,void* self,
     return nullptr;
 }
 
-void *DefineClassV21(void* thiz,
+DPT_ENCRYPT void *DefineClassV21(void* thiz,
                      const char* descriptor,
                      void* class_loader,
                      const void* dex_file,
@@ -229,7 +229,7 @@ void *DefineClassV21(void* thiz,
     return nullptr;
 }
 
-void hook_DefineClass(){
+DPT_ENCRYPT  void hook_DefineClass(){
     void* defineClassAddress = DobbySymbolResolver(GetClassLinkerDefineClassLibPath(),getClassLinkerDefineClassSymbol());
     if(g_sdkLevel >= __ANDROID_API_L_MR1__) {
         DobbyHook(defineClassAddress, (void *) DefineClassV22, (void **) &g_originDefineClassV22);
@@ -247,7 +247,7 @@ const char *getArtLibName() {
     return "libart.so";
 }
 
-void* fake_mmap(void* __addr, size_t __size, int __prot, int __flags, int __fd, off_t __offset){
+DPT_ENCRYPT void* fake_mmap(void* __addr, size_t __size, int __prot, int __flags, int __fd, off_t __offset){
     BYTEHOOK_STACK_SCOPE();
 
     int prot = __prot;
@@ -280,7 +280,7 @@ void* fake_mmap(void* __addr, size_t __size, int __prot, int __flags, int __fd, 
     return addr;
 }
 
-void hook_mmap(){
+DPT_ENCRYPT void hook_mmap(){
     bytehook_stub_t stub = bytehook_hook_single(
             getArtLibName(),
             "libc.so",

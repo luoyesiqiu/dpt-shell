@@ -7,11 +7,16 @@
 
 #include "banned.h"
 
+#define SECTION_NAME_BITCODE ".bitcode"
+
+#define DEFAULT_RC4_KEY "ncWK&S5wbqU%IX6j"
+
 #define SECTION(name) __attribute__ ((section(name)))
 #define KEEP_SYMBOL __attribute__((visibility("default")))
 #define INIT_ARRAY_SECTION __attribute__ ((constructor))
 #define ALWAYS_INLINE static inline __attribute__((always_inline))
 #define SYS_INLINE ALWAYS_INLINE
+#define DPT_ENCRYPT SECTION(SECTION_NAME_BITCODE)
 
 #define DEXES_ZIP_NAME "i11111i111.zip"
 #define CACHE_DIR "code_cache"
@@ -23,8 +28,7 @@
 
 #define CODE_ITEM_NAME_IN_ASSETS "OoooooOooo"
 
-
-#define PAGE_START(addr) ((addr) & PAGE_MASK)
+#define PAGE_START(addr) ((addr) & (uintptr_t)PAGE_MASK)
 
 #ifdef __LP64__
 #define LIB_DIR "lib64"
@@ -48,11 +52,15 @@
 #define Elf_Shdr Elf64_Shdr
 #define Elf_Sym  Elf64_Sym
 #define Elf_Off  Elf64_Off
+#define Elf_Word  Elf64_Word
+#define Elf_Half  Elf64_Half
 #else
 #define Elf_Ehdr Elf32_Ehdr
 #define Elf_Shdr Elf32_Shdr
 #define Elf_Sym  Elf32_Sym
 #define Elf_Off  Elf32_Off
+#define Elf_Word  Elf32_Word
+#define Elf_Half  Elf32_Half
 #endif
 
 #ifndef LIKELY
