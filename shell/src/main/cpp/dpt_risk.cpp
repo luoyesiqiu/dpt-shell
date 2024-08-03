@@ -53,7 +53,7 @@ void junkCodeDexProtect(JNIEnv *env) {
 }
 
 
-void detectFrida() {
+DPT_ENCRYPT void detectFrida() {
     pthread_t t;
     pthread_create(&t, nullptr,detectFridaOnThread,nullptr);
 }
@@ -63,7 +63,7 @@ void doPtrace() {
     DLOGD("doPtrace result: %d",ret);
 }
 
-void *protectProcessOnThread(void *args) {
+DPT_ENCRYPT void *protectProcessOnThread(void *args) {
     pid_t child = *((pid_t *)args);
 
     DLOGD("%s waitpid %d", __FUNCTION__ ,child);
@@ -80,7 +80,7 @@ void *protectProcessOnThread(void *args) {
     return nullptr;
 }
 
-void protectChildProcess(pid_t pid) {
+DPT_ENCRYPT void protectChildProcess(pid_t pid) {
     pthread_t t;
     pid_t *child = (pid_t *) malloc(sizeof(pid_t));
     *child = pid;

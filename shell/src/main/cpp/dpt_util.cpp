@@ -177,7 +177,7 @@ jstring getCompressedDexesPathExport(JNIEnv *env,jclass __unused) {
     return env->NewStringUTF(dexesPath);
 }
 
-static void writeDexAchieve(const char *dexAchievePath,void *apk_addr,size_t apk_size) {
+DPT_ENCRYPT static void writeDexAchieve(const char *dexAchievePath,void *apk_addr,size_t apk_size) {
     DLOGD("zipCode open = %s",dexAchievePath);
     FILE *fp = fopen(dexAchievePath, "wb");
     if(fp != nullptr){
@@ -197,7 +197,7 @@ static void writeDexAchieve(const char *dexAchievePath,void *apk_addr,size_t apk
     }
 }
 
-void extractDexesInNeeded(JNIEnv *env,void *apk_addr,size_t apk_size) {
+DPT_ENCRYPT void extractDexesInNeeded(JNIEnv *env,void *apk_addr,size_t apk_size) {
     char compressedDexesPathChs[256] = {0};
     getCompressedDexesPath(env,compressedDexesPathChs, ARRAY_LENGTH(compressedDexesPathChs));
 
@@ -227,7 +227,7 @@ void extractDexesInNeeded(JNIEnv *env,void *apk_addr,size_t apk_size) {
 }
 
 
-static void load_zip_by_mmap(const char* zip_file_path,void **zip_addr,size_t *zip_size) {
+DPT_ENCRYPT static void load_zip_by_mmap(const char* zip_file_path,void **zip_addr,size_t *zip_size) {
     int fd = open(zip_file_path,O_RDONLY);
     if(fd <= 0){
         DLOGE("load_zip cannot open file!");
@@ -270,7 +270,7 @@ void unload_apk(void *apk_addr,size_t apk_size) {
     }
 }
 
-bool read_zip_file_entry(void* zip_addr,off_t zip_size,const char* entry_name,void **entry_addr,uint64_t *entry_size) {
+DPT_ENCRYPT bool read_zip_file_entry(void* zip_addr,off_t zip_size,const char* entry_name,void **entry_addr,uint64_t *entry_size) {
     DLOGD("read_zip_file_entry prepare read file: %s",entry_name);
 
     void *mem_stream = nullptr;
@@ -381,7 +381,7 @@ void get_elf_section(Elf_Shdr *target,const char *elf_path,const char *sh_name) 
     fclose(elf_fp);
 }
 
-const char* find_symbol_in_elf_file(const char *elf_file,int keyword_count,...) {
+DPT_ENCRYPT const char* find_symbol_in_elf_file(const char *elf_file,int keyword_count,...) {
     FILE *elf_fp = fopen(elf_file, "r");
     if(elf_fp) {
         fseek(elf_fp, 0L, SEEK_END);
@@ -436,7 +436,7 @@ const char* find_symbol_in_elf_file(const char *elf_file,int keyword_count,...) 
     return nullptr;
 }
 
-int find_in_maps(int count,...) {
+DPT_ENCRYPT int find_in_maps(int count,...) {
     const int MAX_READ_LINE = 10 * 1024;
     char maps_path[128] = {0};
     snprintf(maps_path, ARRAY_LENGTH(maps_path), "/proc/%d/maps", getpid());

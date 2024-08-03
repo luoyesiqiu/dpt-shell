@@ -27,7 +27,7 @@ static JNINativeMethod gMethods[] = {
         {"ra", "(Ljava/lang/String;)Ljava/lang/Object;",                               (void *) replaceApplication}
 };
 
-jobjectArray makePathElements(JNIEnv* env,const char *pathChs) {
+DPT_ENCRYPT jobjectArray makePathElements(JNIEnv* env,const char *pathChs) {
     jstring path = env->NewStringUTF(pathChs);
     java_io_File file(env,path);
 
@@ -53,7 +53,7 @@ jobjectArray makePathElements(JNIEnv* env,const char *pathChs) {
     return elements;
 }
 
-void mergeDexElement(JNIEnv* env,jclass __unused, jobject targetClassLoader,const char* pathChs) {
+DPT_ENCRYPT void mergeDexElement(JNIEnv* env,jclass __unused, jobject targetClassLoader,const char* pathChs) {
     jobjectArray extraDexElements = makePathElements(env,pathChs);
 
     dalvik_system_BaseDexClassLoader targetBaseDexClassLoader(env,targetClassLoader);
@@ -86,7 +86,7 @@ void mergeDexElement(JNIEnv* env,jclass __unused, jobject targetClassLoader,cons
     DLOGD("mergeDexElement success");
 }
 
-void mergeDexElements(JNIEnv* env,jclass klass, jobject targetClassLoader) {
+DPT_ENCRYPT void mergeDexElements(JNIEnv* env,jclass klass, jobject targetClassLoader) {
     char compressedDexesPathChs[256] = {0};
     getCompressedDexesPath(env,compressedDexesPathChs, ARRAY_LENGTH(compressedDexesPathChs));
 
@@ -98,7 +98,7 @@ void mergeDexElements(JNIEnv* env,jclass klass, jobject targetClassLoader) {
     DLOGD("mergeDexElements success");
 }
 
-void removeDexElements(JNIEnv* env,jclass __unused,jobject classLoader,jstring elementName){
+DPT_ENCRYPT void removeDexElements(JNIEnv* env,jclass __unused,jobject classLoader,jstring elementName){
     dalvik_system_BaseDexClassLoader oldBaseDexClassLoader(env,classLoader);
 
     jobject dexPathListObj = oldBaseDexClassLoader.getPathList();
@@ -167,7 +167,7 @@ void removeDexElements(JNIEnv* env,jclass __unused,jobject classLoader,jstring e
     DLOGD("removeDexElements success");
 }
 
-jstring readAppComponentFactory(JNIEnv *env, jclass __unused) {
+DPT_ENCRYPT jstring readAppComponentFactory(JNIEnv *env, jclass __unused) {
 
     if(appComponentFactoryChs == nullptr) {
         void *apk_addr = nullptr;
@@ -195,7 +195,7 @@ jstring readAppComponentFactory(JNIEnv *env, jclass __unused) {
     return env->NewStringUTF((appComponentFactoryChs));
 }
 
-jstring readApplicationName(JNIEnv *env, jclass __unused) {
+DPT_ENCRYPT jstring readApplicationName(JNIEnv *env, jclass __unused) {
 
     if(applicationNameChs == nullptr) {
         void *apk_addr = nullptr;
@@ -221,7 +221,7 @@ jstring readApplicationName(JNIEnv *env, jclass __unused) {
     return env->NewStringUTF((applicationNameChs));
 }
 
-void createAntiRiskProcess() {
+DPT_ENCRYPT void createAntiRiskProcess() {
     pid_t child = fork();
     if(child < 0) {
         DLOGW("%s fork fail!", __FUNCTION__);
@@ -287,7 +287,7 @@ jclass getRealApplicationClass(JNIEnv *env, const char *applicationClassName) {
     return g_realApplicationClass;
 }
 
-jobject getApplicationInstance(JNIEnv *env, jstring applicationClassName) {
+DPT_ENCRYPT jobject getApplicationInstance(JNIEnv *env, jstring applicationClassName) {
     if (g_realApplicationInstance == nullptr) {
         const char *applicationClassNameChs = env->GetStringUTFChars(applicationClassName, nullptr);
 
@@ -315,7 +315,7 @@ jobject getApplicationInstance(JNIEnv *env, jstring applicationClassName) {
     return g_realApplicationInstance;
 }
 
-void callRealApplicationOnCreate(JNIEnv *env, jclass, jstring realApplicationClassName) {
+DPT_ENCRYPT void callRealApplicationOnCreate(JNIEnv *env, jclass, jstring realApplicationClassName) {
 
     jobject appInstance = getApplicationInstance(env,realApplicationClassName);
     android_app_Application application(env,appInstance);
@@ -325,7 +325,7 @@ void callRealApplicationOnCreate(JNIEnv *env, jclass, jstring realApplicationCla
 
 }
 
-void callRealApplicationAttach(JNIEnv *env, jclass, jobject context,
+DPT_ENCRYPT void callRealApplicationAttach(JNIEnv *env, jclass, jobject context,
                                          jstring realApplicationClassName) {
 
     jobject appInstance = getApplicationInstance(env,realApplicationClassName);
@@ -337,7 +337,7 @@ void callRealApplicationAttach(JNIEnv *env, jclass, jobject context,
 
 }
 
-jobject replaceApplication(JNIEnv *env, jclass klass, jstring realApplicationClassName){
+DPT_ENCRYPT jobject replaceApplication(JNIEnv *env, jclass klass, jstring realApplicationClassName){
 
     jobject appInstance = getApplicationInstance(env, realApplicationClassName);
     if (appInstance == nullptr) {
@@ -350,13 +350,13 @@ jobject replaceApplication(JNIEnv *env, jclass klass, jstring realApplicationCla
     return appInstance;
 }
 
-void replaceApplicationOnActivityThread(JNIEnv *env,jclass __unused, jobject realApplication){
+DPT_ENCRYPT void replaceApplicationOnActivityThread(JNIEnv *env,jclass __unused, jobject realApplication){
     android_app_ActivityThread activityThread(env);
     activityThread.setInitialApplication(realApplication);
     DLOGD("replaceApplicationOnActivityThread success");
 }
 
-void replaceApplicationOnLoadedApk(JNIEnv *env, jclass __unused,jobject realApplication) {
+DPT_ENCRYPT void replaceApplicationOnLoadedApk(JNIEnv *env, jclass __unused,jobject realApplication) {
     android_app_ActivityThread activityThread(env);
 
     jobject mBoundApplicationObj = activityThread.getBoundApplication();
@@ -406,7 +406,7 @@ void replaceApplicationOnLoadedApk(JNIEnv *env, jclass __unused,jobject realAppl
 }
 
 
-static bool registerNativeMethods(JNIEnv *env) {
+DPT_ENCRYPT static bool registerNativeMethods(JNIEnv *env) {
     jclass JniBridgeClass = env->FindClass("com/luoyesiqiu/shell/JniBridge");
     if (env->RegisterNatives(JniBridgeClass, gMethods, sizeof(gMethods) / sizeof(gMethods[0])) ==
         0) {
@@ -416,7 +416,7 @@ static bool registerNativeMethods(JNIEnv *env) {
 }
 
 
-void init_app(JNIEnv *env, jclass __unused) {
+DPT_ENCRYPT void init_app(JNIEnv *env, jclass __unused) {
     DLOGD("init_app!");
     clock_t start = clock();
 
@@ -473,7 +473,7 @@ DPT_ENCRYPT void readCodeItem(uint8_t *data,size_t data_len) {
     }
 }
 
-JNIEXPORT jint JNI_OnLoad(JavaVM *vm, void *__unused) {
+DPT_ENCRYPT JNIEXPORT jint JNI_OnLoad(JavaVM *vm, void *__unused) {
 
     JNIEnv *env = nullptr;
     if (vm->GetEnv((void **) &env, JNI_VERSION_1_6) != JNI_OK) {
