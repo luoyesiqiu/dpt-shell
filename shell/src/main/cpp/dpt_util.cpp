@@ -436,56 +436,6 @@ const char* find_symbol_in_elf_file(const char *elf_file,int keyword_count,...) 
     return nullptr;
 }
 
-void hexdump(__unused const char* name,const void* data, size_t size){
-    char ascii[17];
-    size_t i, j;
-    ascii[16] = '\0';
-    char *buffer = (char*)calloc(size,1);
-    const size_t MAX_LEN = size/2;
-    char *item = (char*)calloc(MAX_LEN,1);
-    for (i = 0; i < size; ++i) {
-        memset(item,0,MAX_LEN);
-        snprintf(item,MAX_LEN,"%02X ", ((unsigned char*)data)[i]);
-        snprintf(buffer + strlen(buffer),MAX_LEN,"%s",item);
-        if (((unsigned char*)data)[i] >= ' ' && ((unsigned char*)data)[i] <= '~') {
-            ascii[i % 16] = ((unsigned char*)data)[i];
-        } else {
-            ascii[i % 16] = '.';
-        }
-        if ((i+1) % 8 == 0 || i+1 == size) {
-            memset(item,0,MAX_LEN);
-            snprintf(item,MAX_LEN,"%s"," ");
-            snprintf(buffer + strlen(buffer),MAX_LEN,"%s",item);
-
-            if ((i+1) % 16 == 0) {
-                memset(item,0,MAX_LEN);
-                snprintf(item,MAX_LEN,"|  %s ", ascii);
-                snprintf(buffer + strlen(buffer),MAX_LEN,"%s\n",item);
-
-            } else if (i+1 == size) {
-                ascii[(i+1) % 16] = '\0';
-                if ((i+1) % 16 <= 8) {
-                    memset(item,0,MAX_LEN);
-                    snprintf(item,MAX_LEN,"%s"," ");
-                    snprintf(buffer + strlen(buffer) + 1,MAX_LEN,"%s",item);
-                }
-                for (j = (i+1) % 16; j < 16; ++j) {
-                    memset(item,0,MAX_LEN);
-                    snprintf(item,MAX_LEN,"%s","   ");
-                    snprintf(buffer + strlen(buffer),MAX_LEN,"%s",item);
-                }
-                memset(item,0,MAX_LEN);
-                snprintf(item,MAX_LEN,"|  %s ", ascii);
-                snprintf(buffer + strlen(buffer),MAX_LEN,"%s\n",item);
-            }
-        }
-    }
-    DLOGD("%s: \n%s",name,buffer);
-    free(item);
-    free(buffer);
-}
-
-
 int find_in_maps(int count,...) {
     const int MAX_READ_LINE = 10 * 1024;
     char maps_path[128] = {0};
