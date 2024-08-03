@@ -6,6 +6,42 @@ package com.luoye.dpt.util;
 import java.io.*;
 
 public class IoUtils {
+
+    public static byte[] readFile(String file, long offset ,int len){
+        FileInputStream fileInputStream = null;
+        ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
+        try {
+            fileInputStream = new FileInputStream(file);
+            byte[] buf = new byte[len];
+            fileInputStream.skip(offset);
+            fileInputStream.read(buf);
+            byteArrayOutputStream.write(buf);
+        }
+        catch (Exception e){
+            e.printStackTrace();
+        }
+        finally {
+            close(fileInputStream);
+            close(byteArrayOutputStream);
+        }
+        return byteArrayOutputStream.toByteArray();
+    }
+
+    public static void writeFile(String dest ,byte[] data ,long offset){
+        RandomAccessFile randomAccessFile = null;
+        try{
+            randomAccessFile = new RandomAccessFile(new File(dest),"rw");
+            randomAccessFile.seek(offset);
+            randomAccessFile.write(data);
+        }
+        catch (IOException e){
+            e.printStackTrace();
+        }
+        finally {
+            close(randomAccessFile);
+        }
+    }
+
     public static byte[] readFile(String file){
         FileInputStream fileInputStream = null;
         ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();

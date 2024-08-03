@@ -7,11 +7,25 @@
 #include <elf.h>
 #include <pthread.h>
 #include <errno.h>
+#include <dlfcn.h>
 #include "dpt_util.h"
 #include "common/dpt_log.h"
 #include "minizip-ng/mz_strm.h"
 
 using namespace dpt;
+
+
+int dpt_mprotect(void *start,void *end,int prot) {
+    uintptr_t start_addr = PAGE_START((uintptr_t)start);
+    uintptr_t end_addr = PAGE_START((uintptr_t)end - 1) + PAGE_SIZE;
+    size_t size = end_addr - start_addr;
+
+    DLOGD("%s begin: %p, size: %zu",__FUNCTION__,(void *)start_addr,size);
+
+
+    if (0 != mprotect((void *)start_addr, size, prot)) return -1;
+    return 0;
+}
 
 static int separate_dex_number(std::string *str) {
     int sum = 0;
@@ -321,6 +335,52 @@ bool read_zip_file_entry(void* zip_addr,off_t zip_size,const char* entry_name,vo
     }
 }
 
+void get_elf_section(Elf_Shdr *target,const char *elf_path,const char *sh_name) {
+    if(elf_path == NULL) {
+        return;
+    }
+    DLOGD("%s path: %s",__FUNCTION__,elf_path);
+
+    FILE *elf_fp = fopen(elf_path, "r");
+    if(!elf_fp) {
+        return;
+    }
+
+    fseek(elf_fp, 0L, SEEK_END);
+    size_t lib_size = ftell(elf_fp);
+    fseek(elf_fp, 0L, SEEK_SET);
+
+    uint8_t *data = (uint8_t *) calloc(lib_size, 1);
+    fread(data, 1, lib_size, elf_fp);
+
+    uint8_t *elf_bytes_data = data;
+
+    Elf_Ehdr *ehdr = (Elf_Ehdr *) elf_bytes_data;
+    Elf_Shdr *shdr = (Elf_Shdr *) (((uint8_t *) elf_bytes_data) + ehdr->e_shoff);
+    DLOGD("%s section header table addr = %p, offset = %x", __FUNCTION__, shdr,
+          (int) ehdr->e_shoff);
+    Elf_Half shstrndx = ehdr->e_shstrndx;
+
+    //seek to .shstr
+    Elf_Shdr *shstr_shdr = (Elf_Shdr *)((uint8_t *) shdr + sizeof(Elf_Shdr) * shstrndx);
+
+    uint8_t *shstr_addr = elf_bytes_data + shstr_shdr->sh_offset;
+
+    DLOGD("%s shstr addr: %p", __FUNCTION__, shstr_addr);
+
+    for (int i = 0; i < ehdr->e_shnum; i++) {
+        const char *section_name = reinterpret_cast<const char *>((char *)shstr_addr + shdr->sh_name);
+        if (strcmp(section_name, sh_name) == 0) {
+            DLOGD("%s find section %s,offset: %x", __FUNCTION__,sh_name,(int)shdr->sh_offset);
+
+            memcpy(target,shdr,sizeof(Elf_Shdr));
+        }
+        shdr++;
+    }
+    free(data);
+    fclose(elf_fp);
+}
+
 const char* find_symbol_in_elf_file(const char *elf_file,int keyword_count,...) {
     FILE *elf_fp = fopen(elf_file, "r");
     if(elf_fp) {
@@ -467,7 +527,7 @@ int find_in_maps(int count,...) {
     return found;
 }
 
-int find_in_threads_list(int count,...) {
+DPT_ENCRYPT int find_in_threads_list(int count,...) {
     char task_path[128] = {0};
     pid_t pid = getpid();
     snprintf(task_path, ARRAY_LENGTH(task_path), "/proc/%d/task",pid);
@@ -484,7 +544,6 @@ int find_in_threads_list(int count,...) {
         if(isdigit(de->d_name[0])) {
             int tid = atoi(de->d_name);
             if(tid == pid) {
-                DLOGW("list thread self: %d",pid);
                 continue;
             }
             char stat_path[256] = {0};

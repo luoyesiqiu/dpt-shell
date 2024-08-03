@@ -8,6 +8,7 @@ set(DPT_NATIVE_SOURCE
         dpt_jni.cpp
         dpt_util.cpp
         dpt_risk.cpp
+        rc4/rc4.c
         dex/dex_file.cpp
         dex/MultiDexCode.cpp
         dex/CodeItem.cpp

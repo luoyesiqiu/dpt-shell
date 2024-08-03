@@ -3,6 +3,7 @@ package com.luoye.dpt.builder;
 import com.android.apksigner.ApkSignerTool;
 import com.iyxan23.zipalignjava.ZipAlign;
 import com.luoye.dpt.Const;
+import com.luoye.dpt.elf.ReadElf;
 import com.luoye.dpt.model.Instruction;
 import com.luoye.dpt.model.MultiDexCode;
 import com.luoye.dpt.task.ThreadPool;
@@ -12,6 +13,7 @@ import com.luoye.dpt.util.IoUtils;
 import com.luoye.dpt.util.LogUtils;
 import com.luoye.dpt.util.ManifestUtils;
 import com.luoye.dpt.util.MultiDexCodeUtils;
+import com.luoye.dpt.util.RC4Utils;
 import com.luoye.dpt.util.ZipUtils;
 import com.wind.meditor.core.FileProcesser;
 import com.wind.meditor.property.AttributeItem;
@@ -22,6 +24,7 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.RandomAccessFile;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -135,6 +138,7 @@ public class Apk extends AndroidPackage {
 
         apk.addProxyDex(apkMainProcessPath);
         apk.copyNativeLibs(apkMainProcessPath);
+        apk.encryptSoFiles(apkMainProcessPath);
 
         apk.buildApk(apkFile.getAbsolutePath(),apkMainProcessPath, FileUtils.getExecutablePath());
 
@@ -246,12 +250,57 @@ public class Apk extends AndroidPackage {
     }
 
     private void compressDexFiles(String apkDir){
-        ZipUtils.compress(getDexFiles(apkDir),getOutAssetsDir(apkDir).getAbsolutePath()+File.separator + "i11111i111.zip");
+        ZipUtils.compress(getDexFiles(apkDir),getOutAssetsDir(apkDir).getAbsolutePath() + File.separator + "i11111i111.zip");
     }
 
     private void copyNativeLibs(String apkDir){
         File file = new File(FileUtils.getExecutablePath(), "shell-files/libs");
         FileUtils.copy(file.getAbsolutePath(),getOutAssetsDir(apkDir).getAbsolutePath() + File.separator + "vwwwwwvwww");
+    }
+
+    private void encryptSoFiles(String apkDir){
+
+        File obfDir = new File(getOutAssetsDir(apkDir).getAbsolutePath() + File.separator, "vwwwwwvwww");
+        File[] soAbiDirs = obfDir.listFiles();
+        if(soAbiDirs != null) {
+            for (File soAbiDir : soAbiDirs) {
+                File[] soFiles = soAbiDir.listFiles();
+                if(soFiles != null) {
+                    for (File soFile : soFiles) {
+                        if(!soFile.getAbsolutePath().endsWith(".so")) {
+                            continue;
+                        }
+                        try {
+                            ReadElf readElf = new ReadElf(soFile);
+                            List<ReadElf.SectionHeader> sectionHeaders = readElf.getSectionHeaders();
+                            readElf.close();
+                            for (ReadElf.SectionHeader sectionHeader : sectionHeaders) {
+
+                                if(".bitcode".equals(sectionHeader.getName())) {
+
+                                    LogUtils.info("start encrypt %s section: %s,offset: %s,size: %s",
+                                            soFile.getAbsolutePath(),
+                                            sectionHeader.getName(),
+                                            Long.toHexString(sectionHeader.getOffset()),
+                                            Long.toHexString(sectionHeader.getSize())
+                                    );
+
+                                    byte[] bitcode = IoUtils.readFile(soFile.getAbsolutePath(),sectionHeader.getOffset(),(int)sectionHeader.getSize());
+
+                                    byte[] enc = RC4Utils.crypt(Const.DEFAULT_RC4_KEY.getBytes(StandardCharsets.UTF_8),bitcode);
+
+                                    IoUtils.writeFile(soFile.getAbsolutePath(),enc,sectionHeader.getOffset());
+                                }
+                            }
+                        }
+                        catch (Exception e) {
+                            e.printStackTrace();
+                        }
+                    }
+                }
+             }
+        }
+
     }
 
     private void deleteAllDexFiles(String dir){

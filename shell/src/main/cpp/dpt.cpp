@@ -239,8 +239,42 @@ void createAntiRiskProcess() {
     }
 }
 
+void decrypt_bitcode() {
+    Dl_info info;
+    dladdr((const void *)decrypt_bitcode,&info);
+    Elf_Shdr shdr;
+
+    get_elf_section(&shdr,info.dli_fname,SECTION_NAME_BITCODE);
+    Elf_Off offset = shdr.sh_offset;
+    Elf_Word size = shdr.sh_size;
+
+    void *target = (u_char *)info.dli_fbase + offset;
+
+    int rwe_prot = PROT_READ | PROT_WRITE | PROT_EXEC;
+    int ret = dpt_mprotect(target,(void *)((uint8_t *)target + size),rwe_prot);
+    if(ret == -1) {
+        abort();
+    }
+
+    u_char *bitcode = (u_char *)malloc(size);
+    struct rc4_state dec_state;
+    rc4_init(&dec_state, reinterpret_cast<const u_char *>(DEFAULT_RC4_KEY), strlen(DEFAULT_RC4_KEY));
+    rc4_crypt(&dec_state, reinterpret_cast<const u_char *>(target),
+              reinterpret_cast<u_char *>(bitcode),
+              size);
+    DLOGD("%s offset: %x size: %x",__FUNCTION__ ,(int)offset,(int)size);
+
+    memcpy(target,bitcode,size);
+    free(bitcode);
+
+    int re_prot = PROT_READ | PROT_EXEC;
+
+    dpt_mprotect(target,(void *)((uint8_t *)target + size),re_prot);
+}
+
 void init_dpt() {
     DLOGI("init_dpt call!");
+    decrypt_bitcode();
     dpt_hook();
     createAntiRiskProcess();
 }
@@ -407,7 +441,7 @@ void init_app(JNIEnv *env, jclass __unused) {
     printTime("read apk data took =" , start);
 }
 
-void readCodeItem(uint8_t *data,size_t data_len) {
+DPT_ENCRYPT void readCodeItem(uint8_t *data,size_t data_len) {
 
     if (data != nullptr && data_len >= 0) {
 
@@ -442,7 +476,7 @@ void readCodeItem(uint8_t *data,size_t data_len) {
 JNIEXPORT jint JNI_OnLoad(JavaVM *vm, void *__unused) {
 
     JNIEnv *env = nullptr;
-    if (vm->GetEnv((void **) &env, JNI_VERSION_1_4) != JNI_OK) {
+    if (vm->GetEnv((void **) &env, JNI_VERSION_1_6) != JNI_OK) {
         return JNI_ERR;
     }
 
@@ -451,7 +485,7 @@ JNIEXPORT jint JNI_OnLoad(JavaVM *vm, void *__unused) {
     }
 
     DLOGI("JNI_OnLoad called!");
-    return JNI_VERSION_1_4;
+    return JNI_VERSION_1_6;
 }
 
 JNIEXPORT void JNI_OnUnload(__unused JavaVM* vm,__unused void* reserved) {
