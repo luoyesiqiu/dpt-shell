@@ -14,6 +14,10 @@ char *appComponentFactoryChs = nullptr;
 char *applicationNameChs = nullptr;
 void *codeItemFilePtr = nullptr;
 
+DPT_DATA_SECTION uint8_t DATA_SECTION_BITCODE[] = ".bitcode";
+DPT_DATA_SECTION uint8_t DATA_SECTION_RO_DATA[] = ".rodata";
+DPT_DATA_SECTION uint8_t DATA_DEFAULT_RC4_KEY[] = "ncWK&S5wbqU%IX6j";
+
 static JNINativeMethod gMethods[] = {
         {"craoc", "(Ljava/lang/String;)V",                               (void *) callRealApplicationOnCreate},
         {"craa",  "(Landroid/content/Context;Ljava/lang/String;)V",      (void *) callRealApplicationAttach},
@@ -239,42 +243,45 @@ DPT_ENCRYPT void createAntiRiskProcess() {
     }
 }
 
-void decrypt_bitcode() {
+void decrypt_section(const char* section_name,int temp_prot,int target_prot) {
     Dl_info info;
-    dladdr((const void *)decrypt_bitcode,&info);
+    dladdr((const void *)decrypt_section,&info);
     Elf_Shdr shdr;
 
-    get_elf_section(&shdr,info.dli_fname,SECTION_NAME_BITCODE);
+    get_elf_section(&shdr,info.dli_fname,section_name);
     Elf_Off offset = shdr.sh_offset;
     Elf_Word size = shdr.sh_size;
 
     void *target = (u_char *)info.dli_fbase + offset;
 
-    int rwe_prot = PROT_READ | PROT_WRITE | PROT_EXEC;
-    int ret = dpt_mprotect(target,(void *)((uint8_t *)target + size),rwe_prot);
+    int ret = dpt_mprotect(target,(void *)((uint8_t *)target + size),temp_prot);
     if(ret == -1) {
         abort();
     }
 
     u_char *bitcode = (u_char *)malloc(size);
     struct rc4_state dec_state;
-    rc4_init(&dec_state, reinterpret_cast<const u_char *>(DEFAULT_RC4_KEY), strlen(DEFAULT_RC4_KEY));
+    rc4_init(&dec_state, reinterpret_cast<const u_char *>(DATA_DEFAULT_RC4_KEY), strlen((char *)DATA_DEFAULT_RC4_KEY));
     rc4_crypt(&dec_state, reinterpret_cast<const u_char *>(target),
               reinterpret_cast<u_char *>(bitcode),
               size);
-    DLOGD("%s offset: %x size: %x",__FUNCTION__ ,(int)offset,(int)size);
 
     memcpy(target,bitcode,size);
     free(bitcode);
 
-    int re_prot = PROT_READ | PROT_EXEC;
+    dpt_mprotect(target,(void *)((uint8_t *)target + size),target_prot);
+}
 
-    dpt_mprotect(target,(void *)((uint8_t *)target + size),re_prot);
+void decrypt_bitcode() {
+    decrypt_section((char *)DATA_SECTION_RO_DATA,PROT_READ | PROT_WRITE,PROT_READ);
+    decrypt_section((char *)DATA_SECTION_BITCODE,PROT_READ | PROT_WRITE | PROT_EXEC,PROT_READ | PROT_EXEC);
 }
 
 void init_dpt() {
-    DLOGI("init_dpt call!");
     decrypt_bitcode();
+
+    DLOGI("init_dpt call!");
+
     dpt_hook();
     createAntiRiskProcess();
 }

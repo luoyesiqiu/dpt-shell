@@ -8,8 +8,7 @@
 #include "banned.h"
 
 #define SECTION_NAME_BITCODE ".bitcode"
-
-#define DEFAULT_RC4_KEY "ncWK&S5wbqU%IX6j"
+#define SECTION_NAME_DATA ".data"
 
 #define SECTION(name) __attribute__ ((section(name)))
 #define KEEP_SYMBOL __attribute__((visibility("default")))
@@ -17,6 +16,7 @@
 #define ALWAYS_INLINE static inline __attribute__((always_inline))
 #define SYS_INLINE ALWAYS_INLINE
 #define DPT_ENCRYPT SECTION(SECTION_NAME_BITCODE)
+#define DPT_DATA_SECTION SECTION(SECTION_NAME_DATA)
 
 #define DEXES_ZIP_NAME "i11111i111.zip"
 #define CACHE_DIR "code_cache"
