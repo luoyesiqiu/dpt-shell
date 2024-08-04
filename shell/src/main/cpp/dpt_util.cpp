@@ -14,6 +14,7 @@
 
 using namespace dpt;
 
+DPT_DATA_SECTION uint8_t DATA_R_FLAG[] = "r";
 
 int dpt_mprotect(void *start,void *end,int prot) {
     uintptr_t start_addr = PAGE_START((uintptr_t)start);
@@ -339,9 +340,8 @@ void get_elf_section(Elf_Shdr *target,const char *elf_path,const char *sh_name) 
     if(elf_path == NULL) {
         return;
     }
-    DLOGD("%s path: %s",__FUNCTION__,elf_path);
 
-    FILE *elf_fp = fopen(elf_path, "r");
+    FILE *elf_fp = fopen(elf_path, (char *)DATA_R_FLAG);
     if(!elf_fp) {
         return;
     }
@@ -357,8 +357,6 @@ void get_elf_section(Elf_Shdr *target,const char *elf_path,const char *sh_name) 
 
     Elf_Ehdr *ehdr = (Elf_Ehdr *) elf_bytes_data;
     Elf_Shdr *shdr = (Elf_Shdr *) (((uint8_t *) elf_bytes_data) + ehdr->e_shoff);
-    DLOGD("%s section header table addr = %p, offset = %x", __FUNCTION__, shdr,
-          (int) ehdr->e_shoff);
     Elf_Half shstrndx = ehdr->e_shstrndx;
 
     //seek to .shstr
@@ -366,13 +364,9 @@ void get_elf_section(Elf_Shdr *target,const char *elf_path,const char *sh_name) 
 
     uint8_t *shstr_addr = elf_bytes_data + shstr_shdr->sh_offset;
 
-    DLOGD("%s shstr addr: %p", __FUNCTION__, shstr_addr);
-
     for (int i = 0; i < ehdr->e_shnum; i++) {
         const char *section_name = reinterpret_cast<const char *>((char *)shstr_addr + shdr->sh_name);
         if (strcmp(section_name, sh_name) == 0) {
-            DLOGD("%s find section %s,offset: %x", __FUNCTION__,sh_name,(int)shdr->sh_offset);
-
             memcpy(target,shdr,sizeof(Elf_Shdr));
         }
         shdr++;
