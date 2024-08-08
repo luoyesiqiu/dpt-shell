@@ -243,7 +243,7 @@ DPT_ENCRYPT void createAntiRiskProcess() {
     }
 }
 
-void decrypt_section(const char* section_name,int temp_prot,int target_prot) {
+void decrypt_section(const char* section_name, int temp_prot, int target_prot) {
     Dl_info info;
     dladdr((const void *)decrypt_section,&info);
     Elf_Shdr shdr;
@@ -273,7 +273,6 @@ void decrypt_section(const char* section_name,int temp_prot,int target_prot) {
 }
 
 void decrypt_bitcode() {
-    decrypt_section((char *)DATA_SECTION_RO_DATA,PROT_READ | PROT_WRITE,PROT_READ);
     decrypt_section((char *)DATA_SECTION_BITCODE,PROT_READ | PROT_WRITE | PROT_EXEC,PROT_READ | PROT_EXEC);
 }
 
