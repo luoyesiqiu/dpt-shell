@@ -119,9 +119,9 @@ public class Apk extends AndroidPackage {
         apk.setPackageName(packageName);
         apk.extractDexCode(apkMainProcessPath);
 
-        apk.addJunkCodeDex(apkMainProcessPath);
-        apk.compressDexFiles(apkMainProcessPath);
-        apk.deleteAllDexFiles(apkMainProcessPath);
+//        apk.addJunkCodeDex(apkMainProcessPath);
+//        apk.compressDexFiles(apkMainProcessPath);
+//        apk.deleteAllDexFiles(apkMainProcessPath);
 
         apk.saveApplicationName(apkMainProcessPath);
         apk.writeProxyAppName(apkMainProcessPath);
@@ -135,8 +135,11 @@ public class Apk extends AndroidPackage {
         }
 
         apk.setExtractNativeLibs(apkMainProcessPath);
-
-        apk.addProxyDex(apkMainProcessPath);
+        apk.addJunkCodeDex(apkMainProcessPath);
+        apk.compressDexFiles(apkMainProcessPath);
+        apk.deleteAllDexFiles(apkMainProcessPath);
+        apk.combineDexZipWithShellDex(apkMainProcessPath);
+//        apk.addProxyDex(apkMainProcessPath);
         apk.copyNativeLibs(apkMainProcessPath);
         apk.encryptSoFiles(apkMainProcessPath);
 
@@ -151,7 +154,55 @@ public class Apk extends AndroidPackage {
     public void protect() {
         process(this);
     }
+    /**
+     * 将dex的压缩文件与壳dex合并成一个新的dex文件
+     */
+    private void combineDexZipWithShellDex(String apkMainProcessPath) {
+        try {
+            File shellDexFile = new File("shell-files/dex/classes.dex");
+            File originalDexZipFile = new File(getOutAssetsDir(apkMainProcessPath).getAbsolutePath() + File.separator + "i11111i111.zip");
+            byte[] zipData = com.android.dex.util.FileUtils.readFile(originalDexZipFile); // 以二进制形式读出zip
+            byte[] unShellDexArray =  com.android.dex.util.FileUtils.readFile(shellDexFile); // 以二进制形式读出dex
+            int zipDataLen = zipData.length;
+            int unShellDexLen = unShellDexArray.length;
+            LogUtils.info("zipDataLen: " + zipDataLen);
+            LogUtils.info("unShellDexLen:" + unShellDexLen);
+            int totalLen = zipDataLen + unShellDexLen + 4; // 多出4字节是存放长度的。
+            byte[] newdex = new byte[totalLen]; // 申请了新的长度
 
+            // 添加解壳代码
+            System.arraycopy(unShellDexArray, 0, newdex, 0, unShellDexLen); // 先拷贝dex内容
+            // 添加未加密的zip数据
+            System.arraycopy(zipData, 0, newdex, unShellDexLen, zipDataLen); // 再在dex内容后面拷贝apk的内容
+            // 添加解壳数据长度
+            System.arraycopy(FileUtils.intToByte(zipDataLen), 0, newdex, totalLen - 4, 4); // 最后4为长度
+
+            // 修改DEX file size文件头
+            FileUtils.fixFileSizeHeader(newdex);
+            // 修改DEX SHA1 文件头
+            FileUtils.fixSHA1Header(newdex);
+            // 修改DEX CheckSum文件头
+            FileUtils.fixCheckSumHeader(newdex);
+
+            String str = apkMainProcessPath + File.separator+ "classes.dex";
+            File file = new File(str);
+            if (!file.exists()) {
+                file.createNewFile();
+            }
+
+            // 输出成新的dex文件
+            FileOutputStream localFileOutputStream = new FileOutputStream(str);
+            localFileOutputStream.write(newdex);
+            localFileOutputStream.flush();
+            localFileOutputStream.close();
+            LogUtils.info("已生成新的Dex文件======" + str);
+            // 删除dex的zip包
+            FileUtils.deleteRecurse(originalDexZipFile);
+        }catch (Exception e){
+            e.printStackTrace();
+        }
+
+    }
     private String getUnsignApkName(String apkName){
         return FileUtils.getNewFileName(apkName,"unsign");
     }
