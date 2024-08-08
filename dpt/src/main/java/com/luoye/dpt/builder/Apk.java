@@ -276,7 +276,7 @@ public class Apk extends AndroidPackage {
                             readElf.close();
                             for (ReadElf.SectionHeader sectionHeader : sectionHeaders) {
 
-                                if(".bitcode".equals(sectionHeader.getName()) || ".rodata".equals(sectionHeader.getName())) {
+                                if(".bitcode".equals(sectionHeader.getName())) {
 
                                     LogUtils.info("start encrypt %s section: %s,offset: %s,size: %s",
                                             soFile.getAbsolutePath(),

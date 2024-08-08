@@ -47,7 +47,7 @@
 
 int bh_util_set_addr_protect(void *addr, int prot) {
   uintptr_t start_addr = PAGE_START((uintptr_t)addr);
-  uintptr_t end_addr = PAGE_START((uintptr_t)addr + sizeof(uintptr_t) - 1) + PAGE_SIZE;
+  uintptr_t end_addr = PAGE_START((uintptr_t)addr + sizeof(uintptr_t) - 1) + getpagesize();
   size_t size = end_addr - start_addr;
 
   if (0 != mprotect((void *)start_addr, size, prot)) return -1;
@@ -56,7 +56,7 @@ int bh_util_set_addr_protect(void *addr, int prot) {
 
 int bh_util_set_protect(void *start, void *end, int prot) {
   uintptr_t start_addr = PAGE_START((uintptr_t)start);
-  uintptr_t end_addr = PAGE_START((uintptr_t)end - 1) + PAGE_SIZE;
+  uintptr_t end_addr = PAGE_START((uintptr_t)end - 1) + getpagesize();
   size_t size = end_addr - start_addr;
 
   if (0 != mprotect((void *)start_addr, size, prot)) return -1;
