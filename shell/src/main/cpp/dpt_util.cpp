@@ -18,11 +18,8 @@ DPT_DATA_SECTION uint8_t DATA_R_FLAG[] = "r";
 
 int dpt_mprotect(void *start,void *end,int prot) {
     uintptr_t start_addr = PAGE_START((uintptr_t)start);
-    uintptr_t end_addr = PAGE_START((uintptr_t)end - 1) + PAGE_SIZE;
+    uintptr_t end_addr = PAGE_START((uintptr_t)end - 1) + getpagesize();
     size_t size = end_addr - start_addr;
-
-    DLOGD("%s begin: %p, size: %zu",__FUNCTION__,(void *)start_addr,size);
-
 
     if (0 != mprotect((void *)start_addr, size, prot)) return -1;
     return 0;
