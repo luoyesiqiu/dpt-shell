@@ -174,7 +174,7 @@ jstring getCompressedDexesPathExport(JNIEnv *env,jclass __unused) {
     getCompressedDexesPath(env, dexesPath, ARRAY_LENGTH(dexesPath));
     return env->NewStringUTF(dexesPath);
 }
-DPT_ENCRYPT static uint32_t readZipLength(const uint8_t *data, size_t size) {
+ static uint32_t readZipLength(const uint8_t *data, size_t size) {
     if (size < 4) return 0;
 
     uint32_t length = 0;
