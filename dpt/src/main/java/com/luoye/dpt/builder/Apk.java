@@ -118,11 +118,6 @@ public class Apk extends AndroidPackage {
         String packageName = ManifestUtils.getPackageName(apkMainProcessPath + File.separator + "AndroidManifest.xml");
         apk.setPackageName(packageName);
         apk.extractDexCode(apkMainProcessPath);
-
-//        apk.addJunkCodeDex(apkMainProcessPath);
-//        apk.compressDexFiles(apkMainProcessPath);
-//        apk.deleteAllDexFiles(apkMainProcessPath);
-
         apk.saveApplicationName(apkMainProcessPath);
         apk.writeProxyAppName(apkMainProcessPath);
         if(apk.isAppComponentFactory()){
@@ -139,7 +134,6 @@ public class Apk extends AndroidPackage {
         apk.compressDexFiles(apkMainProcessPath);
         apk.deleteAllDexFiles(apkMainProcessPath);
         apk.combineDexZipWithShellDex(apkMainProcessPath);
-//        apk.addProxyDex(apkMainProcessPath);
         apk.copyNativeLibs(apkMainProcessPath);
         apk.encryptSoFiles(apkMainProcessPath);
 
@@ -155,33 +149,33 @@ public class Apk extends AndroidPackage {
         process(this);
     }
     /**
-     * 将dex的压缩文件与壳dex合并成一个新的dex文件
+     * Combine the compressed dex file with the shell dex to create a new dex file.
      */
     private void combineDexZipWithShellDex(String apkMainProcessPath) {
         try {
             File shellDexFile = new File("shell-files/dex/classes.dex");
             File originalDexZipFile = new File(getOutAssetsDir(apkMainProcessPath).getAbsolutePath() + File.separator + "i11111i111.zip");
-            byte[] zipData = com.android.dex.util.FileUtils.readFile(originalDexZipFile); // 以二进制形式读出zip
-            byte[] unShellDexArray =  com.android.dex.util.FileUtils.readFile(shellDexFile); // 以二进制形式读出dex
+            byte[] zipData = com.android.dex.util.FileUtils.readFile(originalDexZipFile);// Read the zip file as binary data
+            byte[] unShellDexArray =  com.android.dex.util.FileUtils.readFile(shellDexFile); // Read the dex file as binary data
             int zipDataLen = zipData.length;
             int unShellDexLen = unShellDexArray.length;
             LogUtils.info("zipDataLen: " + zipDataLen);
             LogUtils.info("unShellDexLen:" + unShellDexLen);
-            int totalLen = zipDataLen + unShellDexLen + 4; // 多出4字节是存放长度的。
-            byte[] newdex = new byte[totalLen]; // 申请了新的长度
+            int totalLen = zipDataLen + unShellDexLen + 4;// An additional 4 bytes are added to store the length
+            byte[] newdex = new byte[totalLen]; // Allocate the new length
 
-            // 添加解壳代码
-            System.arraycopy(unShellDexArray, 0, newdex, 0, unShellDexLen); // 先拷贝dex内容
-            // 添加未加密的zip数据
-            System.arraycopy(zipData, 0, newdex, unShellDexLen, zipDataLen); // 再在dex内容后面拷贝apk的内容
-            // 添加解壳数据长度
-            System.arraycopy(FileUtils.intToByte(zipDataLen), 0, newdex, totalLen - 4, 4); // 最后4为长度
+            // Add the shell code
+            System.arraycopy(unShellDexArray, 0, newdex, 0, unShellDexLen);// First, copy the dex content
+            // Add the unencrypted zip data
+            System.arraycopy(zipData, 0, newdex, unShellDexLen, zipDataLen); // Then copy the APK content after the dex content
+            // Add the length of the shell data
+            System.arraycopy(FileUtils.intToByte(zipDataLen), 0, newdex, totalLen - 4, 4);// The last 4 bytes are for the length
 
-            // 修改DEX file size文件头
+            // Modify the DEX file size header
             FileUtils.fixFileSizeHeader(newdex);
-            // 修改DEX SHA1 文件头
+            // Modify the DEX SHA1 header
             FileUtils.fixSHA1Header(newdex);
-            // 修改DEX CheckSum文件头
+            // Modify the DEX CheckSum header
             FileUtils.fixCheckSumHeader(newdex);
 
             String str = apkMainProcessPath + File.separator+ "classes.dex";
@@ -190,13 +184,13 @@ public class Apk extends AndroidPackage {
                 file.createNewFile();
             }
 
-            // 输出成新的dex文件
+            // Output the new dex file
             FileOutputStream localFileOutputStream = new FileOutputStream(str);
             localFileOutputStream.write(newdex);
             localFileOutputStream.flush();
             localFileOutputStream.close();
-            LogUtils.info("已生成新的Dex文件======" + str);
-            // 删除dex的zip包
+            LogUtils.info("New Dex file generated: " + str);
+            // Delete the dex zip package
             FileUtils.deleteRecurse(originalDexZipFile);
         }catch (Exception e){
             e.printStackTrace();
