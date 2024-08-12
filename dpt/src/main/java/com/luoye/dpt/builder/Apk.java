@@ -118,11 +118,6 @@ public class Apk extends AndroidPackage {
         String packageName = ManifestUtils.getPackageName(apkMainProcessPath + File.separator + "AndroidManifest.xml");
         apk.setPackageName(packageName);
         apk.extractDexCode(apkMainProcessPath);
-
-        apk.addJunkCodeDex(apkMainProcessPath);
-        apk.compressDexFiles(apkMainProcessPath);
-        apk.deleteAllDexFiles(apkMainProcessPath);
-
         apk.saveApplicationName(apkMainProcessPath);
         apk.writeProxyAppName(apkMainProcessPath);
         if(apk.isAppComponentFactory()){
@@ -135,8 +130,10 @@ public class Apk extends AndroidPackage {
         }
 
         apk.setExtractNativeLibs(apkMainProcessPath);
-
-        apk.addProxyDex(apkMainProcessPath);
+        apk.addJunkCodeDex(apkMainProcessPath);
+        apk.compressDexFiles(apkMainProcessPath);
+        apk.deleteAllDexFiles(apkMainProcessPath);
+        apk.combineDexZipWithShellDex(apkMainProcessPath);
         apk.copyNativeLibs(apkMainProcessPath);
         apk.encryptSoFiles(apkMainProcessPath);
 
@@ -151,7 +148,55 @@ public class Apk extends AndroidPackage {
     public void protect() {
         process(this);
     }
+    /**
+     * Combine the compressed dex file with the shell dex to create a new dex file.
+     */
+    private void combineDexZipWithShellDex(String apkMainProcessPath) {
+        try {
+            File shellDexFile = new File("shell-files/dex/classes.dex");
+            File originalDexZipFile = new File(getOutAssetsDir(apkMainProcessPath).getAbsolutePath() + File.separator + "i11111i111.zip");
+            byte[] zipData = com.android.dex.util.FileUtils.readFile(originalDexZipFile);// Read the zip file as binary data
+            byte[] unShellDexArray =  com.android.dex.util.FileUtils.readFile(shellDexFile); // Read the dex file as binary data
+            int zipDataLen = zipData.length;
+            int unShellDexLen = unShellDexArray.length;
+            LogUtils.info("zipDataLen: " + zipDataLen);
+            LogUtils.info("unShellDexLen:" + unShellDexLen);
+            int totalLen = zipDataLen + unShellDexLen + 4;// An additional 4 bytes are added to store the length
+            byte[] newdex = new byte[totalLen]; // Allocate the new length
 
+            // Add the shell code
+            System.arraycopy(unShellDexArray, 0, newdex, 0, unShellDexLen);// First, copy the dex content
+            // Add the unencrypted zip data
+            System.arraycopy(zipData, 0, newdex, unShellDexLen, zipDataLen); // Then copy the APK content after the dex content
+            // Add the length of the shell data
+            System.arraycopy(FileUtils.intToByte(zipDataLen), 0, newdex, totalLen - 4, 4);// The last 4 bytes are for the length
+
+            // Modify the DEX file size header
+            FileUtils.fixFileSizeHeader(newdex);
+            // Modify the DEX SHA1 header
+            FileUtils.fixSHA1Header(newdex);
+            // Modify the DEX CheckSum header
+            FileUtils.fixCheckSumHeader(newdex);
+
+            String str = apkMainProcessPath + File.separator+ "classes.dex";
+            File file = new File(str);
+            if (!file.exists()) {
+                file.createNewFile();
+            }
+
+            // Output the new dex file
+            FileOutputStream localFileOutputStream = new FileOutputStream(str);
+            localFileOutputStream.write(newdex);
+            localFileOutputStream.flush();
+            localFileOutputStream.close();
+            LogUtils.info("New Dex file generated: " + str);
+            // Delete the dex zip package
+            FileUtils.deleteRecurse(originalDexZipFile);
+        }catch (Exception e){
+            e.printStackTrace();
+        }
+
+    }
     private String getUnsignApkName(String apkName){
         return FileUtils.getNewFileName(apkName,"unsign");
     }

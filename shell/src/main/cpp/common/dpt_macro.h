@@ -25,6 +25,8 @@
 #define APP_NAME_IN_ZIP "assets/app_name"
 #define CODE_ITEM_NAME_IN_ZIP "assets/OoooooOooo"
 #define DEX_FILES_NAME_IN_ZIP "assets/i11111i111.zip"
+#define COMBINE_DEX_FILES_NAME_IN_ZIP "classes.dex"
+
 
 #define CODE_ITEM_NAME_IN_ASSETS "OoooooOooo"
 

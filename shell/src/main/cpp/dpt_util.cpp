@@ -174,16 +174,39 @@ jstring getCompressedDexesPathExport(JNIEnv *env,jclass __unused) {
     getCompressedDexesPath(env, dexesPath, ARRAY_LENGTH(dexesPath));
     return env->NewStringUTF(dexesPath);
 }
+ static uint32_t readZipLength(const uint8_t *data, size_t size) {
+    if (size < 4) return 0;
 
+    uint32_t length = 0;
+    memcpy(&length, data + size - 4, 4);
+
+    // Byte swapping for little-endian format
+    length = (length >> 24) | ((length & 0x00FF0000) >> 8) | ((length & 0x0000FF00) << 8) | (length << 24);
+
+    return length;
+}
 DPT_ENCRYPT static void writeDexAchieve(const char *dexAchievePath,void *apk_addr,size_t apk_size) {
     DLOGD("zipCode open = %s",dexAchievePath);
     FILE *fp = fopen(dexAchievePath, "wb");
     if(fp != nullptr){
         uint64_t dex_files_size = 0;
         void *dexFilesData = nullptr;
-        bool needFree = read_zip_file_entry(apk_addr,apk_size,DEX_FILES_NAME_IN_ZIP,&dexFilesData,&dex_files_size);
-        if(dexFilesData != nullptr) {
-            fwrite(dexFilesData, 1, dex_files_size, fp);
+        bool needFree = read_zip_file_entry(apk_addr,apk_size,COMBINE_DEX_FILES_NAME_IN_ZIP,&dexFilesData,&dex_files_size);
+        if (dexFilesData != nullptr) {
+            DLOGD("Read classes.dex of size: %lu", (unsigned long)dex_files_size);
+            uint32_t zipDataLen = readZipLength((uint8_t *)dexFilesData, dex_files_size);
+            DLOGD("Extracted zip data length: %u", (unsigned int)zipDataLen);
+
+            if (zipDataLen > 0 && dex_files_size > zipDataLen + 4) {
+                // Zip file data starts at the end of classes.dex minus the zip length and 4 bytes for the length field
+                uint8_t *zipDataStart = (uint8_t *)dexFilesData + (dex_files_size - zipDataLen - 4);
+                fwrite(zipDataStart, 1, zipDataLen, fp);
+                DLOGD("Zip file extracted and written successfully.");
+            } else {
+                DLOGE("Invalid zip data length: %u. dex_files_size: %lu", (unsigned int)zipDataLen, (unsigned long)dex_files_size);
+            }
+        } else {
+            DLOGE("Failed to read classes.dex.");
         }
         fclose(fp);
         if(needFree) {
