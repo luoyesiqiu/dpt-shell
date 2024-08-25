@@ -8,7 +8,7 @@
 #include <stdint.h>
 #include <string>
 
-namespace dpt{
+namespace dpt {
     namespace dex {
         struct Header {
         public:
@@ -150,109 +150,112 @@ namespace dpt{
             }
         };
     };
-class DexFileUtils{
-public:
-    static size_t readUleb128(uint8_t const * const data, uint64_t * const val);
-    static size_t readFields(uint8_t *data, dpt::dex::ClassDataField *field, uint64_t count);
-    static size_t readMethods(uint8_t *data, dpt::dex::ClassDataMethod *method, uint64_t count);
-};
 
-namespace V21 {
-    class DexFile {
+    class DexFileUtils {
     public:
-        //vtable pointer
-        void *_;
+        static size_t readUleb128(uint8_t const *const data, uint64_t *const val);
 
-        // The base address of the memory mapping.
-        const uint8_t* const begin_;
+        static size_t readFields(uint8_t *data, dpt::dex::ClassDataField *field, uint64_t count);
 
-        // The size of the underlying memory allocation in bytes.
-        const size_t size_;
-
-        // Typically the dex file name when available, alternatively some identifying string.
-        //
-        // The ClassLinker will use this to match DexFiles the boot class
-        // path to DexCache::GetLocation when loading from an image.
-        const std::string location_;
-
-        const uint32_t location_checksum_;
-
-        // Manages the underlying memory allocation.
-        std::unique_ptr<void *> mem_map_;
-
-        // Points to the header section.
-        const dex::Header* const header_;
-
-        // Points to the base of the string identifier list.
-        const dex::StringId* const string_ids_;
-
-        // Points to the base of the type identifier list.
-        const dex::TypeId* const type_ids_;
-
-        // Points to the base of the field identifier list.
-        const dex::FieldId* const field_ids_;
-
-        // Points to the base of the method identifier list.
-        const dex::MethodId* const method_ids_;
-
-        // Points to the base of the prototype identifier list.
-        const dex::ProtoId* const proto_ids_;
-
-        // Points to the base of the class definition list.
-        const dex::ClassDef* const class_defs_;
-
+        static size_t readMethods(uint8_t *data, dpt::dex::ClassDataMethod *method, uint64_t count);
     };
-} //namespace V21
 
-namespace V28 {
-    class DexFile {
-    public:
-        //vtable pointer
-        void *_;
+    namespace V21 {
+        class DexFile {
+        public:
+            //vtable pointer
+            void *_;
 
-        // The base address of the memory mapping.
-        const uint8_t* const begin_;
+            // The base address of the memory mapping.
+            const uint8_t *const begin_;
 
-        // The size of the underlying memory allocation in bytes.
-        const size_t size_;
+            // The size of the underlying memory allocation in bytes.
+            const size_t size_;
 
-        // The base address of the data section (same as Begin() for standard dex).
-        const uint8_t* const data_begin_;
+            // Typically the dex file name when available, alternatively some identifying string.
+            //
+            // The ClassLinker will use this to match DexFiles the boot class
+            // path to DexCache::GetLocation when loading from an image.
+            const std::string location_;
 
-        // The size of the data section.
-        const size_t data_size_;
+            const uint32_t location_checksum_;
 
-        // Typically the dex file name when available, alternatively some identifying string.
-        //
-        // The ClassLinker will use this to match DexFiles the boot class
-        // path to DexCache::GetLocation when loading from an image.
-        const std::string location_;
+            // Manages the underlying memory allocation.
+            std::unique_ptr<void *> mem_map_;
 
-        const uint32_t location_checksum_;
+            // Points to the header section.
+            const dex::Header *const header_;
 
-        // Points to the header section.
-        const dex::Header* const header_;
+            // Points to the base of the string identifier list.
+            const dex::StringId *const string_ids_;
 
-        // Points to the base of the string identifier list.
-        const dex::StringId* const string_ids_;
+            // Points to the base of the type identifier list.
+            const dex::TypeId *const type_ids_;
 
-        // Points to the base of the type identifier list.
-        const dex::TypeId* const type_ids_;
+            // Points to the base of the field identifier list.
+            const dex::FieldId *const field_ids_;
 
-        // Points to the base of the field identifier list.
-        const dex::FieldId* const field_ids_;
+            // Points to the base of the method identifier list.
+            const dex::MethodId *const method_ids_;
 
-        // Points to the base of the method identifier list.
-        const dex::MethodId* const method_ids_;
+            // Points to the base of the prototype identifier list.
+            const dex::ProtoId *const proto_ids_;
 
-        // Points to the base of the prototype identifier list.
-        const dex::ProtoId* const proto_ids_;
+            // Points to the base of the class definition list.
+            const dex::ClassDef *const class_defs_;
 
-        // Points to the base of the class definition list.
-        const dex::ClassDef* const class_defs_;
+        };
+    } //namespace V21
 
-    };
-} //namespace V28
+    namespace V28 {
+        class DexFile {
+        public:
+            //vtable pointer
+            void *_;
+
+            // The base address of the memory mapping.
+            const uint8_t *const begin_;
+
+            // The size of the underlying memory allocation in bytes.
+            const size_t size_;
+
+            // The base address of the data section (same as Begin() for standard dex).
+            const uint8_t *const data_begin_;
+
+            // The size of the data section.
+            const size_t data_size_;
+
+            // Typically the dex file name when available, alternatively some identifying string.
+            //
+            // The ClassLinker will use this to match DexFiles the boot class
+            // path to DexCache::GetLocation when loading from an image.
+            const std::string location_;
+
+            const uint32_t location_checksum_;
+
+            // Points to the header section.
+            const dex::Header *const header_;
+
+            // Points to the base of the string identifier list.
+            const dex::StringId *const string_ids_;
+
+            // Points to the base of the type identifier list.
+            const dex::TypeId *const type_ids_;
+
+            // Points to the base of the field identifier list.
+            const dex::FieldId *const field_ids_;
+
+            // Points to the base of the method identifier list.
+            const dex::MethodId *const method_ids_;
+
+            // Points to the base of the prototype identifier list.
+            const dex::ProtoId *const proto_ids_;
+
+            // Points to the base of the class definition list.
+            const dex::ClassDef *const class_defs_;
+
+        };
+    } //namespace V28
 
 };//namespace dpt
 
