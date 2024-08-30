@@ -16,6 +16,7 @@ int g_sdkLevel = 0;
 void dpt_hook() {
     bytehook_init(BYTEHOOK_MODE_AUTOMATIC,false);
     g_sdkLevel = android_get_device_api_level();
+    hook_execve();
     hook_mmap();
     hook_DefineClass();
 }
@@ -290,5 +291,27 @@ DPT_ENCRYPT void hook_mmap(){
             nullptr);
     if(stub != nullptr){
         DLOGD("mmap hook success!");
+    }
+}
+DPT_ENCRYPT int fake_execve(const char *pathname, char *const argv[], char *const envp[]) {
+    BYTEHOOK_STACK_SCOPE();
+    DLOGW("execve hooked: %s", pathname);
+    if (strstr(pathname, "dex2oat") != nullptr) {
+        DLOGW("execve blocked: %s", pathname);
+        errno = EACCES;
+        return -1;
+    }
+    return BYTEHOOK_CALL_PREV(fake_execve, pathname, argv, envp);
+}
+DPT_ENCRYPT void hook_execve(){
+    bytehook_stub_t stub = bytehook_hook_single(
+            getArtLibName(),
+            "libc.so",
+            "execve",
+            (void *) fake_execve,
+            nullptr,
+            nullptr);
+    if (stub != nullptr) {
+        DLOGD("execve hook success!");
     }
 }
