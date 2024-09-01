@@ -33,4 +33,5 @@ static void* (*g_originDefineClassV21)(void* thiz,
 
 void hook_DefineClass();
 void hook_mmap();
+void hook_execve();
 #endif //DPT_DPT_HOOK_H
