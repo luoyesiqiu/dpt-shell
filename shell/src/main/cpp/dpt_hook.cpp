@@ -115,7 +115,13 @@ DPT_ENCRYPT void patchClass(__unused const char* descriptor,
         std::string location;
         uint8_t *begin = nullptr;
         uint64_t dexSize = 0;
-        if(g_sdkLevel >= __ANDROID_API_P__){
+        if(g_sdkLevel >= 35) {
+            auto* dexFileV35 = (V35::DexFile *)dex_file;
+            location = dexFileV35->location_;
+            begin = (uint8_t *)dexFileV35->begin_;
+            dexSize = dexFileV35->header_->file_size_;
+        }
+        else if(g_sdkLevel >= __ANDROID_API_P__){
             auto* dexFileV28 = (V28::DexFile *)dex_file;
             location = dexFileV28->location_;
             begin = (uint8_t *)dexFileV28->begin_;
