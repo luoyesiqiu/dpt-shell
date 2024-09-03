@@ -23,7 +23,7 @@ public class EnvUtils {
             if(supportedAbi.contains("x86_64")) {
                 return "x86_64";
             }
-            if(supportedAbi.contains("x86")) {
+            else if(supportedAbi.contains("x86")) {
                 return "x86";
             }
             else if(supportedAbi.contains("arm64-v8a")) {
