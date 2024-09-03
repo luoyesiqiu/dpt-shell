@@ -257,6 +257,70 @@ namespace dpt {
         };
     } //namespace V28
 
+    namespace V35 {
+        template <typename T>
+        class ArrayRef {
+        private:
+            T* array_;
+            size_t size_;
+        };
+        class DexFile {
+        public:
+            void *_;
+
+            // The base address of the memory mapping.
+            const uint8_t* begin_;
+
+            size_t unused_size_ = 0;  // Preserve layout for DRM (b/305203031).
+
+            // Data memory range: Most dex offsets are relative to this memory range.
+            // Standard dex: same as (begin_, size_).
+            // Dex container: all dex files (starting from the first header).
+            // Compact: shared data which is located after all non-shared data.
+            //
+            // This is different to the "data section" in the standard dex header.
+            ArrayRef<const uint8_t> const data_;
+
+            // The full absolute path to the dex file, if it was loaded from disk.
+            //
+            // Can also be a path to a multidex container (typically apk), followed by
+            // DexFileLoader.kMultiDexSeparator (i.e. '!') and the file inside the
+            // container.
+            //
+            // On host this may not be an absolute path.
+            //
+            // On device libnativeloader uses this to determine the location of the java
+            // package or shared library, which decides where to load native libraries
+            // from.
+            //
+            // The ClassLinker will use this to match DexFiles the boot class
+            // path to DexCache::GetLocation when loading from an image.
+            const std::string location_;
+
+             uint32_t location_checksum_;
+
+            // Points to the header section.
+            const dex::Header*  header_;
+
+            // Points to the base of the string identifier list.
+            const dex::StringId*  string_ids_;
+
+            // Points to the base of the type identifier list.
+            const dex::TypeId* type_ids_;
+
+            // Points to the base of the field identifier list.
+            const dex::FieldId* field_ids_;
+
+            // Points to the base of the method identifier list.
+            const dex::MethodId* method_ids_;
+
+            // Points to the base of the prototype identifier list.
+            const dex::ProtoId* proto_ids_;
+
+            // Points to the base of the class definition list.
+            const dex::ClassDef* class_defs_;
+        };
+    } //namespace V35
 };//namespace dpt
 
 #endif //DPT_DEX_FILE_H
