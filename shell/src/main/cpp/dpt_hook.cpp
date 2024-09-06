@@ -6,7 +6,9 @@
 #include <unordered_map>
 #include <dex/CodeItem.h>
 #include "dpt_hook.h"
+#include "dpt_risk.h"
 #include "bytehook.h"
+
 using namespace dpt;
 
 extern std::unordered_map<int, std::unordered_map<int, data::CodeItem*>*> dexMap;
@@ -104,7 +106,7 @@ DPT_ENCRYPT void patchMethod(uint8_t *begin,__unused const char *location,uint32
         }
     }
     else{
-        DLOGE("[*] patchMethod cannot find dex: %d in dex map",dexIndex);
+        DLOGE("[*] patchMethod cannot find dex: '%s' in dex map",location);
     }
 }
 
@@ -261,10 +263,8 @@ DPT_ENCRYPT void* fake_mmap(void* __addr, size_t __size, int __prot, int __flags
     int hasRead = (__prot & PROT_READ) == PROT_READ;
     int hasWrite = (__prot & PROT_WRITE) == PROT_WRITE;
 
-    char link_path[128] = {0};
-    snprintf(link_path,sizeof(link_path),"/proc/%d/fd/%d",getpid(),__fd);
     char fd_path[256] = {0};
-    readlink(link_path,fd_path,sizeof(fd_path));
+    dpt_readlink(__fd,fd_path, ARRAY_LENGTH(fd_path));
 
     if(strstr(fd_path,"webview.vdex") != nullptr) {
         DLOGW("fake_mmap link path: %s, no need to change prot",fd_path);
@@ -299,6 +299,7 @@ DPT_ENCRYPT void hook_mmap(){
         DLOGD("mmap hook success!");
     }
 }
+
 DPT_ENCRYPT int fake_execve(const char *pathname, char *const argv[], char *const envp[]) {
     BYTEHOOK_STACK_SCOPE();
     DLOGW("execve hooked: %s", pathname);
@@ -309,6 +310,7 @@ DPT_ENCRYPT int fake_execve(const char *pathname, char *const argv[], char *cons
     }
     return BYTEHOOK_CALL_PREV(fake_execve, pathname, argv, envp);
 }
+
 DPT_ENCRYPT void hook_execve(){
     bytehook_stub_t stub = bytehook_hook_single(
             getArtLibName(),
