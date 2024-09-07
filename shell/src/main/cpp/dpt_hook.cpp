@@ -5,6 +5,7 @@
 #include <map>
 #include <unordered_map>
 #include <dex/CodeItem.h>
+#include "common/dpt_string.h"
 #include "dpt_hook.h"
 #include "dpt_risk.h"
 #include "bytehook.h"
@@ -106,13 +107,20 @@ DPT_ENCRYPT void patchMethod(uint8_t *begin,__unused const char *location,uint32
         }
     }
     else{
-        DLOGE("[*] patchMethod cannot find dex: '%s' in dex map",location);
+        DLOGW("[*] patchMethod cannot find dex: '%s' in dex map",location);
     }
 }
 
 DPT_ENCRYPT void patchClass(__unused const char* descriptor,
                  const void* dex_file,
                  const void* dex_class_def) {
+
+    if(UNLIKELY(dpt_strstr(descriptor,"com/luoye/dpt/junkcode/JunkClass1") != nullptr
+        || dpt_strstr(descriptor,"com/luoye/dpt/junkcode/JunkClass2") != nullptr)) {
+        DLOGE("Find illegal call!");
+        crash();
+        return;
+    }
 
     if(LIKELY(dex_file != nullptr)){
         std::string location;
