@@ -430,7 +430,7 @@ public class ShellClassLoader extends PathClassLoader {
 这一步也非常重要。我们加载apk，dex或者jar，它是以Element方式存放在内存中的，合并dexElements目的是把我们新加载的dex放到dexElements数组开头，这样ClassLoader加载类时就会优先从我们的dex中查找。代码如下：
 
 ```cpp
-void mergeDexElements(JNIEnv* env,jclass klass,jobject oldClassLoader,jobject newClassLoader){
+void combineDexElements(JNIEnv* env,jclass klass,jobject oldClassLoader,jobject newClassLoader){
     jclass BaseDexClassLoaderClass = env->FindClass("dalvik/system/BaseDexClassLoader");
     jfieldID  pathList = env->GetFieldID(BaseDexClassLoaderClass,"pathList","Ldalvik/system/DexPathList;");
     jobject oldDexPathListObj = env->GetObjectField(oldClassLoader,pathList);
