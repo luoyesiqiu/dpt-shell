@@ -19,8 +19,7 @@ import java.util.HashSet;
 import java.util.Set;
 
 public class JunkCodeGenerator {
-
-    private static final Set<String> identifierSet = new HashSet<>();
+    private static final Set<String> classNameSet = new HashSet<>();
     public static void generate(File dir) throws IOException {
         generateClass(dir);
     }
@@ -40,17 +39,26 @@ public class JunkCodeGenerator {
         return sb.toString();
     }
 
+    private static String generateClassName() {
+        String baseClassName = "com/luoye/dpt/junkcode/JunkClass";
+
+        SecureRandom secureRandom = new SecureRandom();
+        int number = secureRandom.nextInt() % 100;
+
+        return baseClassName + number;
+    }
+
     private static void generateClass(File dir) throws IOException {
         SecureRandom secureRandom = new SecureRandom();
         final int generateClassCount = secureRandom.nextInt(10) + 10;
 
         LogUtils.debug("generate class count: %d",generateClassCount);
         for(int i = 0;i < generateClassCount;i++) {
-            String className = generateIdentifier();
-            if(identifierSet.contains(className)){
-                className = generateIdentifier();
+            String className = generateClassName();
+            if(classNameSet.contains(className)){
+                className = generateClassName();
             }
-            identifierSet.add(className);
+            classNameSet.add(className);
 
             ClassWriter classWriter = new ClassWriter(0);
             classWriter.visit(V1_8, ACC_PUBLIC, className, null, "java/lang/Object", null);

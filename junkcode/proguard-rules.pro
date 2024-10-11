@@ -21,6 +21,4 @@
 #-renamesourcefileattribute SourceFile
 -dontshrink
 
--keep class com.luoye.dpt.junkcode.JunkClass
--keep class com.luoye.dpt.junkcode.JunkClass1
--keep class com.luoye.dpt.junkcode.JunkClass2
+-keep class com.luoye.dpt.junkcode.**

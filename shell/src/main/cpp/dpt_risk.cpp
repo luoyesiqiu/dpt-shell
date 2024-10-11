@@ -25,7 +25,7 @@ void crash() {
 }
 
 void junkCodeDexProtect(JNIEnv *env) {
-    jclass klass = dpt::jni::FindClass(env,"com/luoye/dpt/junkcode/JunkClass");
+    jclass klass = dpt::jni::FindClass(env,JUNK_CLASS_FULL_NAME);
     if(klass == nullptr) {
         crash();
     }
