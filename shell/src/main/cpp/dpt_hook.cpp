@@ -115,11 +115,16 @@ DPT_ENCRYPT void patchClass(__unused const char* descriptor,
                  const void* dex_file,
                  const void* dex_class_def) {
 
-    if(UNLIKELY(dpt_strstr(descriptor,"com/luoye/dpt/junkcode/JunkClass1") != nullptr
-        || dpt_strstr(descriptor,"com/luoye/dpt/junkcode/JunkClass2") != nullptr)) {
-        DLOGE("Find illegal call!");
-        crash();
-        return;
+    if(UNLIKELY(dpt_strstr(descriptor,JUNK_CLASS_FULL_NAME) != nullptr)) {
+        size_t descriptorLength = dpt_strlen(descriptor);
+        char ch = descriptor[descriptorLength - 2];
+        DLOGD("Attempt patch junk class %s ,char is '%c'",descriptor,ch);
+        if(isdigit(ch)) {
+            DLOGE("Find illegal call, desc: %s!", descriptor);
+            crash();
+            return;
+        }
+
     }
 
     if(LIKELY(dex_file != nullptr)){
