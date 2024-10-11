@@ -76,7 +76,7 @@ public class ProxyComponentFactory extends AppComponentFactory {
         AppComponentFactory targetAppComponentFactory = null;
         String applicationName = JniBridge.rapn();
         if(!Global.sIsReplacedClassLoader){
-            JniBridge.mde(cl);
+            JniBridge.cbde(cl);
             Global.sIsReplacedClassLoader = true;
             targetAppComponentFactory = getTargetAppComponentFactory(cl);
         }
@@ -133,7 +133,7 @@ public class ProxyComponentFactory extends AppComponentFactory {
 
         AppComponentFactory targetAppComponentFactory = getTargetAppComponentFactory(cl);
 
-        JniBridge.mde(cl);
+        JniBridge.cbde(cl);
 
         Global.sIsReplacedClassLoader = true;
 

@@ -25,8 +25,8 @@ static JNINativeMethod gMethods[] = {
         {"gap",   "()Ljava/lang/String;",         (void *) getApkPathExport},
         {"gdp",   "()Ljava/lang/String;",         (void *) getCompressedDexesPathExport},
         {"rcf",   "()Ljava/lang/String;",         (void *) readAppComponentFactory},
-        {"rapn",   "()Ljava/lang/String;",         (void *) readApplicationName},
-        {"mde",   "(Ljava/lang/ClassLoader;)V",        (void *) mergeDexElements},
+        {"rapn",   "()Ljava/lang/String;",        (void *) readApplicationName},
+        {"cbde",   "(Ljava/lang/ClassLoader;)V",  (void *) combineDexElements},
         {"rde",   "(Ljava/lang/ClassLoader;Ljava/lang/String;)V",        (void *) removeDexElements},
         {"ra", "(Ljava/lang/String;)Ljava/lang/Object;",                               (void *) replaceApplication}
 };
@@ -57,7 +57,7 @@ DPT_ENCRYPT jobjectArray makePathElements(JNIEnv* env,const char *pathChs) {
     return elements;
 }
 
-DPT_ENCRYPT void mergeDexElement(JNIEnv* env,jclass __unused, jobject targetClassLoader,const char* pathChs) {
+DPT_ENCRYPT void combineDexElement(JNIEnv* env, jclass __unused, jobject targetClassLoader, const char* pathChs) {
     jobjectArray extraDexElements = makePathElements(env,pathChs);
 
     dalvik_system_BaseDexClassLoader targetBaseDexClassLoader(env,targetClassLoader);
@@ -87,19 +87,19 @@ DPT_ENCRYPT void mergeDexElement(JNIEnv* env,jclass __unused, jobject targetClas
 
     targetDexPathList.setDexElements(newDexElements);
 
-    DLOGD("mergeDexElement success");
+    DLOGD("combineDexElement success");
 }
 
-DPT_ENCRYPT void mergeDexElements(JNIEnv* env,jclass klass, jobject targetClassLoader) {
+DPT_ENCRYPT void combineDexElements(JNIEnv* env, jclass klass, jobject targetClassLoader) {
     char compressedDexesPathChs[256] = {0};
     getCompressedDexesPath(env,compressedDexesPathChs, ARRAY_LENGTH(compressedDexesPathChs));
 
-    mergeDexElement(env,klass,targetClassLoader,compressedDexesPathChs);
+    combineDexElement(env, klass, targetClassLoader, compressedDexesPathChs);
 
 #ifndef DEBUG
     junkCodeDexProtect(env);
 #endif
-    DLOGD("mergeDexElements success");
+    DLOGD("combineDexElements success");
 }
 
 DPT_ENCRYPT void removeDexElements(JNIEnv* env,jclass __unused,jobject classLoader,jstring elementName){
