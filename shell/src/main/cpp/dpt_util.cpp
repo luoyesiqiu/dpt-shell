@@ -27,7 +27,10 @@ int dpt_mprotect(void *start,void *end,int prot) {
     uintptr_t end_addr = PAGE_START((uintptr_t)end - 1) + getpagesize();
     size_t size = end_addr - start_addr;
 
-    if (0 != mprotect((void *)start_addr, size, prot)) return -1;
+    if (0 != mprotect((void *)start_addr, size, prot)) {
+        DLOGW("%s mprotect %p-%p fail",__FUNCTION__,start,end);
+        return -1;
+    }
     return 0;
 }
 
