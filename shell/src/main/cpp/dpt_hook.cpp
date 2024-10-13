@@ -55,12 +55,19 @@ const char *getClassLinkerDefineClassSymbol() {
 
 void change_dex_protective(uint8_t * begin,int dexSize,int dexIndex){
     uintptr_t start = PAGE_START((uintptr_t) (begin));
-    uint32_t block = sysconf(_SC_PAGE_SIZE);
-    size_t n = (dexSize / block) + (dexSize % block != 0);
+    uint32_t pageSize = sysconf(_SC_PAGE_SIZE);
+    size_t n = (dexSize / pageSize) + (dexSize % pageSize != 0);
 
     for(int i = 0;i < 10;) {
-        DLOGD("mprotect dex[%d] start = " FMT_POINTER ",end = " FMT_POINTER,dexIndex, start, start + block * n);
-        int ret = mprotect((void *) (start), block * n,
+        DLOGD("%s mprotect dex[%d] start = " FMT_POINTER ",end = " FMT_POINTER ", page_size = %d, dexSize = %d, block_cnt = %zu",
+              __FUNCTION__,
+              dexIndex,
+              start,
+              start + pageSize * n,
+              pageSize,
+              dexSize,
+              n);
+        int ret = mprotect((void *) (start), pageSize * n,
                            PROT_READ | PROT_WRITE);
 
         if (ret != 0) {
@@ -148,13 +155,13 @@ DPT_ENCRYPT void patchClass(__unused const char* descriptor,
             auto* dexFileV28 = (V28::DexFile *)dex_file;
             location = dexFileV28->location_;
             begin = (uint8_t *)dexFileV28->begin_;
-            dexSize = dexFileV28->size_;
+            dexSize = dexFileV28->size_ == 0 ? dexFileV28->header_->file_size_ : dexFileV28->size_;
         }
         else {
             auto* dexFileV21 = (V21::DexFile *)dex_file;
             location = dexFileV21->location_;
             begin = (uint8_t *)dexFileV21->begin_;
-            dexSize = dexFileV21->size_;
+            dexSize = dexFileV21->size_ == 0 ? dexFileV21->header_->file_size_ : dexFileV21->size_;
         }
 
         if(location.rfind(DEXES_ZIP_NAME) != std::string::npos && dex_class_def){
