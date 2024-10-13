@@ -19,7 +19,7 @@
 #define DLOGE(...) DLOG(ANDROID_LOG_ERROR,__VA_ARGS__)
 #define DLOGW(...) DLOG(ANDROID_LOG_WARN,__VA_ARGS__)
 
-#ifdef NOICE_LOG
+#ifdef NOISY_LOG
 #define NLOG(...) DLOG(ANDROID_LOG_INFO,__VA_ARGS__)
 #else
 #define NLOG(...)
