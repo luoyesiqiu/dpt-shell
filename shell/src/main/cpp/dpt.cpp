@@ -179,7 +179,7 @@ DPT_ENCRYPT jstring readAppComponentFactory(JNIEnv *env, jclass __unused) {
         load_apk(env,&apk_addr,&apk_size);
 
         uint64_t entry_size = 0;
-        void *entry_addr = 0;
+        void *entry_addr = nullptr;
         bool needFree = read_zip_file_entry(apk_addr, apk_size ,ACF_NAME_IN_ZIP, &entry_addr, &entry_size);
         if(!needFree) {
             char *newChs = (char *) calloc(entry_size + 1, sizeof(char));

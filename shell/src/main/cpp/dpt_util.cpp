@@ -303,15 +303,13 @@ void unload_apk(void *apk_addr,size_t apk_size) {
 DPT_ENCRYPT bool read_zip_file_entry(void* zip_addr,off_t zip_size,const char* entry_name,void **entry_addr,uint64_t *entry_size) {
     DLOGD("read_zip_file_entry prepare read file: %s",entry_name);
 
-    void *mem_stream = nullptr;
-    void *zip_handle = nullptr;
     bool needFree = false;
 
-    mz_stream_mem_create(&mem_stream);
+    void *mem_stream = mz_stream_mem_create();
     mz_stream_mem_set_buffer(mem_stream, zip_addr, zip_size);
     mz_stream_open(mem_stream, nullptr, MZ_OPEN_MODE_READ);
 
-    mz_zip_create(&zip_handle);
+    void *zip_handle = mz_zip_create();
     int32_t err = mz_zip_open(zip_handle, mem_stream, MZ_OPEN_MODE_READ);
 
     if(err == MZ_OK){
@@ -325,6 +323,11 @@ DPT_ENCRYPT bool read_zip_file_entry(void* zip_addr,off_t zip_size,const char* e
                     DLOGD("read_zip_file_entry found entry name = %s,file size = " FMT_INT64_T,
                           file_info->filename,
                           file_info->uncompressed_size);
+                    if(file_info->uncompressed_size == 0) {
+                        *entry_addr = nullptr;
+                        *entry_size = 0;
+                        return false;
+                    }
 
                     err = mz_zip_entry_read_open(zip_handle, 0, nullptr);
                     if (err != MZ_OK) {
