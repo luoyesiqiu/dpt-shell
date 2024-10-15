@@ -151,16 +151,16 @@ void getDataDir(JNIEnv *env,char *dataDirOut,size_t max_out_len) {
     jobject appInfoObj = appBindData.getAppInfo();
 
     reflect::android_content_pm_ApplicationInfo applicationInfo(env,appInfoObj);
-    auto sourceDir = applicationInfo.getDataDir();
+    auto dataDir = applicationInfo.getDataDir();
 
-    const char *dataDirChs = env->GetStringUTFChars(sourceDir,nullptr);
+    const char *dataDirChs = env->GetStringUTFChars(dataDir,nullptr);
     snprintf(dataDirOut, max_out_len , "%s",dataDirChs);
 
     DLOGD("data dir: %s",dataDirOut);
 }
 
 jstring getApkPathExport(JNIEnv *env,jclass __unused) {
-    char apkPathChs[256] = {0};
+    char apkPathChs[512] = {0};
     getApkPath(env,apkPathChs, ARRAY_LENGTH(apkPathChs));
 
     return env->NewStringUTF(apkPathChs);
