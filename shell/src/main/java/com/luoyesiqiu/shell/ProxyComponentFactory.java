@@ -109,12 +109,18 @@ public class ProxyComponentFactory extends AppComponentFactory {
 
         //AppComponentFactory no specified
         if(!TextUtils.isEmpty(applicationName)) {
-
-            Log.d(TAG, "instantiateApplication application name specified but AppComponentFactory no specified");
+            try {
+                Class.forName(applicationName);
+            }
+            catch (ClassNotFoundException e) {
+                if(EnvUtils.getApplicationInfo() != null) {
+                    applicationName = EnvUtils.getApplicationInfo().packageName + "." + applicationName;
+                }
+            }
+            Log.d(TAG, "instantiateApplication application name specified but AppComponentFactory no specified, appName: " + applicationName);
             return super.instantiateApplication(cl, applicationName);
         }
         else{
-
             Log.d(TAG, "instantiateApplication application name and AppComponentFactory no specified");
             return super.instantiateApplication(cl, className);
         }
