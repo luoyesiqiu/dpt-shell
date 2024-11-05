@@ -477,9 +477,9 @@ public class Apk extends AndroidPackage {
         String unzipalignApkPath = savePath + File.separator + getUnzipalignApkName(originApkName);
         ZipUtils.zip(unpackFilePath, unzipalignApkPath);
 
-        String keyStoreFilePath = apkLastProcessDir + File.separator + "debug.keystore";
+        String keyStoreFilePath = apkLastProcessDir + File.separator + "dpt.jks";
 
-        String keyStoreAssetPath = "assets/debug.keystore";
+        String keyStoreAssetPath = "assets/dpt.jks";
 
         try {
             ZipUtils.readResourceFromRuntime(keyStoreAssetPath, keyStoreFilePath);
