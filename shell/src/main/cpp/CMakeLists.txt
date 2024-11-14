@@ -27,6 +27,7 @@ set(DPT_NATIVE_SOURCE
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -Werror")
 
+add_definitions(-DDECRYPT_BITCODE)
 
 if(${CMAKE_BUILD_TYPE} STREQUAL "Debug")
     add_definitions(-DDEBUG)
