@@ -277,8 +277,9 @@ void decrypt_bitcode() {
 }
 
 void init_dpt() {
+#ifdef DECRYPT_BITCODE
     decrypt_bitcode();
-
+#endif
     DLOGI("init_dpt call!");
 
     dpt_hook();
