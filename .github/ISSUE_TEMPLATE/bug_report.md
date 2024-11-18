@@ -8,16 +8,19 @@ assignees: ''
 ---
 
 **Describe the bug**
-A clear and concise description of what the bug is.
+A clear and concise description of what the bug/crash is.
 
 **dpt-shell version**
 x.x.x
 
+**Device's brand and model**
+The brand and model of the device on which you are triggering this bug or crash.
+
 **Android version**
-Android release version.
+Android os version.
 
 **Logcat**
-Logcat when the application triggers a bug or crashes.
+Logcat when the application triggers a bug or crashes, you can delete sensitive information such as package names.
 
 **Apk file**
 If it is convenient, it is best to provide the original apk file.
