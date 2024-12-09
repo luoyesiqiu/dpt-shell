@@ -1,0 +1,17 @@
+diff --git a/bytehook/src/main/cpp/CMakeLists.txt b/bytehook/src/main/cpp/CMakeLists.txt
+index 9608bd3..690b8a5 100644
+--- a/bytehook/src/main/cpp/CMakeLists.txt
++++ b/bytehook/src/main/cpp/CMakeLists.txt
+@@ -4,9 +4,9 @@ project(bytehook)
+ enable_language(ASM)
+
+ file(GLOB SRC *.c)
+-add_library(bytehook SHARED ${SRC})
+-target_compile_features(bytehook PUBLIC c_std_11)
+-target_compile_options(bytehook PUBLIC -Weverything -Werror)
++add_library(bytehook STATIC ${SRC})
++# target_compile_features(bytehook PUBLIC c_std_11)
++# target_compile_options(bytehook PUBLIC -Weverything -Werror)
+ target_include_directories(bytehook PUBLIC . include third_party/bsd third_party/lss)
+ target_link_libraries(bytehook log)
+

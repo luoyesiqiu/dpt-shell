@@ -1,6 +1,29 @@
-cmake_minimum_required(VERSION 3.18.1)
+cmake_minimum_required(VERSION 3.31.1)
 
 project("dpt")
+
+include(FetchContent)
+
+FetchContent_Declare(
+        minizip_ng
+        GIT_REPOSITORY https://github.com/zlib-ng/minizip-ng.git
+        GIT_TAG 4.0.7
+)
+set(MZ_LZMA OFF CACHE BOOL "" FORCE)
+set(MZ_ZSTD OFF CACHE BOOL "" FORCE)
+set(MZ_OPENSSL OFF CACHE BOOL "" FORCE)
+FetchContent_MakeAvailable(minizip_ng)
+
+set(patch_book git apply ${CMAKE_CURRENT_SOURCE_DIR}/patches/bhook_add_static_lib.patch)
+FetchContent_Declare(
+        bhook
+        GIT_REPOSITORY https://github.com/bytedance/bhook.git
+        GIT_TAG v1.0.5
+        PATCH_COMMAND ${patch_book}
+        SOURCE_SUBDIR bytehook/src/main/cpp
+)
+FetchContent_MakeAvailable(bhook)
+
 
 set(DPT_NATIVE_SOURCE
         dpt.cpp
@@ -40,14 +63,8 @@ else()
     message("closed log & stripped so symbols")
 endif()
 
-
-option(MZ_LZMA "Enables LZMA & XZ compression" OFF)
-option(MZ_ZSTD "Enables ZSTD compression" OFF)
-option(MZ_OPENSSL "Enables OpenSSL for encryption" OFF)
-
 include_directories(./ )
 include_directories(./common)
-include_directories(./bhook/include)
 include_directories(./minizip-ng)
 
 add_library(dpt
@@ -58,9 +75,6 @@ add_library(dpt
 include_directories(
         dobby
 )
-
-add_subdirectory(bhook)
-add_subdirectory(minizip-ng)
 
 add_library(local_dobby STATIC IMPORTED)
 set_target_properties(local_dobby PROPERTIES IMPORTED_LOCATION ${CMAKE_CURRENT_SOURCE_DIR}/../../../libs/${ANDROID_ABI}/libdobby.a)
