@@ -10,7 +10,7 @@
 #include <dlfcn.h>
 #include "dpt_util.h"
 #include "common/dpt_log.h"
-#include "minizip-ng/mz_strm.h"
+#include <mz_strm.h>
 
 using namespace dpt;
 

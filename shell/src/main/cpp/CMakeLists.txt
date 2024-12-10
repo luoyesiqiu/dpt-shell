@@ -65,7 +65,6 @@ endif()
 
 include_directories(./ )
 include_directories(./common)
-include_directories(./minizip-ng)
 
 add_library(dpt
              SHARED
