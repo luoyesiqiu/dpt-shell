@@ -22,9 +22,9 @@
 #include <android/asset_manager.h>
 #include <android/asset_manager_jni.h>
 
-#include <minizip-ng/mz_zip.h>
-#include <minizip-ng/mz_strm_mem.h>
-#include <minizip-ng/mz.h>
+#include <mz_zip.h>
+#include <mz_strm_mem.h>
+#include <mz.h>
 
 #include "dpt_jni.h"
 #include "common/dpt_log.h"
