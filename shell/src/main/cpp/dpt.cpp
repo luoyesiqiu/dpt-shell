@@ -16,7 +16,7 @@ void *codeItemFilePtr = nullptr;
 
 DPT_DATA_SECTION uint8_t DATA_SECTION_BITCODE[] = ".bitcode";
 DPT_DATA_SECTION uint8_t DATA_SECTION_RO_DATA[] = ".rodata";
-DPT_DATA_SECTION uint8_t DATA_DEFAULT_RC4_KEY[] = "ncWK&S5wbqU%IX6j";
+KEEP_SYMBOL DPT_DATA_SECTION uint8_t DPT_UNKNOWN_DATA[] = "1234567890abcdef";
 
 static JNINativeMethod gMethods[] = {
         {"craoc", "(Ljava/lang/String;)V",                               (void *) callRealApplicationOnCreate},
@@ -261,7 +261,7 @@ void decrypt_section(const char* section_name, int temp_prot, int target_prot) {
 
     u_char *bitcode = (u_char *)malloc(size);
     struct rc4_state dec_state;
-    rc4_init(&dec_state, reinterpret_cast<const u_char *>(DATA_DEFAULT_RC4_KEY), strlen((char *)DATA_DEFAULT_RC4_KEY));
+    rc4_init(&dec_state, reinterpret_cast<const u_char *>(DPT_UNKNOWN_DATA), 16);
     rc4_crypt(&dec_state, reinterpret_cast<const u_char *>(target),
               reinterpret_cast<u_char *>(bitcode),
               size);

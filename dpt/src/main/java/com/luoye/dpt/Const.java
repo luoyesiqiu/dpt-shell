@@ -27,5 +27,5 @@ public class Const {
     public static final String PROXY_COMPONENT_FACTORY = "com.luoyesiqiu.shell.ProxyComponentFactory";
     public static final short MULTI_DEX_CODE_VERSION = 1;
 
-    public static final String DEFAULT_RC4_KEY = "ncWK&S5wbqU%IX6j";
+    public static final String RC4_KEY_SYMBOL = "DPT_UNKNOWN_DATA";
 }
