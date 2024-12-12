@@ -304,7 +304,6 @@ public class Apk extends AndroidPackage {
     }
 
     private void encryptSoFiles(String apkDir){
-
         File obfDir = new File(getOutAssetsDir(apkDir).getAbsolutePath() + File.separator, "vwwwwwvwww");
         File[] soAbiDirs = obfDir.listFiles();
         if(soAbiDirs != null) {
@@ -315,37 +314,39 @@ public class Apk extends AndroidPackage {
                         if(!soFile.getAbsolutePath().endsWith(".so")) {
                             continue;
                         }
-                        try {
-                            ReadElf readElf = new ReadElf(soFile);
-                            List<ReadElf.SectionHeader> sectionHeaders = readElf.getSectionHeaders();
-                            readElf.close();
-                            for (ReadElf.SectionHeader sectionHeader : sectionHeaders) {
-
-                                if(".bitcode".equals(sectionHeader.getName())) {
-
-                                    LogUtils.info("start encrypt %s section: %s,offset: %s,size: %s",
-                                            soFile.getAbsolutePath(),
-                                            sectionHeader.getName(),
-                                            Long.toHexString(sectionHeader.getOffset()),
-                                            Long.toHexString(sectionHeader.getSize())
-                                    );
-
-                                    byte[] bitcode = IoUtils.readFile(soFile.getAbsolutePath(),sectionHeader.getOffset(),(int)sectionHeader.getSize());
-
-                                    byte[] enc = RC4Utils.crypt(Const.DEFAULT_RC4_KEY.getBytes(StandardCharsets.UTF_8),bitcode);
-
-                                    IoUtils.writeFile(soFile.getAbsolutePath(),enc,sectionHeader.getOffset());
-                                }
-                            }
-                        }
-                        catch (Exception e) {
-                            e.printStackTrace();
-                        }
+                        encryptSoFile(soFile);
                     }
                 }
              }
         }
 
+    }
+
+    private void encryptSoFile(File soFile) {
+        try {
+            ReadElf readElf = new ReadElf(soFile);
+            List<ReadElf.SectionHeader> sectionHeaders = readElf.getSectionHeaders();
+            readElf.close();
+            for (ReadElf.SectionHeader sectionHeader : sectionHeaders) {
+                if(".bitcode".equals(sectionHeader.getName())) {
+                    LogUtils.info("start encrypt %s section: %s,offset: %s,size: %s",
+                            soFile.getAbsolutePath(),
+                            sectionHeader.getName(),
+                            Long.toHexString(sectionHeader.getOffset()),
+                            Long.toHexString(sectionHeader.getSize())
+                    );
+
+                    byte[] bitcode = IoUtils.readFile(soFile.getAbsolutePath(),sectionHeader.getOffset(),(int)sectionHeader.getSize());
+
+                    byte[] enc = RC4Utils.crypt(Const.DEFAULT_RC4_KEY.getBytes(StandardCharsets.UTF_8),bitcode);
+
+                    IoUtils.writeFile(soFile.getAbsolutePath(),enc,sectionHeader.getOffset());
+                }
+            }
+        }
+        catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     private void deleteAllDexFiles(String dir){
