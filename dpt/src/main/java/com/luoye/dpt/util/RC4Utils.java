@@ -1,6 +1,8 @@
 package com.luoye.dpt.util;
 
 
+import java.security.SecureRandom;
+
 import javax.crypto.Cipher;
 import javax.crypto.spec.SecretKeySpec;
 
@@ -16,5 +18,17 @@ public class RC4Utils {
         }
 
         return null;
+    }
+
+    public static byte[] generateRC4Key() {
+        byte[] rc4key = new byte[16];
+        SecureRandom secureRandom = new SecureRandom();
+        for(int i = 0;i < rc4key.length;i++) {
+            secureRandom.nextBytes(rc4key);
+        }
+
+        rc4key[3] = 0x20;
+        rc4key[9] = 0x74;
+        return rc4key;
     }
 }

@@ -9,6 +9,7 @@ import com.luoye.dpt.model.MultiDexCode;
 import com.luoye.dpt.task.ThreadPool;
 import com.luoye.dpt.util.DexUtils;
 import com.luoye.dpt.util.FileUtils;
+import com.luoye.dpt.util.HexUtils;
 import com.luoye.dpt.util.IoUtils;
 import com.luoye.dpt.util.LogUtils;
 import com.luoye.dpt.util.ManifestUtils;
@@ -135,7 +136,9 @@ public class Apk extends AndroidPackage {
         apk.deleteAllDexFiles(apkMainProcessPath);
         apk.combineDexZipWithShellDex(apkMainProcessPath);
         apk.copyNativeLibs(apkMainProcessPath);
-        apk.encryptSoFiles(apkMainProcessPath);
+
+        byte[] rc4key = RC4Utils.generateRC4Key();
+        apk.encryptSoFiles(apkMainProcessPath,rc4key);
 
         apk.buildApk(apkFile.getAbsolutePath(),apkMainProcessPath, FileUtils.getExecutablePath());
 
@@ -303,7 +306,7 @@ public class Apk extends AndroidPackage {
         FileUtils.copy(file.getAbsolutePath(),getOutAssetsDir(apkDir).getAbsolutePath() + File.separator + "vwwwwwvwww");
     }
 
-    private void encryptSoFiles(String apkDir){
+    private void encryptSoFiles(String apkDir, byte[] rc4Key){
         File obfDir = new File(getOutAssetsDir(apkDir).getAbsolutePath() + File.separator, "vwwwwwvwww");
         File[] soAbiDirs = obfDir.listFiles();
         if(soAbiDirs != null) {
@@ -314,7 +317,8 @@ public class Apk extends AndroidPackage {
                         if(!soFile.getAbsolutePath().endsWith(".so")) {
                             continue;
                         }
-                        encryptSoFile(soFile);
+                        encryptSoFile(soFile, rc4Key);
+                        writeRC4Key(soFile, rc4Key);
                     }
                 }
              }
@@ -322,27 +326,55 @@ public class Apk extends AndroidPackage {
 
     }
 
-    private void encryptSoFile(File soFile) {
+    private void encryptSoFile(File soFile, byte[] rc4Key) {
         try {
             ReadElf readElf = new ReadElf(soFile);
             List<ReadElf.SectionHeader> sectionHeaders = readElf.getSectionHeaders();
             readElf.close();
             for (ReadElf.SectionHeader sectionHeader : sectionHeaders) {
                 if(".bitcode".equals(sectionHeader.getName())) {
-                    LogUtils.info("start encrypt %s section: %s,offset: %s,size: %s",
+                    LogUtils.info("start encrypt %s section: %s, offset: %s, size: %s",
                             soFile.getAbsolutePath(),
                             sectionHeader.getName(),
-                            Long.toHexString(sectionHeader.getOffset()),
-                            Long.toHexString(sectionHeader.getSize())
+                            HexUtils.toHexString(sectionHeader.getOffset()),
+                            sectionHeader.getSize()
                     );
 
-                    byte[] bitcode = IoUtils.readFile(soFile.getAbsolutePath(),sectionHeader.getOffset(),(int)sectionHeader.getSize());
+                    byte[] bitcode = IoUtils.readFile(soFile.getAbsolutePath(),
+                            sectionHeader.getOffset(),
+                            (int)sectionHeader.getSize()
+                    );
 
-                    byte[] enc = RC4Utils.crypt(Const.DEFAULT_RC4_KEY.getBytes(StandardCharsets.UTF_8),bitcode);
-
+                    byte[] enc = RC4Utils.crypt(rc4Key, bitcode);
                     IoUtils.writeFile(soFile.getAbsolutePath(),enc,sectionHeader.getOffset());
                 }
             }
+        }
+        catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void writeRC4Key(File soFile, byte[] rc4key) {
+        try {
+            ReadElf readElf = new ReadElf(soFile);
+            ReadElf.Symbol symbol = readElf.getDynamicSymbol(Const.RC4_KEY_SYMBOL);
+            if(symbol == null) {
+                LogUtils.warn("cannot find symbol in %s, no need write key", soFile.getName());
+                return;
+            }
+            else {
+                LogUtils.info("find symbol(%s) in %s", HexUtils.toHexString(symbol.value), soFile.getName());
+            }
+            long value = symbol.value;
+            int shndx = symbol.shndx;
+            List<ReadElf.SectionHeader> sectionHeaders = readElf.getSectionHeaders();
+            ReadElf.SectionHeader sectionHeader = sectionHeaders.get(shndx);
+            long symbolDataOffset = sectionHeader.getOffset() + value - sectionHeader.getAddr();
+            LogUtils.info("write symbol data to %s(%s)", soFile.getName(), HexUtils.toHexString(symbolDataOffset));
+
+            readElf.close();
+            IoUtils.writeFile(soFile.getAbsolutePath(),rc4key,symbolDataOffset);
         }
         catch (Exception e) {
             e.printStackTrace();

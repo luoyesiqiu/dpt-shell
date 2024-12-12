@@ -49,6 +49,7 @@ public class ReadElf implements AutoCloseable {
     private static final int SHT_STRTAB = 3;
     private static final int SHT_DYNAMIC = 6;
     private static final int SHT_DYNSYM = 11;
+
     public static class Symbol {
         public static final int STB_LOCAL = 0;
         public static final int STB_GLOBAL = 1;
@@ -65,15 +66,20 @@ public class ReadElf implements AutoCloseable {
         public final String name;
         public final int bind;
         public final int type;
-        Symbol(String name, int st_info) {
+        public final long value;
+        public final int shndx;
+        Symbol(String name, int st_info, long st_value, int st_shndx) {
             this.name = name;
             this.bind = (st_info >> 4) & 0x0F;
             this.type = st_info & 0x0F;
+            this.value = st_value;
+            this.shndx = st_shndx;
         }
         @Override
         public String toString() {
-            return "Symbol[" + name + "," + toBind() + "," + toType() + "]";
+            return "Symbol[" + name + "," + toBind() + "," + toType() + "," + value + "," + shndx + "]";
         }
+
         private String toBind() {
             switch (bind) {
                 case STB_LOCAL:
@@ -85,6 +91,7 @@ public class ReadElf implements AutoCloseable {
             }
             return "STB_??? (" + bind + ")";
         }
+
         private String toType() {
             switch (type) {
                 case STT_NOTYPE:
@@ -105,8 +112,8 @@ public class ReadElf implements AutoCloseable {
             return "STT_??? (" + type + ")";
         }
     }
-    public static class SectionHeader {
 
+    public static class SectionHeader {
         public SectionHeader(String sh_name, long sh_type, long sh_flags, long sh_addr, long sh_offset, long sh_size) {
             this.sh_name = sh_name;
             this.sh_type = sh_type;
@@ -146,8 +153,8 @@ public class ReadElf implements AutoCloseable {
         private long sh_offset;
         private long sh_size;
 
-
     }
+
     private final String mPath;
     private final RandomAccessFile mFile;
     private final byte[] mBuffer = new byte[512];
@@ -185,6 +192,7 @@ public class ReadElf implements AutoCloseable {
     public static ReadElf read(File file) throws IOException {
         return new ReadElf(file);
     }
+
     public boolean isDynamic() {
         return mIsDynamic;
     }
@@ -267,6 +275,7 @@ public class ReadElf implements AutoCloseable {
         readSectionHeaders(sh_off, e_shnum, e_shentsize, e_shstrndx);
         readProgramHeaders(ph_off, e_phnum, e_phentsize);
     }
+
     private void readSectionHeaders(long sh_off, int e_shnum, int e_shentsize, int e_shstrndx)
             throws IOException {
         // Read the Section Header String Table offset first.
@@ -325,6 +334,7 @@ public class ReadElf implements AutoCloseable {
             }
         }
     }
+
     private void readProgramHeaders(long ph_off, int e_phnum, int e_phentsize) throws IOException {
         for (int i = 0; i < e_phnum; ++i) {
             mFile.seek(ph_off + i * e_phentsize);
@@ -343,6 +353,7 @@ public class ReadElf implements AutoCloseable {
             }
         }
     }
+
     private HashMap<String, Symbol> readSymbolTable(long symStrOffset, long symStrSize,
                                                     long tableOffset, long tableSize) throws IOException {
         HashMap<String, Symbol> result = new HashMap<String, Symbol>();
@@ -350,36 +361,40 @@ public class ReadElf implements AutoCloseable {
         while (mFile.getFilePointer() < tableOffset + tableSize) {
             long st_name = readWord();
             int st_info;
+            long st_value;
+            int st_shndx;
             if (mAddrSize == 8) {
                 st_info = readByte();
                 int st_other = readByte();
-                int st_shndx = readHalf();
-                long st_value = readAddr();
+                st_shndx = readHalf();
+                st_value = readAddr();
                 long st_size = readX(mAddrSize);
             } else {
-                long st_value = readAddr();
+                st_value = readAddr();
                 long st_size = readWord();
                 st_info = readByte();
                 int st_other = readByte();
-                int st_shndx = readHalf();
+                st_shndx = readHalf();
             }
             if (st_name == 0) {
                 continue;
             }
             final String symName = readStrTabEntry(symStrOffset, symStrSize, st_name);
             if (symName != null) {
-                Symbol s = new Symbol(symName, st_info);
+                Symbol s = new Symbol(symName, st_info, st_value, st_shndx);
                 result.put(symName, s);
             }
         }
         return result;
     }
+
     private String readShStrTabEntry(long strOffset) throws IOException {
         if (mShStrTabOffset == 0 || strOffset < 0 || strOffset >= mShStrTabSize) {
             return null;
         }
         return readString(mShStrTabOffset + strOffset);
     }
+
     private String readStrTabEntry(long tableOffset, long tableSize, long strOffset)
             throws IOException {
         if (tableOffset == 0 || strOffset < 0 || strOffset >= tableSize) {
@@ -387,18 +402,23 @@ public class ReadElf implements AutoCloseable {
         }
         return readString(tableOffset + strOffset);
     }
+
     private int readHalf() throws IOException {
         return (int) readX(2);
     }
+
     private long readWord() throws IOException {
         return readX(4);
     }
+
     private long readOff() throws IOException {
         return readX(mAddrSize);
     }
+
     private long readAddr() throws IOException {
         return readX(mAddrSize);
     }
+
     private long readX(int byteCount) throws IOException {
         mFile.readFully(mBuffer, 0, byteCount);
         int answer = 0;
@@ -414,6 +434,7 @@ public class ReadElf implements AutoCloseable {
         }
         return answer;
     }
+
     private String readString(long offset) throws IOException {
         long originalOffset = mFile.getFilePointer();
         mFile.seek(offset);
@@ -426,9 +447,11 @@ public class ReadElf implements AutoCloseable {
         }
         return null;
     }
+
     private int readByte() throws IOException {
         return mFile.read() & 0xff;
     }
+
     public Symbol getSymbol(String name) {
         if (mSymbols == null) {
             try {
@@ -439,6 +462,7 @@ public class ReadElf implements AutoCloseable {
         }
         return mSymbols.get(name);
     }
+
     public Symbol getDynamicSymbol(String name) {
         if (mDynamicSymbols == null) {
             try {
