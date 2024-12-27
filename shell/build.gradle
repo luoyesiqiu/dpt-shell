@@ -78,6 +78,7 @@ def afterAssembleCopy(Project project, Map archMap, boolean debug) {
 
     for(e in archMap) {
         copy {
+            include "**/libdpt.so"
             from file(sourceSoLibsDir.absolutePath + File.separator
                     + e.key)
             into file(targetSoLibsDir.absolutePath + File.separator
@@ -112,6 +113,7 @@ def afterNativeBuildCopy(Project project, Map archMap, boolean debug) {
 
     for(e in archMap) {
         copy {
+            include "**/libdpt.so"
             from file(sourceDir.getAbsolutePath() + File.separator
                     + e.key)
             into file(targetDir.getAbsolutePath() + File.separator
