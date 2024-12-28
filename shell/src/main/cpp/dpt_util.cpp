@@ -490,7 +490,7 @@ DPT_ENCRYPT int find_in_maps(int count,...) {
 
             for(int i = 0;i < count;i++) {
                 const char *arg = va_arg(ap,const char *);
-                if(strstr(item_name,arg) != 0) {
+                if(dpt_strstr(item_name,arg) != 0) {
                     DLOGD("found %s in %s",arg,item_name);
                     found++;
                 }
