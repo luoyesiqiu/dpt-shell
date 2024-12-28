@@ -4,7 +4,7 @@
 
 #include "dpt_risk.h"
 
-void crash() {
+DPT_ENCRYPT NO_INLINE void dpt_crash() {
 #ifdef __aarch64__
     asm volatile(
             "mov x30,#0\t\n"
@@ -24,19 +24,19 @@ void crash() {
 #endif
 }
 
-void junkCodeDexProtect(JNIEnv *env) {
+DPT_ENCRYPT void junkCodeDexProtect(JNIEnv *env) {
     jclass klass = dpt::jni::FindClass(env,JUNK_CLASS_FULL_NAME);
     if(klass == nullptr) {
-        crash();
+        dpt_crash();
     }
 }
 
-[[noreturn]] void *detectFridaOnThread(__unused void *args) {
+[[noreturn]] DPT_ENCRYPT void *detectFridaOnThread(__unused void *args) {
     while (true) {
         int frida_so_count = find_in_maps(1,"frida-agent");
         if(frida_so_count > 0) {
             DLOGD("detectFridaOnThread found frida so");
-            crash();
+            dpt_crash();
         }
         int frida_thread_count = find_in_threads_list(4
                 ,"pool-frida"
@@ -46,7 +46,7 @@ void junkCodeDexProtect(JNIEnv *env) {
 
         if(frida_thread_count >= 2) {
             DLOGD("detectFridaOnThread found frida threads");
-            crash();
+            dpt_crash();
         }
         sleep(10);
     }
@@ -58,7 +58,7 @@ DPT_ENCRYPT void detectFrida() {
     pthread_create(&t, nullptr,detectFridaOnThread,nullptr);
 }
 
-void doPtrace() {
+DPT_ENCRYPT void doPtrace() {
     __unused int ret = sys_ptrace(PTRACE_TRACEME,0,0,0);
     DLOGD("doPtrace result: %d",ret);
 }
@@ -73,7 +73,7 @@ DPT_ENCRYPT void *protectProcessOnThread(void *args) {
     int pid = waitpid(child, nullptr, 0);
     if(pid > 0) {
         DLOGW("%s detect child process %d exited", __FUNCTION__, pid);
-        crash();
+        dpt_crash();
     }
     DLOGD("%s waitpid %d end", __FUNCTION__ ,child);
 
