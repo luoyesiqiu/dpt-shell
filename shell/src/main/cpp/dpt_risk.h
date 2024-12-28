@@ -21,7 +21,7 @@
 #include "dpt_jni.h"
 #include "linux_syscall_support.h"
 
-void crash();
+void dpt_crash();
 void detectFrida();
 void doPtrace();
 void protectChildProcess(pid_t pid);

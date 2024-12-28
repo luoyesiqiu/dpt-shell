@@ -135,7 +135,7 @@ DPT_ENCRYPT void patchClass(__unused const char* descriptor,
         DLOGD("Attempt patch junk class %s ,char is '%c'",descriptor,ch);
         if(isdigit(ch)) {
             DLOGE("Find illegal call, desc: %s!", descriptor);
-            crash();
+            dpt_crash();
             return;
         }
 

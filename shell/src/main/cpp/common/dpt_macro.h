@@ -14,6 +14,7 @@
 #define KEEP_SYMBOL __attribute__((visibility("default")))
 #define INIT_ARRAY_SECTION __attribute__ ((constructor))
 #define ALWAYS_INLINE static inline __attribute__((always_inline))
+#define NO_INLINE __attribute__((noinline))
 #define SYS_INLINE ALWAYS_INLINE
 #define DPT_ENCRYPT SECTION(SECTION_NAME_BITCODE)
 #define DPT_DATA_SECTION SECTION(SECTION_NAME_DATA)
