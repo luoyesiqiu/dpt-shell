@@ -81,18 +81,11 @@ void change_dex_protective(uint8_t * begin,int dexSize,int dexIndex){
     }
 }
 
-DPT_ENCRYPT void patchMethod(uint8_t *begin,__unused const char *location,uint32_t dexSize,int dexIndex,uint32_t methodIdx,uint32_t codeOff){
-    if(codeOff == 0){
-        NLOG("[*] patchMethod dex: %d methodIndex: %d no need patch!",dexIndex,methodIdx);
-        return;
-    }
-    auto *dexCodeItem = (dex::CodeItem *) (begin + codeOff);
-
-    uint16_t firstDvmCode = *((uint16_t*)dexCodeItem->insns_);
-    if(firstDvmCode != 0x0012 && firstDvmCode != 0x0016 && firstDvmCode != 0x000e){
-        NLOG("[*] this method has code no need to patch");
-        return;
-    }
+DPT_ENCRYPT void patchMethod(uint8_t *begin,
+                             __unused const char *location,
+                             uint32_t dexSize,
+                             int dexIndex,
+                             uint32_t methodIdx) {
 
     auto dexIt = dexMap.find(dexIndex);
     if (LIKELY(dexIt != dexMap.end())) {
@@ -106,15 +99,19 @@ DPT_ENCRYPT void patchMethod(uint8_t *begin,__unused const char *location,uint32
 
         if (LIKELY(codeItemIt != codeItemMap->end())) {
             data::CodeItem* codeItem = codeItemIt->second;
-            auto *realCodeItemPtr = (uint8_t *)(dexCodeItem->insns_);
+            if(codeItem->getOffsetDex() == 0) {
+                NLOG("[*] patchMethod dex: %d methodIndex: %d no need patch!",dexIndex,methodIdx);
+                return;
+            }
+            auto *realInsnsPtr = (uint8_t *)(begin + codeItem->getOffsetDex());
 
             NLOG("[*] patchMethod codeItem patch, methodIndex = %d,insnsSize = %d >>> %p(0x%x)",
                  codeItem->getMethodIdx(),
                  codeItem->getInsnsSize(),
-                 realCodeItemPtr,
-                 (unsigned int)(realCodeItemPtr - begin));
+                 realInsnsPtr,
+                 (unsigned int)(realInsnsPtr - begin));
 
-            memcpy(realCodeItemPtr,codeItem->getInsns(),codeItem->getInsnsSize());
+            memcpy(realInsnsPtr,codeItem->getInsns(),codeItem->getInsnsSize());
         }
         else{
             NLOG("[*] patchMethod cannot find  methodId: %d in codeitem map, dex index: %d(%s)",methodIdx,dexIndex,location);
@@ -205,13 +202,13 @@ DPT_ENCRYPT void patchClass(__unused const char* descriptor,
                 for (uint64_t i = 0; i < direct_methods_size; i++) {
                     auto method = directMethods[i];
                     patchMethod(begin, location.c_str(), dexSize, dexIndex,
-                                method.method_idx_delta_, method.code_off_);
+                                method.method_idx_delta_);
                 }
 
                 for (uint64_t i = 0; i < virtual_methods_size; i++) {
                     auto method = virtualMethods[i];
                     patchMethod(begin, location.c_str(), dexSize, dexIndex,
-                                method.method_idx_delta_, method.code_off_);
+                                method.method_idx_delta_);
                 }
             }
             else {
