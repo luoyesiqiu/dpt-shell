@@ -12,6 +12,7 @@ import org.json.JSONObject;
 import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
+import java.security.SecureRandom;
 import java.util.*;
 
 /**
@@ -60,7 +61,7 @@ public class DexUtils {
             for (ClassDef classDef : classDefs) {
                 boolean skip = false;
                 //Skip exclude classes name
-                for(String rule : excludeRule){
+                for(String rule : excludeRule) {
                     if(classDef.toString().matches(rule)){
                         skip = true;
                         break;
@@ -155,7 +156,7 @@ public class DexUtils {
             return null;
         }
         Instruction instruction = new Instruction();
-        //16 = registers_size + ins_size + outs_size + tries_size + debug_info_off + insns_size
+        // CodeItem size = registers_size + ins_size + outs_size + tries_size + debug_info_off + insns_size = 16
         int insnsOffset = method.getCodeOffset() + 16;
         Code code = dex.readCode(method);
         //Fault-tolerant handling
@@ -186,18 +187,17 @@ public class DexUtils {
         //Note: Here is the size of the array
         instruction.setInstructionDataSize(insnsCapacity * 2);
         byte[] byteCode = new byte[insnsCapacity * 2];
-        //Write nop instruction
+        //Write random bytes
+        SecureRandom insRandom = new SecureRandom();
         for (int i = 0; i < insnsCapacity; i++) {
             outRandomAccessFile.seek(insnsOffset + (i * 2));
             byteCode[i * 2] = outRandomAccessFile.readByte();
             byteCode[i * 2 + 1] = outRandomAccessFile.readByte();
             outRandomAccessFile.seek(insnsOffset + (i * 2));
-            outRandomAccessFile.writeShort(0);
+            outRandomAccessFile.writeShort(insRandom.nextInt());
         }
         instruction.setInstructionsData(byteCode);
         outRandomAccessFile.seek(insnsOffset);
-        //Write return instruction
-        outRandomAccessFile.write(returnByteCodes);
 
         return instruction;
     }
