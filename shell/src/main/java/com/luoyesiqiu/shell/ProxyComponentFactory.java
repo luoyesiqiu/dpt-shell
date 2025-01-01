@@ -110,7 +110,7 @@ public class ProxyComponentFactory extends AppComponentFactory {
         //AppComponentFactory no specified
         if(!TextUtils.isEmpty(applicationName)) {
             try {
-                Class.forName(applicationName);
+                Class.forName(applicationName, false, cl);
             }
             catch (ClassNotFoundException e) {
                 if(EnvUtils.getApplicationInfo() != null) {
