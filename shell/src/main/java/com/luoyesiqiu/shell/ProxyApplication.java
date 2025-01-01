@@ -20,7 +20,7 @@ public class ProxyApplication extends Application {
     private void replaceApplication() {
         if (Global.sNeedCalledApplication && !TextUtils.isEmpty(realApplicationName)) {
             realApplication = (Application) JniBridge.ra(realApplicationName);
-            Log.d(TAG, "applicationExchange: " + realApplicationName+"  realApplication="+realApplication.getClass().getName());
+            Log.d(TAG, "applicationExchange: " + realApplicationName + ", realApplication: " + realApplication.getClass().getName());
 
             JniBridge.craa(getApplicationContext(), realApplicationName);
             JniBridge.craoc(realApplicationName);

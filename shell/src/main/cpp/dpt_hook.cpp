@@ -176,23 +176,15 @@ DPT_ENCRYPT void patchClass(__unused const char* descriptor,
 
                 uint64_t static_fields_size = 0;
                 read += DexFileUtils::readUleb128(class_data, &static_fields_size);
-                NLOG("[-] DefineClass static_fields_size = %llu,read = %zu", (unsigned long long)static_fields_size,
-                     read);
 
                 uint64_t instance_fields_size = 0;
                 read += DexFileUtils::readUleb128(class_data + read, &instance_fields_size);
-                NLOG("[-] DefineClass instance_fields_size = %llu,read = %zu",
-                     (unsigned long long)instance_fields_size, read);
 
                 uint64_t direct_methods_size = 0;
                 read += DexFileUtils::readUleb128(class_data + read, &direct_methods_size);
-                NLOG("[-] DefineClass direct_methods_size = %llu,read = %zu",
-                     (unsigned long long)direct_methods_size, read);
 
                 uint64_t virtual_methods_size = 0;
                 read += DexFileUtils::readUleb128(class_data + read, &virtual_methods_size);
-                NLOG("[-] DefineClass virtual_methods_size = %llu,read = %zu",
-                     (unsigned long long)virtual_methods_size, read);
 
                 dex::ClassDataField staticFields[static_fields_size];
                 read += DexFileUtils::readFields(class_data + read, staticFields,
@@ -212,16 +204,12 @@ DPT_ENCRYPT void patchClass(__unused const char* descriptor,
 
                 for (uint64_t i = 0; i < direct_methods_size; i++) {
                     auto method = directMethods[i];
-                    NLOG("[-] DefineClass directMethods[%llu] methodIndex = %u,code_off = 0x%x",
-                         (unsigned long long)i, method.method_idx_delta_, method.code_off_);
                     patchMethod(begin, location.c_str(), dexSize, dexIndex,
                                 method.method_idx_delta_, method.code_off_);
                 }
 
                 for (uint64_t i = 0; i < virtual_methods_size; i++) {
                     auto method = virtualMethods[i];
-                    NLOG("[-] DefineClass virtualMethods[%llu] methodIndex = %u,code_off = 0x%x",
-                         (unsigned long long)i, method.method_idx_delta_, method.code_off_);
                     patchMethod(begin, location.c_str(), dexSize, dexIndex,
                                 method.method_idx_delta_, method.code_off_);
                 }
@@ -267,13 +255,16 @@ DPT_ENCRYPT void *DefineClassV21(void* thiz,
 
 DPT_ENCRYPT  void hook_DefineClass(){
     void* defineClassAddress = DobbySymbolResolver(GetClassLinkerDefineClassLibPath(),getClassLinkerDefineClassSymbol());
+
+    int hookResult;
     if(g_sdkLevel >= __ANDROID_API_L_MR1__) {
-        DobbyHook(defineClassAddress, (void *) DefineClassV22, (void **) &g_originDefineClassV22);
+        hookResult = DobbyHook(defineClassAddress, (void *) DefineClassV22, (void **) &g_originDefineClassV22);
     }
     else {
-        DobbyHook(defineClassAddress, (void *) DefineClassV21, (void **) &g_originDefineClassV21);
-
+        hookResult = DobbyHook(defineClassAddress, (void *) DefineClassV21, (void **) &g_originDefineClassV21);
     }
+
+    DLOGD("%s hook result: %d",__FUNCTION__,hookResult);
 }
 
 const char *getArtLibName() {
@@ -325,13 +316,16 @@ DPT_ENCRYPT void hook_mmap(){
     if(stub != nullptr){
         DLOGD("mmap hook success!");
     }
+    else {
+        DLOGE("mmap hook fail!");
+    }
 }
 
 DPT_ENCRYPT int fake_execve(const char *pathname, char *const argv[], char *const envp[]) {
     BYTEHOOK_STACK_SCOPE();
-    DLOGW("execve hooked: %s", pathname);
+    DLOGD("execve hooked: %s", pathname);
     if (strstr(pathname, "dex2oat") != nullptr) {
-        DLOGW("execve blocked: %s", pathname);
+        DLOGD("execve blocked: %s", pathname);
         errno = EACCES;
         return -1;
     }
@@ -348,5 +342,8 @@ DPT_ENCRYPT void hook_execve(){
             nullptr);
     if (stub != nullptr) {
         DLOGD("execve hook success!");
+    }
+    else {
+        DLOGE("execve hook fail!");
     }
 }
