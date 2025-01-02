@@ -5,9 +5,11 @@
 #ifndef DPT_MULTIDEXCODE_H
 #define DPT_MULTIDEXCODE_H
 
-#include <stdint.h>
+#include <cstdint>
+#include <cstring>
 #include "CodeItem.h"
 #include "common/dpt_log.h"
+
 namespace dpt {
     namespace data {
         class MultiDexCode {
