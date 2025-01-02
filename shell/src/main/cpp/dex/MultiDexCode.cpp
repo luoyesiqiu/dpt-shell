@@ -40,19 +40,19 @@ dpt::data::CodeItem* dpt::data::MultiDexCode::nextCodeItem(uint32_t* offset) {
 }
 
 uint8_t dpt::data::MultiDexCode::readUInt8(uint32_t offset){
-    uint8_t t = *((uint8_t*)(m_buffer + offset));
-
+    uint8_t t = 0;
+    memcpy(&t, m_buffer + offset, sizeof(uint8_t));
     return t;
 }
 
 uint16_t dpt::data::MultiDexCode::readUInt16(uint32_t offset){
-    uint16_t t = *((uint16_t*)(m_buffer + offset));
-
+    uint16_t t = 0;
+    memcpy(&t, m_buffer + offset, sizeof(uint16_t));
     return t;
 }
 
 uint32_t dpt::data::MultiDexCode::readUInt32(uint32_t offset){
-    uint32_t t = *((uint32_t*)(m_buffer + offset));
-
+    uint32_t t = 0;
+    memcpy(&t, m_buffer + offset, sizeof(uint32_t));
     return t;
 }
