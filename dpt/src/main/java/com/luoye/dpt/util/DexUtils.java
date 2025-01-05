@@ -14,32 +14,87 @@ import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.security.SecureRandom;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * @author luoyesiqiu
  */
 public class DexUtils {
+    private final static Map<String,Integer> codeOffAppearMap = new ConcurrentHashMap<>();
+
     /* The following are the rules for classes that do not extract */
     private static final String[] excludeRule = {
-      "Landroid/.*",
-      "Landroidx/.*",
-      "Lcom/squareup/okhttp/.*",
-      "Lokio/.*", "Lokhttp3/.*",
-      "Lkotlin/.*",
-      "Lcom/google/.*",
-      "Lrx/.*",
-      "Lorg/apache/.*",
-      "Lretrofit2/.*",
-      "Lcom/alibaba/.*",
-      "Lcom/amap/api/.*",
-      "Lcom/sina/weibo/.*",
-      "Lcom/xiaomi/.*",
-      "Lcom/eclipsesource/.*",
-      "Lcom/blankj/utilcode/.*",
-      "Lcom/umeng/.*",
-      "Ljavax/.*",
-      "Lorg/slf4j/.*"
+            "Landroid/.*",
+            "Landroidx/.*",
+            "Lcom/squareup/okhttp/.*",
+            "Lokio/.*", "Lokhttp3/.*",
+            "Lkotlin/.*",
+            "Lcom/google/.*",
+            "Lrx/.*",
+            "Lorg/apache/.*",
+            "Lretrofit2/.*",
+            "Lcom/alibaba/.*",
+            "Lcom/amap/api/.*",
+            "Lcom/sina/weibo/.*",
+            "Lcom/xiaomi/.*",
+            "Lcom/eclipsesource/.*",
+            "Lcom/blankj/utilcode/.*",
+            "Lcom/umeng/.*",
+            "Ljavax/.*",
+            "Lorg/slf4j/.*"
     };
+
+    private static void saveCodeOffAppear(Dex dex, int dexIndex) {
+        codeOffAppearMap.clear();
+        Iterable<ClassDef> classDefs = dex.classDefs();
+
+        for (ClassDef classDef : classDefs) {
+            int classDataOffset = classDef.getClassDataOffset();
+            if(classDataOffset == 0) {
+                continue;
+            }
+
+            ClassData classData = dex.readClassData(classDef);
+            ClassData.Method[] methods = classData.allMethods();
+            for (ClassData.Method method : methods) {
+                if (method.getCodeOffset() != 0) {
+                    codeOffAppearMap.merge(dexIndex + "_" + method.getCodeOffset(), 1, Integer::sum);
+                }
+            }
+        }
+
+    }
+
+    private static int getCodeOffAppearCount(int dexIndex, int codeOff) {
+        try {
+            Integer appearCount = codeOffAppearMap.get(dexIndex + "_" + codeOff);
+            if(appearCount != null) {
+                return appearCount;
+            }
+        }
+        catch (Exception e){
+            e.printStackTrace();
+        }
+        return 0;
+    }
+
+    /**
+     * Get dex file number
+     * ex：classes2.dex return 1
+     */
+    public static int getDexNumber(String dexName) {
+        Pattern pattern = Pattern.compile("classes(\\d*)\\.dex$");
+        Matcher matcher = pattern.matcher(dexName);
+        if(matcher.find()) {
+            String dexNo = matcher.group(1);
+            return (dexNo == null || dexNo.isEmpty()) ? 0 : Integer.parseInt(dexNo) - 1;
+        }
+        else{
+            return  -1;
+        }
+    }
 
     /**
      * Extract all methods code
@@ -56,9 +111,17 @@ public class DexUtils {
         JSONArray dumpJSON = new JSONArray();
         try {
             dex = new Dex(dexFile);
+            int dexNumber = getDexNumber(dexFile.getName());
             randomAccessFile = new RandomAccessFile(outDexFile, "rw");
             Iterable<ClassDef> classDefs = dex.classDefs();
+
+            saveCodeOffAppear(dex, dexNumber);
+
             for (ClassDef classDef : classDefs) {
+                if(classDef.getClassDataOffset() == 0) {
+                    LogUtils.noisy("class '%s' data offset is zero", classDef.toString());
+                    continue;
+                }
                 boolean skip = false;
                 //Skip exclude classes name
                 for(String rule : excludeRule) {
@@ -67,11 +130,7 @@ public class DexUtils {
                         break;
                     }
                 }
-                if(skip){
-                    continue;
-                }
-                if(classDef.getClassDataOffset() == 0){
-                    LogUtils.noisy("class '%s' data offset is zero",classDef.toString());
+                if(skip) {
                     continue;
                 }
 
@@ -82,18 +141,14 @@ public class DexUtils {
                 String className = dex.typeNames().get(classDef.getTypeIndex());
                 String humanizeTypeName = TypeUtils.getHumanizeTypeName(className);
 
-                ClassData.Method[] directMethods = classData.getDirectMethods();
-                ClassData.Method[] virtualMethods = classData.getVirtualMethods();
-                for (ClassData.Method method : directMethods) {
-                    Instruction instruction = extractMethod(dex,randomAccessFile,classDef,method);
-                    if(instruction != null) {
-                        instructionList.add(instruction);
-                        putToJSON(classJSONArray, instruction);
+                ClassData.Method[] methods = classData.allMethods();
+                for (ClassData.Method method : methods) {
+                    if(getCodeOffAppearCount(dexNumber, method.getCodeOffset()) > 1) {
+                        LogUtils.noisy("codeoff 0x%x appear many times", method.getCodeOffset());
+                        continue;
                     }
-                }
 
-                for (ClassData.Method method : virtualMethods) {
-                    Instruction instruction = extractMethod(dex, randomAccessFile,classDef, method);
+                    Instruction instruction = extractMethod(dex,randomAccessFile,classDef,method);
                     if(instruction != null) {
                         instructionList.add(instruction);
                         putToJSON(classJSONArray, instruction);
