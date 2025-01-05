@@ -431,22 +431,6 @@ public class Apk extends AndroidPackage {
         return false;
     }
 
-    /**
-     * Get dex file number
-     * ex：classes2.dex return 1
-     */
-    private int getDexNumber(String dexName){
-        Pattern pattern = Pattern.compile("classes(\\d*)\\.dex$");
-        Matcher matcher = pattern.matcher(dexName);
-        if(matcher.find()){
-            String dexNo = matcher.group(1);
-            return (dexNo == null || "".equals(dexNo)) ? 0 : Integer.parseInt(dexNo) - 1;
-        }
-        else{
-            return  -1;
-        }
-    }
-
     private void  extractDexCode(String apkOutDir){
         List<File> dexFiles = getDexFiles(apkOutDir);
         Map<Integer,List<Instruction>> instructionMap = new HashMap<>();
@@ -456,7 +440,7 @@ public class Apk extends AndroidPackage {
         CountDownLatch countDownLatch = new CountDownLatch(dexFiles.size());
         for(File dexFile : dexFiles) {
             ThreadPool.getInstance().execute(() -> {
-                final int dexNo = getDexNumber(dexFile.getName());
+                final int dexNo = DexUtils.getDexNumber(dexFile.getName());
                 if(dexNo < 0){
                     return;
                 }
