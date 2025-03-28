@@ -28,7 +28,11 @@ int dpt_mprotect(void *start,void *end,int prot) {
     size_t size = end_addr - start_addr;
 
     if (0 != mprotect((void *)start_addr, size, prot)) {
-        DLOGW("%s mprotect %p-%p fail",__FUNCTION__,start,end);
+        DLOGW("%s mprotect 0x%" PRIxPTR  "-0x%" PRIxPTR  " fail, pagesize: %d, err: %s",__FUNCTION__,
+              start_addr,
+              end_addr,
+              getpagesize(),
+              strerror(errno));
         return -1;
     }
     return 0;
