@@ -32,7 +32,9 @@
 
 #define CODE_ITEM_NAME_IN_ASSETS "OoooooOooo"
 
-#define PAGE_START(addr) ((addr) & (uintptr_t)PAGE_MASK)
+#define DPT_PAGE_MASK (~((getpagesize()) - 1))
+
+#define PAGE_START(addr) ((addr) & (uintptr_t)DPT_PAGE_MASK)
 
 #ifdef __LP64__
 #define LIB_DIR "lib64"
