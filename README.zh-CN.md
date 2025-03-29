@@ -30,14 +30,18 @@ java -jar dpt.jar -f /path/to/apk
 
 ```text
 usage: java -jar dpt.jar [option] -f <apk>
--c,--disable-acf    Disable app component factory(just use for debug).
--d,--dump-code      Dump the code item of DEX and save it to .json files.
--D,--debug          Make apk debuggable.
--e,--exclude-abi    Exclude specific ABIs (comma separated, e.g. x86,x86_64).
--f,--apk-file <arg> Need to protect apk file.
--l,--noisy-log      Open noisy log.
--o,--output <arg>   Output directory for protected apk.
--x,--no-sign        Do not sign apk.
+ -c,--disable-acf           Disable app component factory (just for debug).
+ -d,--dump-code             Dump the code item of DEX and save it to .json files.
+ -D,--debug                 Make apk debuggable.
+ -f,--apk-file <arg>        Need to protect apk file.
+ -l,--noisy-log             Enable noisy log.
+ -x,--no-sign               Do not sign apk.
+ -e,--exclude-abi <arg>     Exclude specific ABIs.
+                            Supported ABIs:
+                              - arm       (armeabi-v7a)
+                              - arm64     (arm64-v8a)
+                              - x86
+                              - x86_64
 ```
 
 ## 原理解析
