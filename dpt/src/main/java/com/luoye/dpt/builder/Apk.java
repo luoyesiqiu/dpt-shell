@@ -21,6 +21,7 @@ import com.wind.meditor.property.AttributeItem;
 import com.wind.meditor.property.ModificationProperty;
 import com.wind.meditor.utils.NodeValue;
 
+import java.nio.file.StandardCopyOption;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -546,116 +547,96 @@ public class Apk extends AndroidPackage {
         return dexFiles;
     }
 
-private void buildApk(String originApkPath, String unpackFilePath, String savePath) {
-    String outputPath = getOutputPath();
-    File outputPathFile = null;
-    String outputDir;
-    String resultFileName = null;
-    
-    if (outputPath != null) {
-        outputPathFile = new File(outputPath);
-        if (outputPath.endsWith(".apk")) {
-            outputDir = outputPathFile.getParent();
-            resultFileName = outputPathFile.getName();
+    private void buildApk(String originApkPath, String unpackFilePath, String savePath) {
+        String outputPath = getOutputPath();
+        File outputPathFile = null;
+        String outputDir;
+        String resultFileName = null;
+
+        if (outputPath != null) {
+            outputPathFile = new File(outputPath);
+            if (outputPath.endsWith(".apk")) {
+                outputDir = outputPathFile.getParent();
+                resultFileName = outputPathFile.getName();
+            } else {
+                outputDir = outputPath;
+            }
         } else {
-            outputDir = outputPath;
+            outputDir = savePath;
         }
-    } else {
-        outputDir = savePath;
-    }
-    
-    File outputDirFile = new File(outputDir);
-    if (!outputDirFile.exists()) {
-        outputDirFile.mkdirs();
-    }
 
-    String originApkName = new File(originApkPath).getName();
-    String apkLastProcessDir = getLastProcessDir().getAbsolutePath();
+        File outputDirFile = new File(outputDir);
+        if (!outputDirFile.exists()) {
+            outputDirFile.mkdirs();
+        }
 
-    String unzipalignApkPath = outputDir + File.separator + 
-        (resultFileName != null ? "temp_" + resultFileName : getUnzipalignApkName(originApkName));
-    ZipUtils.zip(unpackFilePath, unzipalignApkPath);
+        String originApkName = new File(originApkPath).getName();
+        String apkLastProcessDir = getLastProcessDir().getAbsolutePath();
 
-    String keyStoreFilePath = apkLastProcessDir + File.separator + "dpt.jks";
-    String keyStoreAssetPath = "assets/dpt.jks";
+        String unzipalignApkPath = outputDir + File.separator +
+            (resultFileName != null ? "temp_" + resultFileName : getUnzipalignApkName(originApkName));
+        ZipUtils.zip(unpackFilePath, unzipalignApkPath);
 
-    try {
-        ZipUtils.readResourceFromRuntime(keyStoreAssetPath, keyStoreFilePath);
-    }
-    catch (IOException e){
-        e.printStackTrace();
-    }
+        String keyStoreFilePath = apkLastProcessDir + File.separator + "dpt.jks";
+        try {
+            ZipUtils.readResourceFromRuntime("assets/dpt.jks", keyStoreFilePath);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
 
-    String unsignedApkPath = outputDir + File.separator + 
-        (resultFileName != null ? "unsigned_" + resultFileName : getUnsignApkName(originApkName));
-    boolean zipalignSuccess = false;
-    try {
-        zipalignApk(unzipalignApkPath, unsignedApkPath);
-        zipalignSuccess = true;
-    } catch (Exception e) {
-        e.printStackTrace();
-    }
+        String unsignedApkPath = outputDir + File.separator +
+            (resultFileName != null ? "unsigned_" + resultFileName : getUnsignApkName(originApkName));
 
-    String willSignApkPath = null;
-    if (zipalignSuccess) {
-        LogUtils.info("zipalign success.");
-        willSignApkPath = unsignedApkPath;
-    }
-    else{
-        LogUtils.error("warning: zipalign failed!");
-        willSignApkPath = unzipalignApkPath;
-    }
+        boolean zipalignSuccess = false;
+        try {
+            zipalignApk(unzipalignApkPath, unsignedApkPath);
+            zipalignSuccess = true;
+            LogUtils.info("zipalign success.");
+        } catch (Exception e) {
+            LogUtils.error("zipalign failed");
+        }
 
-    boolean signResult = false;
-    String signedApkPath;
-    
-    if (resultFileName != null) {
-        signedApkPath = outputDir + File.separator + resultFileName;
-    } else {
-        signedApkPath = outputDir + File.separator + getSignedApkName(originApkName);
-    }
+        String willSignApkPath = zipalignSuccess ? unsignedApkPath : unzipalignApkPath;
+        String signedApkPath = outputDir + File.separator +
+            (resultFileName != null ? resultFileName : getSignedApkName(originApkName));
 
-    if(isSign()) {
-        signResult = signApkDebug(willSignApkPath, keyStoreFilePath, signedApkPath);
-    }
+        boolean signResult = false;
+        if (isSign()) {
+            signResult = signApkDebug(willSignApkPath, keyStoreFilePath, signedApkPath);
+        } else if (resultFileName != null) {
+            try {
+                Files.copy(Paths.get(willSignApkPath), Paths.get(signedApkPath),
+                    StandardCopyOption.REPLACE_EXISTING);
+            } catch (IOException ignored) {}
+        }
 
-    File willSignApkFile = new File(willSignApkPath);
-    File signedApkFile = new File(signedApkPath);
-    File keyStoreFile = new File(keyStoreFilePath);
-    File idsigFile = new File(signedApkPath + ".idsig");
+        File willSignApkFile = new File(willSignApkPath);
+        File signedApkFile = new File(signedApkPath);
+        File idsigFile = new File(signedApkPath + ".idsig");
+        File keyStoreFile = new File(keyStoreFilePath);
 
-    LogUtils.info("willSignApkFile: %s ,exists: %s",willSignApkFile.getAbsolutePath(),willSignApkFile.exists());
-    LogUtils.info("signedApkFile: %s ,exists: %s",signedApkFile.getAbsolutePath(),signedApkFile.exists());
+        LogUtils.info("willSignApkFile: %s ,exists: %s", willSignApkFile.getAbsolutePath(), willSignApkFile.exists());
+        LogUtils.info("signedApkFile: %s ,exists: %s", signedApkFile.getAbsolutePath(), signedApkFile.exists());
 
-    String resultPath = signedApkFile.getAbsolutePath();
-    if (!signedApkFile.exists() || !signResult) {
-        resultPath = willSignApkFile.getAbsolutePath();
-    }
-    else{
-        if(willSignApkFile.exists()){
+        String resultPath = signedApkFile.exists() ? signedApkFile.getAbsolutePath() : willSignApkFile.getAbsolutePath();
+
+        if (signedApkFile.exists() && willSignApkFile.exists()) {
             willSignApkFile.delete();
         }
-    }
 
-    if(zipalignSuccess) {
-        File unzipalignApkFile = new File(unzipalignApkPath);
-        try {
-            Path filePath = Paths.get(unzipalignApkFile.getAbsolutePath());
-            Files.deleteIfExists(filePath);
-        }catch (Exception e){
-            LogUtils.debug("unzipalignApkPath err = %s", e);
+        if (zipalignSuccess) {
+            try {
+                Files.deleteIfExists(Paths.get(unzipalignApkPath));
+            } catch (Exception e) {
+                LogUtils.debug("unzipalignApkPath err = %s", e);
+            }
         }
-    }
 
-    if (idsigFile.exists()) {
-        idsigFile.delete();
-    }
+        if (idsigFile.exists()) idsigFile.delete();
+        if (keyStoreFile.exists()) keyStoreFile.delete();
 
-    if (keyStoreFile.exists()) {
-        keyStoreFile.delete();
+        LogUtils.info("protected apk output path: " + resultPath + "\n");
     }
-    LogUtils.info("protected apk output path: " + resultPath + "\n");
-}
 
     private static boolean signApkDebug(String apkPath, String keyStorePath, String signedApkPath) {
         if (signApk(apkPath, keyStorePath, signedApkPath,
