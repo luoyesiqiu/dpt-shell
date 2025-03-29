@@ -5,6 +5,7 @@ abstract class AndroidPackage {
     protected static abstract class Builder {
         public String filePath = null;
         public String packageName = null;
+        public String outputPath = null;
         public boolean debuggable = false;
         public boolean sign = true;
         public boolean appComponentFactory = true;
@@ -18,6 +19,14 @@ abstract class AndroidPackage {
 
     public void setFilePath(String filePath) {
         this.filePath = filePath;
+    }
+
+    public String getOutputPath() {
+        return outputPath;
+    }
+
+    public void setOutputPath(String outputPath) {
+        this.outputPath = outputPath;
     }
 
     public boolean isDebuggable() {
@@ -53,7 +62,7 @@ abstract class AndroidPackage {
     }
 
     public String filePath = null;
-
+    public String outputPath = null;
     public String packageName = null;
     public boolean debuggable = false;
     public boolean sign = true;
