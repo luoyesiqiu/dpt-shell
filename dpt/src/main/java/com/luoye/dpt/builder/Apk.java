@@ -42,9 +42,11 @@ import java.util.regex.Pattern;
 public class Apk extends AndroidPackage {
 
     private boolean dumpCode;
+    private List<String> excludedAbi;
 
     public static class Builder extends AndroidPackage.Builder {
     private boolean dumpCode;
+    private List<String> excludedAbi = new ArrayList<>();
     @Override
     public Apk build() {
         return new Apk(this);
@@ -84,6 +86,11 @@ public class Apk extends AndroidPackage {
         this.appComponentFactory = appComponentFactory;
         return this;
     }
+    
+    public Builder excludedAbi(List<String> excludedAbi) {
+        this.excludedAbi = excludedAbi;
+        return this;
+    }
 }
 
     protected Apk(Builder builder) {
@@ -94,6 +101,7 @@ public class Apk extends AndroidPackage {
     setSign(builder.sign);
     setPackageName(builder.packageName);
     setDumpCode(builder.dumpCode);
+    setExcludedAbi(builder.excludedAbi);
     }
 
     public void setDumpCode(boolean dumpCode) {
@@ -102,6 +110,14 @@ public class Apk extends AndroidPackage {
 
     public boolean isDumpCode() {
         return dumpCode;
+    }
+    
+    public List<String> getExcludedAbi() {
+        return excludedAbi;
+    }
+
+    public void setExcludedAbi(List<String> excludedAbi) {
+        this.excludedAbi = excludedAbi;
     }
 
     private static void process(Apk apk){
@@ -307,9 +323,47 @@ public class Apk extends AndroidPackage {
         ZipUtils.compress(getDexFiles(apkDir),getOutAssetsDir(apkDir).getAbsolutePath() + File.separator + "i11111i111.zip");
     }
 
-    private void copyNativeLibs(String apkDir){
-        File file = new File(FileUtils.getExecutablePath(), "shell-files/libs");
-        FileUtils.copy(file.getAbsolutePath(),getOutAssetsDir(apkDir).getAbsolutePath() + File.separator + "vwwwwwvwww");
+    private void copyNativeLibs(String apkDir) {
+        File sourceDirRoot = new File(FileUtils.getExecutablePath(), "shell-files/libs");
+        File destDirRoot = new File(getOutAssetsDir(apkDir).getAbsolutePath(), "vwwwwwvwww");
+        
+        if (!destDirRoot.exists()) {
+            destDirRoot.mkdirs();
+        }
+        
+        File[] abiDirs = sourceDirRoot.listFiles();
+        if (abiDirs != null) {
+            for (File abiDir : abiDirs) {
+                if (abiDir.isDirectory()) {
+                    String abiName = abiDir.getName();
+                    
+                    if (excludedAbi != null && excludedAbi.contains(abiName)) {
+                        LogUtils.info("Skipping excluded ABI: " + abiName);
+                        continue;
+                    }
+                    
+                    File destAbiDir = new File(destDirRoot, abiName);
+                    if (!destAbiDir.exists()) {
+                        destAbiDir.mkdirs();
+                    }
+                    
+                    File[] libFiles = abiDir.listFiles();
+                    if (libFiles != null) {
+                        for (File libFile : libFiles) {
+                            if (libFile.isFile() && libFile.getName().endsWith(".so")) {
+                                File destFile = new File(destAbiDir, libFile.getName());
+                                try {
+                                    Files.copy(libFile.toPath(), destFile.toPath(), 
+                                            java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+                                } catch (IOException e) {
+                                    LogUtils.error("Failed to copy library: " + e.getMessage());
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 
     private void encryptSoFiles(String apkDir, byte[] rc4Key){
