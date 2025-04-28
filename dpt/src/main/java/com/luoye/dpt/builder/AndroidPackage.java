@@ -2,7 +2,6 @@ package com.luoye.dpt.builder;
 
 import com.iyxan23.zipalignjava.ZipAlign;
 import com.luoye.dpt.Const;
-import com.luoye.dpt.Dpt;
 import com.luoye.dpt.elf.ReadElf;
 import com.luoye.dpt.model.Instruction;
 import com.luoye.dpt.model.MultiDexCode;
@@ -83,6 +82,15 @@ public abstract class AndroidPackage {
     public boolean sign = true;
     public boolean appComponentFactory = true;
     private boolean dumpCode;
+
+    public AndroidPackage(Builder builder) {
+        setFilePath(builder.filePath);
+        setDebuggable(builder.debuggable);
+        setAppComponentFactory(builder.appComponentFactory);
+        setSign(builder.sign);
+        setPackageName(builder.packageName);
+        setDumpCode(builder.dumpCode);
+    }
 
     public String getFilePath() {
         return filePath;

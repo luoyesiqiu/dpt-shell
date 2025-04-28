@@ -27,12 +27,7 @@ public class Apk extends AndroidPackage {
     }
 
     protected Apk(Builder builder) {
-        setFilePath(builder.filePath);
-        setDebuggable(builder.debuggable);
-        setAppComponentFactory(builder.appComponentFactory);
-        setSign(builder.sign);
-        setPackageName(builder.packageName);
-        setDumpCode(builder.dumpCode);
+        super(builder);
     }
 
     @Override
