@@ -93,7 +93,7 @@ public class MultiDexCodeUtils {
 
                 int methodCount = dexCode.getMethodCount() & 0xFFFF;
 
-                LogUtils.info("insns item count:" + insns.size() + ",method count : " + methodCount);
+                LogUtils.info("insns item count: " + insns.size() + ", method count: " + methodCount);
                 //The number of functions that are written to a single dex
                 randomAccessFile.write(Endian.makeLittleEndian(dexCode.getMethodCount()));
                 for (int i = 0; i < insns.size(); i++) {

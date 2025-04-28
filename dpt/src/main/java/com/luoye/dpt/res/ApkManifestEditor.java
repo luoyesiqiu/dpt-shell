@@ -1,7 +1,7 @@
-package com.luoye.dpt.util;
+package com.luoye.dpt.res;
 
+import com.luoye.dpt.util.IoUtils;
 import com.wind.meditor.core.FileProcesser;
-import com.wind.meditor.core.ManifestEditor;
 import com.wind.meditor.property.AttributeItem;
 import com.wind.meditor.property.ModificationProperty;
 import com.wind.meditor.utils.NodeValue;
@@ -10,8 +10,7 @@ import pxb.android.axml.AxmlParser;
 /**
  * @author luoyesiqiu
  */
-public class ManifestUtils {
-
+public class ApkManifestEditor {
     /**
      * Write app name to xml
      */
@@ -53,7 +52,7 @@ public class ManifestUtils {
      * @param attrName attr name
      * @return
      */
-    public static String getValue(String file,String tag,String ns,String attrName){
+    public static String getAttributeValue(String file, String tag, String ns, String attrName){
         byte[] axmlData = IoUtils.readFile(file);
         AxmlParser axmlParser = new AxmlParser(axmlData);
         try {
@@ -77,18 +76,18 @@ public class ManifestUtils {
      * Get android:name value from AndroidManifest.xml
      */
     public static String getApplicationName(String file) {
-        return getValue(file,"application","android","name");
+        return getAttributeValue(file,"application","android","name");
     }
 
     /**
      * Get android:appComponentFactory value from AndroidManifest.xml
      */
     public static String getAppComponentFactory(String file) {
-        return getValue(file,"application","android","appComponentFactory");
+        return getAttributeValue(file,"application","android","appComponentFactory");
     }
 
     public static String getPackageName(String file) {
-        return getValue(file,"manifest","android","package");
+        return getAttributeValue(file,"manifest","android","package");
     }
 
 }

@@ -2,8 +2,8 @@ apply plugin: 'java-library'
 
 
 java {
-    sourceCompatibility = JavaVersion.VERSION_1_8
-    targetCompatibility = JavaVersion.VERSION_1_8
+    sourceCompatibility = JavaVersion.VERSION_11
+    targetCompatibility = JavaVersion.VERSION_11
 }
 
 
@@ -15,7 +15,7 @@ jar {
         attributes 'Main-Class': 'com.luoye.dpt.Dpt'
     }
     destinationDirectory = new File("$rootProject.projectDir/executable")
-    //添加将引用的jar的源码打入最终的jar
+    // Collect files
     dependsOn configurations.runtimeClasspath
     from {
         configurations.runtimeClasspath.collect {
@@ -25,8 +25,11 @@ jar {
 
     from fileTree(dir: 'src/main', includes: ['assets/**'])
 
-    //排除引用的jar中的签名信息
-    exclude 'META-INF/*.SF', 'META-INF/*.DSA', 'META-INF/*.RSA', 'META-INF/*.MF', 'META-INF/*.txt', "META-INF/versions/**"
+    // Exclude rules
+    exclude 'META-INF/*.SF', 'META-INF/*.DSA', 'META-INF/*.RSA',
+            'META-INF/*.MF', 'META-INF/*.txt', 'META-INF/versions/**',
+            'META-INF/DEPENDENCIES', 'META-INF/LICENSE', 'META-INF/NOTICE',
+            'META-INF/plexus/components.xml'
 
     manifest {
         attributes("Implementation-Title": archiveBaseName,
@@ -42,7 +45,6 @@ jar {
     }
 }
 
-//添加源码中引入的非代码文件，例如资源等
 sourceSets.main.resources {
     srcDirs = [
             "src/main/java",
@@ -50,10 +52,10 @@ sourceSets.main.resources {
     include "**/*.*"
 }
 
-
-
 dependencies {
     implementation fileTree(dir:'libs',include:['*.jar'])
     implementation group: 'net.lingala.zip4j', name: 'zip4j', version: '2.11.5'
+    implementation group: 'com.android.tools.build', name: 'aapt2-proto', version: '8.8.2-12006047'
+    implementation group: 'org.apache.commons', name: 'commons-io', version: '1.3.2'
     testImplementation 'junit:junit:4.+'
 }
