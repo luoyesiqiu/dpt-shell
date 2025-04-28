@@ -1,6 +1,7 @@
 package com.luoye.dpt.util;
 
 import java.io.File;
+import java.io.IOException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.LinkedList;
@@ -12,34 +13,10 @@ import java.util.zip.Adler32;
  */
 public class FileUtils {
 
-    public static void copy(String src,String dest){
-        File srcFile = new File(src);
-        File destFile = new File(dest);
-        Queue<File> queue = new LinkedList<>();
-        queue.offer(srcFile);
-        while(!queue.isEmpty()) {
-            File origin = queue.poll();
-            File target = null;
-            if (origin.isDirectory()) {
-                target = new File(destFile, origin.getName());
-                File[] subOrigin = origin.listFiles();
-                if(subOrigin != null) {
-                    for (File f : subOrigin) {
-                        queue.offer(f);
-                    }
-                }
-                if (!target.exists()) {
-                    target.mkdirs();
-                }
-            } else {
+    private static final String PIPE_PREFIX = "│   ";
+    private static final String ELBOW_PREFIX = "└── ";
+    private static final String T_PREFIX = "├── ";
 
-                target = new File(dest,origin.getParentFile().getName());
-                File targetFile = new File(target,origin.getName());
-                byte[] data = IoUtils.readFile(origin.getAbsolutePath());
-                IoUtils.writeFile(targetFile.getAbsolutePath(),data);
-            }
-        }
-    }
 
     public static String getNewFileName(String fileName,String tag){
         String fileSuffix = fileName.substring(fileName.lastIndexOf(".") + 1);
@@ -65,16 +42,18 @@ public class FileUtils {
     /**
      * Recursively delete directories or files
      */
-    public static void deleteRecurse(File file){
-        if(file.isDirectory()){
-            File[] files = file.listFiles();
-            if(files != null){
-                for (File f : files) {
-                    deleteRecurse(f);
-                }
+    public static void deleteRecurse(File file) {
+        try {
+            if(file.isFile()) {
+                file.delete();
+            }
+            else {
+                org.apache.commons.io.FileUtils.deleteDirectory(file);
             }
         }
-        file.delete();
+        catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
     /**
@@ -147,4 +126,36 @@ public class FileUtils {
         System.arraycopy(refs, 0, dexBytes, 32, 4);//修改（32-35）
     }
 
+    public static String getJarSignerCommand() {
+        String os = System.getProperty("os.name").toLowerCase();
+        if (os.contains("win")) {
+            return "jarsigner.exe";
+        } else {
+            return "jarsigner";
+        }
+    }
+
+    public static void printDirectoryTree(File directory, String prefix) {
+        if (!directory.exists() || !directory.isDirectory()) {
+            return;
+        }
+        File[] files = directory.listFiles();
+        if (files != null) {
+            for (int i = 0; i < files.length; i++) {
+                File file = files[i];
+                boolean isLast = i == files.length - 1;
+                String currentPrefix = isLast ? ELBOW_PREFIX : T_PREFIX;
+                System.out.println(prefix + currentPrefix + file.getName());
+                if (file.isDirectory()) {
+                    String newPrefix = prefix + (isLast ? "    " : PIPE_PREFIX);
+                    printDirectoryTree(file, newPrefix);
+                }
+            }
+        }
+    }
+
+    public static void printDirectoryTree(File directory) {
+        System.out.println(directory.getAbsolutePath());
+        printDirectoryTree(directory, "");
+    }
 }

@@ -30,16 +30,24 @@ import java.util.zip.ZipInputStream;
 import java.util.zip.ZipOutputStream;
 
 public class ZipUtils {
-
-    private static final HashMap<String, CompressionMethod> compressedLevelMap = new HashMap<>();
-    private static final String RENAME_SUFFIX = ".renamed";
-
-    private static List<String> storeList = Arrays.asList(
+    private static final List<String> storeList = Arrays.asList(
             "assets/app_acf",
             "assets/app_name",
             "assets/i11111i111.zip",
             "assets/OoooooOooo"
     );
+
+    /**
+     * don not compress file list
+     */
+    private static final List<String> doNotCompress = new ArrayList<>(storeList);
+    /**
+     * when unzip apk on window, the file name maybe conflict.
+     * this is fix it
+     */
+    private static final Map<String, String> resConflictFiles = new HashMap<>();
+    private static final HashMap<String, CompressionMethod> compressedLevelMap = new HashMap<>();
+    private static final String RENAME_SUFFIX = ".renamed";
 
     /**
      * Read asset file from .jar
@@ -243,15 +251,6 @@ public class ZipUtils {
     }
 
     /**
-     * don not compress file list
-     */
-    private static List<String> doNotCompress = new ArrayList<>(storeList);
-    /**
-     * when unzip apk on window,the file name maybe conflict.this is fix it
-     */
-    private static Map<String, String> resConflictFiles = new HashMap<>();
-
-    /**
      * unzip apk
      *
      * @param zipPath apk path
@@ -294,7 +293,7 @@ public class ZipUtils {
                     if (!file.getParentFile().exists()) {
                         file.getParentFile().mkdirs();
                     }
-                    if (doNotCompress != null && zipEntry.getCompressedSize() == zipEntry.getSize()) {
+                    if (zipEntry.getCompressedSize() == zipEntry.getSize()) {
                         doNotCompress.add(file.getAbsolutePath().replace(dir.getAbsolutePath() + File.separator, ""));
                     }
                     FileOutputStream fos = new FileOutputStream(file);
@@ -315,7 +314,7 @@ public class ZipUtils {
     }
 
     /**
-     * zip apk
+     * zip apk/aab
      *
      * @param dirPath apk unzip dir path
      * @param zipPath zip apk path
@@ -323,8 +322,9 @@ public class ZipUtils {
     public static void zip(String dirPath, String zipPath) {
         try {
             File zip = new File(zipPath);
-            File dir = new File(dirPath);
-            zip.delete();
+            if(zip.exists()) {
+                zip.delete();
+            }
             CheckedOutputStream cos = new CheckedOutputStream(Files.newOutputStream(zip.toPath()), new CRC32());
             ZipOutputStream zos = new ZipOutputStream(cos);
             for (int i = 0; i < doNotCompress.size(); i++) {
@@ -332,6 +332,7 @@ public class ZipUtils {
                 check = check.replaceAll("/", Matcher.quoteReplacement(File.separator));
                 doNotCompress.set(i, check);
             }
+            File dir = new File(dirPath);
             compress(dir, zos, "", doNotCompress, resConflictFiles);
             zos.flush();
             zos.close();
@@ -355,8 +356,9 @@ public class ZipUtils {
         if (files == null) {
             return;
         }
-        if (files.length < 1) {
-            ZipEntry entry = new ZipEntry(basePath + dir.getName() + "/");
+        if (files.length == 0) {
+            String entryName = basePath + dir.getName() + "/";
+            ZipEntry entry = new ZipEntry(entryName);
             zos.putNextEntry(entry);
             zos.closeEntry();
         }
@@ -397,7 +399,7 @@ public class ZipUtils {
         zos.putNextEntry(entry);
         BufferedInputStream bis = new BufferedInputStream(new FileInputStream(file));
         int count;
-        byte data[] = new byte[1024];
+        byte[] data = new byte[1024];
         while ((count = bis.read(data, 0, 1024)) != -1) {
             zos.write(data, 0, count);
         }
@@ -409,8 +411,7 @@ public class ZipUtils {
         FileInputStream fi = new FileInputStream(file);
         CheckedInputStream checksum = new CheckedInputStream(fi, new CRC32());
         BufferedInputStream in = new BufferedInputStream(checksum);
-        while (in.read() != -1) {
-        }
+        while (in.read() != -1);
         long temp = checksum.getChecksum().getValue();
         fi.close();
         in.close();
