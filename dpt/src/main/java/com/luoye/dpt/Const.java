@@ -16,6 +16,10 @@ public class Const {
     public static final String OPTION_DEBUGGABLE_LONG = "debug";
     public static final String OPTION_DISABLE_APP_COMPONENT_FACTORY = "c";
     public static final String OPTION_DISABLE_APP_COMPONENT_FACTORY_LONG = "disable-acf";
+    public static final String OPTION_OUTPUT_PATH = "o";
+    public static final String OPTION_OUTPUT_PATH_LONG = "output";
+    public static final String OPTION_EXCLUDE_ABI = "e";
+    public static final String OPTION_EXCLUDE_ABI_LONG = "exclude-abi";
 
     public static final String STORE_PASSWORD = "android";
     public static final String KEY_PASSWORD = "android";
