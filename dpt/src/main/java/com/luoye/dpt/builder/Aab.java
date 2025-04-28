@@ -14,10 +14,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class Aab extends AndroidPackage {
-    private boolean dumpCode;
 
     public static class Builder extends AndroidPackage.Builder {
-        private boolean dumpCode;
         @Override
         public Aab build() {
             return new Aab(this);
@@ -25,20 +23,7 @@ public class Aab extends AndroidPackage {
     }
 
     protected Aab(Aab.Builder builder) {
-        setFilePath(builder.filePath);
-        setDebuggable(builder.debuggable);
-        setAppComponentFactory(builder.appComponentFactory);
-        setSign(builder.sign);
-        setPackageName(builder.packageName);
-        setDumpCode(builder.dumpCode);
-    }
-
-    public void setDumpCode(boolean dumpCode) {
-        this.dumpCode = dumpCode;
-    }
-
-    public boolean isDumpCode() {
-        return dumpCode;
+        super(builder);
     }
 
     @Override
