@@ -4,7 +4,8 @@
 
 #include <map>
 #include <unordered_map>
-#include <dex/CodeItem.h>
+#include <sys/system_properties.h>
+#include "dex/CodeItem.h"
 #include "common/dpt_string.h"
 #include "dpt_hook.h"
 #include "dpt_risk.h"
@@ -22,6 +23,7 @@ void dpt_hook() {
     hook_execve();
     hook_mmap();
     hook_DefineClass();
+    hook_LoadClass();
 }
 
 const char *GetArtLibPath() {
@@ -49,7 +51,12 @@ const char *GetClassLinkerDefineClassLibPath(){
 }
 
 const char *getClassLinkerDefineClassSymbol() {
-    const char *sym = find_symbol_in_elf_file(GetClassLinkerDefineClassLibPath(),2,"ClassLinker","DefineClass");
+    const char *sym = find_symbol_in_elf_file(GetClassLinkerDefineClassLibPath(), 2, "ClassLinker", "DefineClass");
+    return sym;
+}
+
+const char *getClassLinkerLoadClassSymbol() {
+    const char *sym = find_symbol_in_elf_file(GetArtLibPath(), 2, "ClassLinker", "LoadClass");
     return sym;
 }
 
@@ -126,7 +133,7 @@ DPT_ENCRYPT void patchClass(__unused const char* descriptor,
                  const void* dex_file,
                  const void* dex_class_def) {
 
-    if(UNLIKELY(dpt_strstr(descriptor,JUNK_CLASS_FULL_NAME) != nullptr)) {
+    if(descriptor != nullptr && UNLIKELY(dpt_strstr(descriptor, JUNK_CLASS_FULL_NAME) != nullptr)) {
         size_t descriptorLength = dpt_strlen(descriptor);
         char ch = descriptor[descriptorLength - 2];
         DLOGD("Attempt patch junk class %s ,char is '%c'",descriptor,ch);
@@ -218,6 +225,34 @@ DPT_ENCRYPT void patchClass(__unused const char* descriptor,
     }
 }
 
+DPT_ENCRYPT void LoadClassV36(void* thiz,
+                               const void* self,
+                               const void* dex_file,
+                               const void* dex_class_def,
+                               const char* klass) {
+    if(LIKELY(g_originLoadClassV36 != nullptr)) {
+        patchClass(nullptr,dex_file,dex_class_def);
+        g_originLoadClassV36(thiz, self, dex_file, dex_class_def, klass);
+    }
+}
+
+DPT_ENCRYPT  void hook_LoadClass() {
+    if(g_sdkLevel < 35) {
+        return;
+    }
+    char codename[128] = {0};
+    __system_property_get("ro.build.version.codename", codename);
+
+    void* loadClassAddress = nullptr;
+    if(g_sdkLevel >= 36 || strcmp(codename, "Baklava") == 0) {
+        loadClassAddress = DobbySymbolResolver(GetArtLibPath(), getClassLinkerLoadClassSymbol());
+
+        __unused int hookResult = DobbyHook(loadClassAddress, (void *) LoadClassV36, (void **) &g_originLoadClassV36);
+
+        DLOGD("%s hook result: %d", __FUNCTION__, hookResult);
+    }
+
+}
 
 DPT_ENCRYPT void *DefineClassV22(void* thiz,void* self,
                  const char* descriptor,
@@ -250,8 +285,13 @@ DPT_ENCRYPT void *DefineClassV21(void* thiz,
     return nullptr;
 }
 
-DPT_ENCRYPT  void hook_DefineClass(){
-    void* defineClassAddress = DobbySymbolResolver(GetClassLinkerDefineClassLibPath(),getClassLinkerDefineClassSymbol());
+DPT_ENCRYPT  void hook_DefineClass() {
+    const char *sym = getClassLinkerDefineClassSymbol();
+    if(sym == nullptr) {
+        DLOGW("%s cannot find symbol: DefineClass",__FUNCTION__);
+        return;
+    }
+    void* defineClassAddress = DobbySymbolResolver(GetClassLinkerDefineClassLibPath(), sym);
 
     int hookResult;
     if(g_sdkLevel >= __ANDROID_API_L_MR1__) {
