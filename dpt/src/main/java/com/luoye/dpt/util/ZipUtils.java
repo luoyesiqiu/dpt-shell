@@ -251,9 +251,9 @@ public class ZipUtils {
     }
 
     /**
-     * unzip apk
+     * unzip
      *
-     * @param zipPath apk path
+     * @param zipPath apk/aab path
      * @param dirPath unzip dir path
      */
     public static void unZip(String zipPath, String dirPath) {
@@ -316,7 +316,7 @@ public class ZipUtils {
     /**
      * zip apk/aab
      *
-     * @param dirPath apk unzip dir path
+     * @param dirPath apk/aab unzip dir path
      * @param zipPath zip apk path
      */
     public static void zip(String dirPath, String zipPath) {
