@@ -98,7 +98,7 @@ DPT_ENCRYPT void patchMethod(uint8_t *begin,
     if (LIKELY(dexIt != dexMap.end())) {
         auto dexMemIt = dexMemMap.find(dexIndex);
         if(UNLIKELY(dexMemIt == dexMemMap.end())){
-            change_dex_protective(begin,dexSize,dexIndex);
+            change_dex_protective(begin, dexSize, dexIndex);
         }
 
         auto codeItemMap = dexIt->second;
@@ -190,19 +190,17 @@ DPT_ENCRYPT void patchClass(__unused const char* descriptor,
                 uint64_t virtual_methods_size = 0;
                 read += DexFileUtils::readUleb128(class_data + read, &virtual_methods_size);
 
-                dex::ClassDataField staticFields[static_fields_size];
-                read += DexFileUtils::readFields(class_data + read, staticFields,
-                                                 static_fields_size);
+                // staticFields
+                read += DexFileUtils::getFieldsSize(class_data + read, static_fields_size);
 
-                dex::ClassDataField instanceFields[instance_fields_size];
-                read += DexFileUtils::readFields(class_data + read, instanceFields,
-                                                 instance_fields_size);
+                // instanceFields
+                read += DexFileUtils::getFieldsSize(class_data + read, instance_fields_size);
 
-                dex::ClassDataMethod directMethods[direct_methods_size];
+                auto *directMethods = new dex::ClassDataMethod[direct_methods_size];
                 read += DexFileUtils::readMethods(class_data + read, directMethods,
                                                   direct_methods_size);
 
-                dex::ClassDataMethod virtualMethods[virtual_methods_size];
+                auto *virtualMethods = new dex::ClassDataMethod[virtual_methods_size];
                 read += DexFileUtils::readMethods(class_data + read, virtualMethods,
                                                   virtual_methods_size);
 
@@ -217,6 +215,9 @@ DPT_ENCRYPT void patchClass(__unused const char* descriptor,
                     patchMethod(begin, location.c_str(), dexSize, dexIndex,
                                 method.method_idx_delta_);
                 }
+
+                delete[] directMethods;
+                delete[] virtualMethods;
             }
             else {
                 NLOG("class_def->class_data_off_ is zero");
@@ -236,7 +237,7 @@ DPT_ENCRYPT void LoadClassV36(void* thiz,
     }
 }
 
-DPT_ENCRYPT  void hook_LoadClass() {
+DPT_ENCRYPT void hook_LoadClass() {
     if(g_sdkLevel < 35) {
         return;
     }

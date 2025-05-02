@@ -19,7 +19,7 @@ size_t dpt::DexFileUtils::readUleb128(uint8_t const * const data, uint64_t * con
     return read;
 }
 
-size_t dpt::DexFileUtils::readFields(uint8_t *data,dpt::dex::ClassDataField *field,uint64_t count){
+size_t dpt::DexFileUtils::readFields(uint8_t *data, dpt::dex::ClassDataField *fields, uint64_t count) {
     size_t read = 0;
     uint32_t fieldIndexDelta = 0;
     for (uint64_t i = 0; i < count; ++i) {
@@ -29,14 +29,27 @@ size_t dpt::DexFileUtils::readFields(uint8_t *data,dpt::dex::ClassDataField *fie
 
         uint64_t accessFlags = 0;
         read += readUleb128(data + read,&accessFlags);
-        field[i].field_idx_delta_ = fieldIndexDelta;
-        field[i].access_flags_ = accessFlags;
+        fields[i].field_idx_delta_ = fieldIndexDelta;
+        fields[i].access_flags_ = accessFlags;
     }
 
     return read;
 }
 
-size_t dpt::DexFileUtils::readMethods(uint8_t *data,dpt::dex::ClassDataMethod *method,uint64_t count){
+size_t dpt::DexFileUtils::getFieldsSize(uint8_t *data, uint64_t count) {
+    size_t read = 0;
+    for (uint64_t i = 0; i < count; ++i) {
+        uint64_t fieldIndex = 0;
+        read += readUleb128(data + read, &fieldIndex);
+
+        uint64_t accessFlags = 0;
+        read += readUleb128(data + read, &accessFlags);
+    }
+
+    return read;
+}
+
+size_t dpt::DexFileUtils::readMethods(uint8_t *data, dpt::dex::ClassDataMethod *method, uint64_t count){
     size_t read = 0;
     uint32_t methodIndexDelta = 0;
     for (uint64_t i = 0; i < count; ++i) {

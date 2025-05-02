@@ -154,10 +154,9 @@ namespace dpt {
     class DexFileUtils {
     public:
         static size_t readUleb128(uint8_t const *const data, uint64_t *const val);
-
-        static size_t readFields(uint8_t *data, dpt::dex::ClassDataField *field, uint64_t count);
-
+        static size_t readFields(uint8_t *data, dpt::dex::ClassDataField *fields, uint64_t count);
         static size_t readMethods(uint8_t *data, dpt::dex::ClassDataMethod *method, uint64_t count);
+        static size_t getFieldsSize(uint8_t *data,uint64_t count);
     };
 
     namespace V21 {
