@@ -21,15 +21,14 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.file.Files;
-import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Objects;
 import java.util.concurrent.CountDownLatch;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -38,14 +37,26 @@ public abstract class AndroidPackage {
 
     public static abstract class Builder {
         public String filePath = null;
+        public String outputPath = null;
         public String packageName = null;
         public boolean debuggable = false;
         public boolean sign = true;
         public boolean appComponentFactory = true;
         public boolean dumpCode = false;
+        public List<String> excludedAbi;
 
         public Builder filePath(String path) {
             this.filePath = path;
+            return this;
+        }
+
+        public Builder outputPath(String outputPath) {
+            this.outputPath = outputPath;
+            return this;
+        }
+
+        public Builder excludedAbi(List<String> excludedAbi) {
+            this.excludedAbi = excludedAbi;
             return this;
         }
 
@@ -75,13 +86,18 @@ public abstract class AndroidPackage {
         }
 
         public abstract AndroidPackage build();
-    }
+    } // Builder
+
     public String filePath = null;
     public String packageName = null;
     public boolean debuggable = false;
     public boolean sign = true;
     public boolean appComponentFactory = true;
     private boolean dumpCode;
+    private List<String> excludedAbi;
+
+    public String outputPath = null;
+
 
     public AndroidPackage(Builder builder) {
         setFilePath(builder.filePath);
@@ -90,6 +106,20 @@ public abstract class AndroidPackage {
         setSign(builder.sign);
         setPackageName(builder.packageName);
         setDumpCode(builder.dumpCode);
+        setExcludedAbi(builder.excludedAbi);
+        setOutputPath(builder.outputPath);
+    }
+
+    public String getOutputPath() {
+        return outputPath;
+    }
+
+    public void setOutputPath(String outputPath) {
+        this.outputPath = outputPath;
+    }
+
+    public void setExcludedAbi(List<String> excludedAbi) {
+        this.excludedAbi = excludedAbi;
     }
 
     public String getFilePath() {
@@ -190,15 +220,15 @@ public abstract class AndroidPackage {
 
     }
 
-    private String getUnsignApkName(String packageFileName){
+    private String getUnsignPackageName(String packageFileName){
         return FileUtils.getNewFileName(packageFileName,"unsign");
     }
 
-    private String getUnzipalignApkName(String packageFileName){
+    private String getUnzipalignPackageName(String packageFileName){
         return FileUtils.getNewFileName(packageFileName,"unzipalign");
     }
 
-    private String getSignedApkName(String packageFileName){
+    private String getSignedPackageName(String packageFileName){
         return FileUtils.getNewFileName(packageFileName,"signed");
     }
 
@@ -242,16 +272,46 @@ public abstract class AndroidPackage {
 
     public abstract void compressDexFiles(String packageDir);
 
-
     public void copyNativeLibs(String packageDir) {
-        try {
-            File src = new File(FileUtils.getExecutablePath(), "shell-files/libs");
-            //FileUtils.copy(file.getAbsolutePath(),getOutAssetsDir(packageDir).getAbsolutePath() + File.separator + "vwwwwwvwww", false);
-            File dest = new File(getOutAssetsDir(packageDir).getAbsolutePath(), "vwwwwwvwww");
-            org.apache.commons.io.FileUtils.copyDirectory(src, dest);
+        File sourceDirRoot = new File(FileUtils.getExecutablePath(), "shell-files/libs");
+        File destDirRoot = new File(getOutAssetsDir(packageDir).getAbsolutePath(), "vwwwwwvwww");
+
+        if (!destDirRoot.exists()) {
+            destDirRoot.mkdirs();
         }
-        catch (IOException e) {
-            e.printStackTrace();
+
+        File[] abiDirs = sourceDirRoot.listFiles();
+        if (abiDirs != null) {
+            for (File abiDir : abiDirs) {
+                if (abiDir.isDirectory()) {
+                    String abiName = abiDir.getName();
+
+                    if (excludedAbi != null && excludedAbi.contains(abiName)) {
+                        LogUtils.info("Skipping excluded ABI: " + abiName);
+                        continue;
+                    }
+
+                    File destAbiDir = new File(destDirRoot, abiName);
+                    if (!destAbiDir.exists()) {
+                        destAbiDir.mkdirs();
+                    }
+
+                    File[] libFiles = abiDir.listFiles();
+                    if (libFiles != null) {
+                        for (File libFile : libFiles) {
+                            if (libFile.isFile() && libFile.getName().endsWith(".so")) {
+                                File destFile = new File(destAbiDir, libFile.getName());
+                                try {
+                                    Files.copy(libFile.toPath(), destFile.toPath(),
+                                            java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+                                } catch (IOException e) {
+                                    LogUtils.error("Failed to copy library: " + e.getMessage());
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
 
@@ -362,6 +422,11 @@ public abstract class AndroidPackage {
         return false;
     }
 
+    public boolean isAndroidPackageFile(File f) {
+        return f.getAbsolutePath().endsWith(".apk")
+                || f.getAbsolutePath().endsWith(".aab");
+    }
+
     /**
      * Get dex file number
      * ex：classes2.dex return 1
@@ -434,14 +499,39 @@ public abstract class AndroidPackage {
     }
 
     protected void buildPackage(String originPackagePath, String unpackFilePath, String savePath) {
+        String outputPath = getOutputPath();
+        File outputPathFile;
+        String outputDir;
+        String resultFileName = null;
 
-        String originApkName = new File(originPackagePath).getName();
+        if (outputPath != null) {
+            outputPathFile = new File(outputPath);
+            if (isAndroidPackageFile(outputPathFile)) {
+                outputPathFile = new File(outputPath.contains(File.separator) ? outputPath : "." + File.separator + outputPath);
+
+                outputDir = outputPathFile.getParent();
+                resultFileName = outputPathFile.getName();
+            } else {
+                outputDir = outputPath;
+            }
+        } else {
+            outputDir = savePath;
+        }
+
+        File outputDirFile = new File(outputDir);
+        if (!outputDirFile.exists()) {
+            outputDirFile.mkdirs();
+        }
+
+        String originPackageName = new File(originPackagePath).getName();
         String packageLastProcessDir = getLastProcessDir().getAbsolutePath();
 
-        String unzipalignApkPath = savePath + File.separator + getUnzipalignApkName(originApkName);
+        String unzipalignPackagePath = outputDir
+                + File.separator
+                + (resultFileName != null ? "temp_" + resultFileName : getUnzipalignPackageName(originPackageName));
 
 
-        ZipUtils.zip(unpackFilePath, unzipalignApkPath);
+        ZipUtils.zip(unpackFilePath, unzipalignPackagePath);
 
         String keyStoreFilePath = packageLastProcessDir + File.separator + "dpt.jks";
 
@@ -454,58 +544,60 @@ public abstract class AndroidPackage {
             e.printStackTrace();
         }
 
-        String unsignedApkPath = savePath + File.separator + getUnsignApkName(originApkName);
+        String unsignedPackagePath = outputDir
+                + File.separator
+                + (resultFileName != null ? "unsigned_" + resultFileName : getUnsignPackageName(originPackageName));
+
         boolean zipalignSuccess = false;
+
         try {
-            zipalign(unzipalignApkPath, unsignedApkPath);
+            zipalign(unzipalignPackagePath, unsignedPackagePath);
             zipalignSuccess = true;
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-
-        String willSignApkPath = null;
-        if (zipalignSuccess) {
             LogUtils.info("zipalign success.");
-            willSignApkPath = unsignedApkPath;
+        } catch (Exception e) {
+            LogUtils.error("zipalign failed!");
+        }
 
-        }
-        else {
-            LogUtils.error("warning: zipalign failed!");
-            willSignApkPath = unzipalignApkPath;
-        }
+        String willSignPackagePath = zipalignSuccess ? unsignedPackagePath : unzipalignPackagePath;
 
         boolean signResult = false;
 
-        String signedApkPath = savePath + File.separator + getSignedApkName(originApkName);
+        String signedPackagePath = outputDir
+                + File.separator
+                + (resultFileName != null ? resultFileName : getSignedPackageName(originPackageName));
 
         if(isSign()) {
-            signResult = signPackageDebug(willSignApkPath, keyStoreFilePath, signedApkPath);
+            signResult = signPackageDebug(willSignPackagePath, keyStoreFilePath, signedPackagePath);
+        }
+        else {
+            try {
+                if(outputPath != null) {
+                    Files.copy(Paths.get(willSignPackagePath), Paths.get(signedPackagePath),
+                            StandardCopyOption.REPLACE_EXISTING);
+                }
+            } catch (IOException ignored) {}
         }
 
-        File willSignApkFile = new File(willSignApkPath);
-        File signedApkFile = new File(signedApkPath);
+        File willSignPackageFile = new File(willSignPackagePath);
+        File signedPackageFile = new File(signedPackagePath);
         File keyStoreFile = new File(keyStoreFilePath);
-        File idsigFile = new File(signedApkPath + ".idsig");
+        File idsigFile = new File(signedPackagePath + ".idsig");
 
+        LogUtils.info("unsign package file: %s, exists: %s", willSignPackageFile.getAbsolutePath(), willSignPackageFile.exists());
 
-        LogUtils.info("Will sign package file: %s, exists: %s", willSignApkFile.getAbsolutePath(), willSignApkFile.exists());
-        LogUtils.info("Signed package file: %s, exists: %s", signedApkFile.getAbsolutePath(), signedApkFile.exists());
+        String resultPath = signedPackageFile.exists() ? signedPackageFile.getAbsolutePath() : willSignPackageFile.getAbsolutePath();
 
-        String resultPath = signedApkFile.getAbsolutePath();
-        if (!signedApkFile.exists() || !signResult) {
-            resultPath = willSignApkFile.getAbsolutePath();
+        if (signedPackageFile.exists() && willSignPackageFile.exists()) {
+            willSignPackageFile.delete();
         }
-        else{
-            if(willSignApkFile.exists()){
-                willSignApkFile.delete();
-            }
+
+        if(signResult) {
+            LogUtils.info("signed package file: " + signedPackageFile.getAbsolutePath());
         }
 
         if(zipalignSuccess) {
-            File unzipalignApkFile = new File(unzipalignApkPath);
             try {
-                Path filePath = Paths.get(unzipalignApkFile.getAbsolutePath());
-                Files.deleteIfExists(filePath);
+                Files.deleteIfExists(Paths.get(unzipalignPackagePath));
             }catch (Exception e){
                 LogUtils.debug("unzipalign package path err = %s", e);
             }
@@ -521,8 +613,8 @@ public abstract class AndroidPackage {
         LogUtils.info("protected package output path: " + resultPath + "\n");
     }
 
-    private boolean signPackageDebug(String packagePath, String keyStorePath, String signedApkPath) {
-        return sign(packagePath, keyStorePath, signedApkPath,
+    private boolean signPackageDebug(String packagePath, String keyStorePath, String signedPackagePath) {
+        return sign(packagePath, keyStorePath, signedPackagePath,
                 Const.KEY_ALIAS,
                 Const.STORE_PASSWORD,
                 Const.KEY_PASSWORD);
@@ -533,9 +625,9 @@ public abstract class AndroidPackage {
                                 String storePassword,
                                 String KeyPassword);
 
-    private static void zipalign(String inputApkPath, String outputApkPath) throws Exception{
-        RandomAccessFile in = new RandomAccessFile(inputApkPath, "r");
-        FileOutputStream out = new FileOutputStream(outputApkPath);
+    private static void zipalign(String inputPackagePath, String outputPackagePath) throws Exception{
+        RandomAccessFile in = new RandomAccessFile(inputPackagePath, "r");
+        FileOutputStream out = new FileOutputStream(outputPackagePath);
         ZipAlign.alignZip(in, out);
         IoUtils.close(in);
         IoUtils.close(out);
