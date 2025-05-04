@@ -12,15 +12,8 @@ dpt-shell is an android Dex protect shell that makes Dex's functions code empty 
 
 Go to [Releases](https://github.com/luoyesiqiu/dpt-shell/releases/latest) download `executable.zip` and unzip it, run the follow command lines in terminal: 
 
-APK file
-
 ```shell
-java -jar dpt.jar -f /path/to/apk
-```
-AAB file
-
-```shell
-java -jar dpt.jar -f /path/to/aab
+java -jar dpt.jar -f /path/to/android-package-file
 ```
 
 ### Manual builds
@@ -30,7 +23,7 @@ git clone --recursive https://github.com/luoyesiqiu/dpt-shell
 cd dpt-shell
 ./gradlew assemble
 cd executable
-java -jar dpt.jar -f /path/to/apk
+java -jar dpt.jar -f /path/to/android-package-file
 ```
 
 ### Command line options
