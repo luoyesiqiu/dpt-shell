@@ -12,8 +12,15 @@ dpt-shell is an android Dex protect shell that makes Dex's functions code empty 
 
 Go to [Releases](https://github.com/luoyesiqiu/dpt-shell/releases/latest) download `executable.zip` and unzip it, run the follow command lines in terminal: 
 
+APK file
+
 ```shell
 java -jar dpt.jar -f /path/to/apk
+```
+AAB file
+
+```shell
+java -jar dpt.jar -f /path/to/aab
 ```
 
 ### Manual builds
@@ -29,19 +36,24 @@ java -jar dpt.jar -f /path/to/apk
 ### Command line options
 
 ```text
-usage: java -jar dpt.jar [option] -f <apk>
- -c,--disable-acf           Disable app component factory (just for debug).
- -d,--dump-code             Dump the code item of DEX and save it to .json files.
- -D,--debug                 Make apk debuggable.
- -f,--apk-file <arg>        Need to protect apk file.
- -l,--noisy-log             Enable noisy log.
- -x,--no-sign               Do not sign apk.
- -e,--exclude-abi <arg>     Exclude specific ABIs.
-                            Supported ABIs:
-                              - arm       (armeabi-v7a)
-                              - arm64     (arm64-v8a)
-                              - x86
-                              - x86_64
+usage: java -jar dpt.jar [option] -f <package_file>
+ -c,--disable-acf          Disable app component factory(just use for
+                           debug).
+ -d,--dump-code            Dump the code item of DEX and save it to .json
+                           files.
+ -D,--debug                Make package debuggable.
+ -e,--exclude-abi <arg>    Exclude specific ABIs (comma separated, e.g.
+                           x86,x86_64).
+                           Supported ABIs:
+                           - arm       (armeabi-v7a)
+                           - arm64     (arm64-v8a)
+                           - x86
+                           - x86_64
+ -f,--package-file <arg>   Need to protect android package(*.apk, *.aab)
+                           file.
+ -l,--noisy-log            Open noisy log.
+ -o,--output <arg>         Output directory for protected package.
+ -x,--no-sign              Do not sign package.
 ```
 
 ## Notice

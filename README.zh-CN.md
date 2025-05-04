@@ -10,10 +10,18 @@ dpt-shell是一种将dex文件中的函数代码抽空，然后在程序运行�
 
 ### 快速使用
 
-转到[Releases](https://github.com/luoyesiqiu/dpt-shell/releases/latest)页面下载`executable.zip`，解压，执行：
+转到[Releases](https://github.com/luoyesiqiu/dpt-shell/releases/latest)页面下载`executable.zip`，解压，执行以下命令：
+
+APK文件
 
 ```shell
 java -jar dpt.jar -f /path/to/apk
+```
+
+AAB文件
+
+```shell
+java -jar dpt.jar -f /path/to/aab
 ```
 
 ### 手动编译
@@ -29,19 +37,24 @@ java -jar dpt.jar -f /path/to/apk
 ### 命令行参数
 
 ```text
-usage: java -jar dpt.jar [option] -f <apk>
- -c,--disable-acf           Disable app component factory (just for debug).
- -d,--dump-code             Dump the code item of DEX and save it to .json files.
- -D,--debug                 Make apk debuggable.
- -f,--apk-file <arg>        Need to protect apk file.
- -l,--noisy-log             Enable noisy log.
- -x,--no-sign               Do not sign apk.
- -e,--exclude-abi <arg>     Exclude specific ABIs.
-                            Supported ABIs:
-                              - arm       (armeabi-v7a)
-                              - arm64     (arm64-v8a)
-                              - x86
-                              - x86_64
+usage: java -jar dpt.jar [option] -f <package_file>
+ -c,--disable-acf          Disable app component factory(just use for
+                           debug).
+ -d,--dump-code            Dump the code item of DEX and save it to .json
+                           files.
+ -D,--debug                Make package debuggable.
+ -e,--exclude-abi <arg>    Exclude specific ABIs (comma separated, e.g.
+                           x86,x86_64).
+                           Supported ABIs:
+                           - arm       (armeabi-v7a)
+                           - arm64     (arm64-v8a)
+                           - x86
+                           - x86_64
+ -f,--package-file <arg>   Need to protect android package(*.apk, *.aab)
+                           file.
+ -l,--noisy-log            Open noisy log.
+ -o,--output <arg>         Output directory for protected package.
+ -x,--no-sign              Do not sign package.
 ```
 
 ## 原理解析
