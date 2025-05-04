@@ -33,7 +33,7 @@ public class Dpt {
     private static void usage(Options options, String msg) {
         System.err.println("Error: " + msg);
         HelpFormatter helpFormatter = new HelpFormatter();
-        helpFormatter.printHelp("java -jar dpt.jar [option] -f <apk/aab>",options);
+        helpFormatter.printHelp("java -jar dpt.jar [option] -f <package_file>",options);
     }
 
     private static AndroidPackage parseOptions(String[] args) {
@@ -41,11 +41,16 @@ public class Dpt {
         options.addOption(new Option(Const.OPTION_NO_SIGN_PACKAGE,Const.OPTION_NO_SIGN_PACKAGE_LONG,false,"Do not sign package."));
         options.addOption(new Option(Const.OPTION_DUMP_CODE,Const.OPTION_DUMP_CODE_LONG,false,"Dump the code item of DEX and save it to .json files."));
         options.addOption(new Option(Const.OPTION_OPEN_NOISY_LOG,Const.OPTION_OPEN_NOISY_LOG_LONG,false,"Open noisy log."));
-        options.addOption(new Option(Const.OPTION_INPUT_FILE,Const.OPTION_INPUT_FILE_LONG,true,"Need to protect .apk/.aab file."));
-        options.addOption(new Option(Const.OPTION_DEBUGGABLE,Const.OPTION_DEBUGGABLE_LONG,false,"Make apk debuggable."));
+        options.addOption(new Option(Const.OPTION_INPUT_FILE,Const.OPTION_INPUT_FILE_LONG,true,"Need to protect android package(*.apk, *.aab) file."));
+        options.addOption(new Option(Const.OPTION_DEBUGGABLE,Const.OPTION_DEBUGGABLE_LONG,false,"Make package debuggable."));
         options.addOption(new Option(Const.OPTION_DISABLE_APP_COMPONENT_FACTORY,Const.OPTION_DISABLE_APP_COMPONENT_FACTORY_LONG,false,"Disable app component factory(just use for debug)."));
-        options.addOption(new Option(Const.OPTION_OUTPUT_PATH,Const.OPTION_OUTPUT_PATH_LONG,true,"Output directory for protected apk."));
-        options.addOption(new Option(Const.OPTION_EXCLUDE_ABI,Const.OPTION_EXCLUDE_ABI_LONG,true,"Exclude specific ABIs (comma separated, e.g. x86,x86_64)."));
+        options.addOption(new Option(Const.OPTION_OUTPUT_PATH,Const.OPTION_OUTPUT_PATH_LONG,true,"Output directory for protected package."));
+        options.addOption(new Option(Const.OPTION_EXCLUDE_ABI,Const.OPTION_EXCLUDE_ABI_LONG,true,"Exclude specific ABIs (comma separated, e.g. x86,x86_64). \n"
+                + "Supported ABIs:\n"
+                + "- arm       (armeabi-v7a)\n"
+                + "- arm64     (arm64-v8a)\n"
+                + "- x86\n"
+                + "- x86_64"));
 
         CommandLineParser commandLineParser = new DefaultParser();
         try {
