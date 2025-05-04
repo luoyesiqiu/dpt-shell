@@ -4,24 +4,16 @@
 
 [English](./README.md) | 简体中文 
 
-dpt-shell是一种将dex文件中的函数代码抽空，然后在程序运行时将函数代码填回的那么一种壳。
+dpt-shell 是一种将 dex 文件中的函数代码抽空，然后在程序运行时将函数代码填回的那么一种壳。
 
 ## 用法
 
 ### 快速使用
 
-转到[Releases](https://github.com/luoyesiqiu/dpt-shell/releases/latest)页面下载`executable.zip`，解压，执行以下命令：
-
-APK文件
+转到 [Releases](https://github.com/luoyesiqiu/dpt-shell/releases/latest) 页面下载 `executable.zip`，解压，执行以下命令：
 
 ```shell
-java -jar dpt.jar -f /path/to/apk
-```
-
-AAB文件
-
-```shell
-java -jar dpt.jar -f /path/to/aab
+java -jar dpt.jar -f /path/to/android-package-file
 ```
 
 ### 手动编译
@@ -31,7 +23,7 @@ git clone --recursive https://github.com/luoyesiqiu/dpt-shell
 cd dpt-shell
 ./gradlew assemble
 cd executable
-java -jar dpt.jar -f /path/to/apk
+java -jar dpt.jar -f /path/to/android-package-file
 ```
 
 ### 命令行参数
