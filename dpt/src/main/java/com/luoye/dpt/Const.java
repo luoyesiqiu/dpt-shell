@@ -11,7 +11,7 @@ public class Const {
     public static final String OPTION_DUMP_CODE_LONG = "dump-code";
     public static final String OPTION_DUMP_CODE = "d";
     public static final String OPTION_INPUT_FILE = "f";
-    public static final String OPTION_INPUT_FILE_LONG = "apk-file";
+    public static final String OPTION_INPUT_FILE_LONG = "package-file";
     public static final String OPTION_DEBUGGABLE = "D";
     public static final String OPTION_DEBUGGABLE_LONG = "debug";
     public static final String OPTION_DISABLE_APP_COMPONENT_FACTORY = "c";
