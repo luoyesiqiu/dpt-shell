@@ -7,14 +7,6 @@ import java.util.Arrays;
  */
 public class Instruction {
 
-    public int getOffsetOfDex() {
-        return offsetOfDex;
-    }
-
-    public void setOffsetOfDex(int offsetOfDex) {
-        this.offsetOfDex = offsetOfDex;
-    }
-
     public int getMethodIndex() {
         return methodIndex;
     }
@@ -42,15 +34,13 @@ public class Instruction {
     @Override
     public String toString() {
         return "Instruction{" +
-                "offsetOfDex=" + offsetOfDex +
-                ", methodIndex=" + methodIndex +
+                "methodIndex=" + methodIndex +
                 ", instructionDataSize=" + instructionDataSize +
                 ", instructionsData=" + Arrays.toString(instructionsData) +
                 '}';
     }
 
-    //Offset in dex
-    private int offsetOfDex;
+
     //Corresponding method_idx in dex
     private int methodIndex;
     //instructionsData size
