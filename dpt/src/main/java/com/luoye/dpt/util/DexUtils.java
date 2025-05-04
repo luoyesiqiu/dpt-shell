@@ -236,7 +236,6 @@ public class DexUtils {
 
             return null;
         }
-        instruction.setOffsetOfDex(insnsOffset);
         //Here, MethodIndex corresponds to the index of the method_ids area
         instruction.setMethodIndex(method.getMethodIndex());
         //Note: Here is the size of the array

@@ -51,7 +51,6 @@ public class MultiDexCodeUtils {
             dexCode.setInsnsIndex(insnsIndexList);
 
             for (Instruction ins : insns) {
-                fileOffset += 4; //Instruction.offsetOfDex
                 fileOffset += 4; //Instruction.methodIndex
                 fileOffset += 4; //Instruction.instructionDataSize
                 fileOffset += ins.getInstructionsData().length; //Instruction.instructionsData
@@ -99,7 +98,6 @@ public class MultiDexCodeUtils {
                 for (int i = 0; i < insns.size(); i++) {
                     Instruction instruction = insns.get(i);
                     randomAccessFile.write(Endian.makeLittleEndian(instruction.getMethodIndex()));
-                    randomAccessFile.write(Endian.makeLittleEndian(instruction.getOffsetOfDex()));
                     randomAccessFile.write(Endian.makeLittleEndian(instruction.getInstructionDataSize()));
                     randomAccessFile.write(instruction.getInstructionsData());
                 }

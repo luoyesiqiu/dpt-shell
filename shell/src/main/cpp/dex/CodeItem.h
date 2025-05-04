@@ -20,10 +20,6 @@ namespace dpt {
 
             void setMethodIdx(uint32_t methodIdx);
 
-            uint32_t getOffsetDex() const;
-
-            void setOffsetDex(uint32_t offsetDex);
-
             uint32_t getInsnsSize() const;
 
             void setInsnsSize(uint32_t size);
@@ -34,7 +30,7 @@ namespace dpt {
 
             CodeItem();
 
-            CodeItem(uint32_t methodIdx, uint32_t offsetDex, uint32_t size, uint8_t *insns);
+            CodeItem(uint32_t methodIdx, uint32_t size, uint8_t *insns);
 
             ~CodeItem();
         };

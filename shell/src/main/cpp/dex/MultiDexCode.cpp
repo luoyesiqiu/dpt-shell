@@ -30,11 +30,10 @@ uint32_t* dpt::data::MultiDexCode::readDexCodeIndex(int* count){
 
 dpt::data::CodeItem* dpt::data::MultiDexCode::nextCodeItem(uint32_t* offset) {
     uint32_t methodIdx = readUInt32(*offset);
-    uint32_t offsetOfDex = readUInt32(*offset + 4);
-    uint32_t insnsSize = readUInt32(*offset + 8);
-    auto* insns = (uint8_t*)(m_buffer + *offset + 12);
-    *offset = (*offset + 12 + insnsSize);
-    auto* codeItem = new CodeItem(methodIdx,offsetOfDex,insnsSize,insns);
+    uint32_t insnsSize = readUInt32(*offset + 4);
+    auto* insns = (uint8_t*)(m_buffer + *offset + 8);
+    *offset = (*offset + 8 + insnsSize);
+    auto* codeItem = new CodeItem(methodIdx, insnsSize, insns);
 
     return codeItem;
 }
