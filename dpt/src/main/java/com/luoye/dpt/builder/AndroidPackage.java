@@ -270,7 +270,7 @@ public abstract class AndroidPackage {
     }
 
     protected String getJunkCodeDexPath() {
-        return"shell-files" + File.separator + "dex" + File.separator + "junkcode.dex";
+        return "shell-files" + File.separator + "dex" + File.separator + "junkcode.dex";
     }
 
     protected void addJunkCodeDex(String packageDir) {
