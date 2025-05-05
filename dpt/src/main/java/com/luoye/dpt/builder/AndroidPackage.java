@@ -176,14 +176,14 @@ public abstract class AndroidPackage {
      */
     protected void combineDexZipWithShellDex(String packageMainProcessPath) {
         try {
-            File shellDexFile = new File("shell-files/dex/classes.dex");
+            File shellDexFile = new File(getProxyDexPath());
             File originalDexZipFile = new File(getOutAssetsDir(packageMainProcessPath).getAbsolutePath() + File.separator + "i11111i111.zip");
             byte[] zipData = com.android.dex.util.FileUtils.readFile(originalDexZipFile);// Read the zip file as binary data
             byte[] unShellDexArray =  com.android.dex.util.FileUtils.readFile(shellDexFile); // Read the dex file as binary data
             int zipDataLen = zipData.length;
             int unShellDexLen = unShellDexArray.length;
-            LogUtils.info("zipDataLen: " + zipDataLen);
-            LogUtils.info("unShellDexLen:" + unShellDexLen);
+            LogUtils.info("dexes zip file size: %s", zipDataLen);
+            LogUtils.info("proxy dex file size: %s", unShellDexLen);
             int totalLen = zipDataLen + unShellDexLen + 4;// An additional 4 bytes are added to store the length
             byte[] newdex = new byte[totalLen]; // Allocate the new length
 
