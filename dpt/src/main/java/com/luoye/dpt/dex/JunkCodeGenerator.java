@@ -1,0 +1,131 @@
+package com.luoye.dpt.dex;
+
+import com.google.dexmaker.*;
+
+import java.io.File;
+import java.io.IOException;
+import java.lang.reflect.Modifier;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.security.SecureRandom;
+import java.util.HashSet;
+import java.util.Locale;
+import java.util.Set;
+
+/**
+ * @author luoyesiqiu
+ */
+public class JunkCodeGenerator {
+
+    private static final String BASE_CLASS_NAME = "com/luoye/dpt/junkcode/JunkClass";
+
+    private static final Set<String> classNameSet = new HashSet<>();
+
+    private static void insertSystemExit(Code code, boolean returnVoid) {
+        TypeId<System> systemType = TypeId.get(System.class);
+
+        MethodId<System, Void> exit = systemType.getMethod(TypeId.VOID, "exit", TypeId.INT);
+
+        Local<Integer> exitCode = code.newLocal(TypeId.INT);
+        code.loadConstant(exitCode, 0);
+
+        code.invokeStatic(exit, null, exitCode);
+        if(returnVoid) {
+            code.returnVoid();
+        }
+    }
+
+
+    private static void insertNullExceptionCode(Code code) {
+        TypeId<NullPointerException> nullPointerExceptionTypeId = TypeId.get(NullPointerException.class);
+        Local<NullPointerException> throwableLocal = code.newLocal(nullPointerExceptionTypeId);
+        MethodId<NullPointerException, Void> constructor = nullPointerExceptionTypeId.getConstructor();
+        code.newInstance(throwableLocal, constructor);
+        code.throwValue(throwableLocal);
+    }
+
+
+    private static String generateIdentifier() {
+        SecureRandom secureRandom = new SecureRandom();
+        final int cnt = secureRandom.nextInt(2) + 3;
+        StringBuilder sb = new StringBuilder();
+        for(int i = 0;i < cnt;i++) {
+            char baseChar = secureRandom.nextBoolean() ? 'A' : 'a';
+
+            int index = secureRandom.nextInt(26);
+            char ch = (char) (baseChar + index);
+            sb.append(ch);
+        }
+
+        return sb.toString();
+    }
+
+    private static String generateBaseClassName() {
+
+        return String.format(Locale.US, "L%s;", BASE_CLASS_NAME);
+    }
+
+    private static String generateClassName() {
+        SecureRandom secureRandom = new SecureRandom();
+        int number = secureRandom.nextInt() % 100;
+
+        return String.format(Locale.US, "L%s%d;", BASE_CLASS_NAME, number);
+    }
+
+    public static void generateJunkCodeDex(File file) throws IOException {
+        SecureRandom secureRandom = new SecureRandom();
+        final int generateClassCount = secureRandom.nextInt(10) + 10;
+
+        DexMaker dexMaker = new DexMaker();
+
+        for(int i = 0;i < generateClassCount;i++) {
+
+            String className;
+            if(i == 0) {
+                className = generateBaseClassName();
+            }
+            else {
+                className = generateClassName();
+                if (classNameSet.contains(className)) {
+                    className = generateClassName();
+                }
+                classNameSet.add(className);
+            }
+
+            TypeId<?> typeId = TypeId.get(className);
+            dexMaker.declare(typeId, "", Modifier.PUBLIC, TypeId.OBJECT);
+
+            // generate static code black
+            MethodId<?, Void> clinitMethod = typeId.getMethod(TypeId.VOID, "<clinit>");
+            Code clinitCode = dexMaker.declare(clinitMethod, Modifier.STATIC);
+            insertSystemExit(clinitCode, false);
+
+            // generate constructor
+            MethodId<?, Void> initMethod = typeId.getConstructor();
+            Code initCode = dexMaker.declare(initMethod, Modifier.PUBLIC);
+            insertSystemExit(initCode, true);
+
+            // generate normal method
+            int methodCount = secureRandom.nextInt(2) + 2;
+            for (int j = 0; j < methodCount; j++) {
+                String methodName = generateIdentifier();
+
+                if(j % 2 == 0) {
+                    MethodId<?, Void> randomMethod = typeId.getMethod(TypeId.VOID, methodName);
+                    Code randomMethodCode = dexMaker.declare(randomMethod, Modifier.PUBLIC);
+                    insertSystemExit(randomMethodCode, true);
+                }
+                else {
+                    MethodId<?, Void> randomMethod = typeId.getMethod(TypeId.VOID, methodName);
+                    Code randomMethodCode = dexMaker.declare(randomMethod, Modifier.PUBLIC);
+                    insertNullExceptionCode(randomMethodCode);
+                }
+
+            }
+        }
+
+        byte[] generate = dexMaker.generate();
+
+        Files.write(Paths.get(file.getAbsolutePath()), generate);
+    }
+}

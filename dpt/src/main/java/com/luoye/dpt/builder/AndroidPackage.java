@@ -2,6 +2,7 @@ package com.luoye.dpt.builder;
 
 import com.iyxan23.zipalignjava.ZipAlign;
 import com.luoye.dpt.Const;
+import com.luoye.dpt.dex.JunkCodeGenerator;
 import com.luoye.dpt.elf.ReadElf;
 import com.luoye.dpt.model.Instruction;
 import com.luoye.dpt.model.MultiDexCode;
@@ -260,14 +261,20 @@ public abstract class AndroidPackage {
 
     public abstract String getDexDir(String packageDir);
 
+    protected String getProxyDexPath() {
+        return "shell-files" + File.separator + "dex" + File.separator + "classes.dex";
+    }
+
     private void addProxyDex(String packageOutDir) {
-        String proxyDexPath = "shell-files/dex/classes.dex";
-        addDex(proxyDexPath,packageOutDir);
+        addDex(getProxyDexPath(), packageOutDir);
+    }
+
+    protected String getJunkCodeDexPath() {
+        return"shell-files" + File.separator + "dex" + File.separator + "junkcode.dex";
     }
 
     protected void addJunkCodeDex(String packageDir) {
-        String junkCodeDexPath = "shell-files/dex/junkcode.dex";
-        addDex(junkCodeDexPath, getDexDir(packageDir));
+        addDex(getJunkCodeDexPath(), getDexDir(packageDir));
     }
 
     public abstract void compressDexFiles(String packageDir);
@@ -397,7 +404,7 @@ public abstract class AndroidPackage {
         }
     }
 
-    private void addDex(String dexFilePath,String dexFilesSavePath){
+    private void addDex(String dexFilePath, String dexFilesSavePath){
         File dexFile = new File(dexFilePath);
         List<File> dexFiles = getDexFiles(dexFilesSavePath);
         int newDexNameNumber = dexFiles.size() + 1;
@@ -633,7 +640,7 @@ public abstract class AndroidPackage {
         IoUtils.close(out);
     }
 
-    public void protect() throws FileNotFoundException {
+    public void protect() throws IOException {
 
         String path = "shell-files";
         if(!new File(path).exists()) {
@@ -649,6 +656,7 @@ public abstract class AndroidPackage {
             throw new FileNotFoundException(msg);
         }
 
+        JunkCodeGenerator.generateJunkCodeDex(new File(getJunkCodeDexPath()));
     }
 
 }

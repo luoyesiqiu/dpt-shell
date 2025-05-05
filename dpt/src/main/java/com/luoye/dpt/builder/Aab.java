@@ -9,7 +9,7 @@ import com.luoye.dpt.util.RC4Utils;
 import com.luoye.dpt.util.ZipUtils;
 
 import java.io.File;
-import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -235,7 +235,7 @@ public class Aab extends AndroidPackage {
     }
 
     @Override
-    public void protect() throws FileNotFoundException {
+    public void protect() throws IOException {
         super.protect();
         process(this);
     }

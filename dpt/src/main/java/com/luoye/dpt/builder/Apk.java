@@ -14,7 +14,7 @@ import com.wind.meditor.property.ModificationProperty;
 import com.wind.meditor.utils.NodeValue;
 
 import java.io.File;
-import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.util.ArrayList;
 
 public class Apk extends AndroidPackage {
@@ -231,7 +231,7 @@ public class Apk extends AndroidPackage {
     }
 
     @Override
-    public void protect() throws FileNotFoundException {
+    public void protect() throws IOException {
         super.protect();
         process(this);
     }
