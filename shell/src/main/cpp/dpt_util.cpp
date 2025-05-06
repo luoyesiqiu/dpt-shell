@@ -187,7 +187,8 @@ jstring getCompressedDexesPathExport(JNIEnv *env,jclass __unused) {
     getCompressedDexesPath(env, dexesPath, ARRAY_LENGTH(dexesPath));
     return env->NewStringUTF(dexesPath);
 }
- static uint32_t readZipLength(const uint8_t *data, size_t size) {
+
+static uint32_t readZipLength(const uint8_t *data, size_t size) {
     if (size < 4) return 0;
 
     uint32_t length = 0;
@@ -198,6 +199,7 @@ jstring getCompressedDexesPathExport(JNIEnv *env,jclass __unused) {
 
     return length;
 }
+
 DPT_ENCRYPT static void writeDexAchieve(const char *dexAchievePath,void *apk_addr,size_t apk_size) {
     DLOGD("zipCode open = %s",dexAchievePath);
     FILE *fp = fopen(dexAchievePath, "wb");
@@ -413,6 +415,9 @@ void get_elf_section(Elf_Shdr *target,const char *elf_path,const char *sh_name) 
 
 DPT_ENCRYPT const char* find_symbol_in_elf_file(const char *elf_file,int keyword_count,...) {
     FILE *elf_fp = fopen(elf_file, "r");
+
+    char* item_value = nullptr;
+
     if(elf_fp) {
         fseek(elf_fp, 0L, SEEK_END);
         size_t lib_size = ftell(elf_fp);
@@ -434,8 +439,8 @@ DPT_ENCRYPT const char* find_symbol_in_elf_file(const char *elf_file,int keyword
                 const char* str_base = (char *)((uint8_t*)elf_bytes_data + shdr->sh_offset);
                 char* ptr = (char *)str_base;
 
-                for(int k = 0; ptr < (str_base + shdr->sh_size);k++){
-                    const char* item_value = ptr;
+                for(;ptr < (str_base + shdr->sh_size);){
+                    item_value = ptr;
                     size_t item_len = strnlen(item_value,128);
                     ptr += (item_len + 1);
 
@@ -452,7 +457,7 @@ DPT_ENCRYPT const char* find_symbol_in_elf_file(const char *elf_file,int keyword
                     }
                     va_end(kw_list);
                     if(match_count == keyword_count){
-                        return item_value;
+                        goto release;
                     }
                 }
                 break;
@@ -460,10 +465,11 @@ DPT_ENCRYPT const char* find_symbol_in_elf_file(const char *elf_file,int keyword
 
             shdr++;
         }
-        fclose(elf_fp);
-        free(data);
+        release:
+            fclose(elf_fp);
+            free(data);
     }
-    return nullptr;
+    return item_value;
 }
 
 DPT_ENCRYPT int find_in_maps(int count,...) {
