@@ -6,7 +6,7 @@ include(FetchContent)
 
 FetchContent_Declare(
         minizip_ng
-        GIT_REPOSITORY https://github.com/zlib-ng/minizip-ng.git
+        GIT_REPOSITORY git@github.com:zlib-ng/minizip-ng.git
         GIT_TAG 4.0.7
 )
 set(MZ_LZMA OFF CACHE BOOL "" FORCE)
@@ -17,7 +17,7 @@ FetchContent_MakeAvailable(minizip_ng)
 set(patch_book git apply ${CMAKE_CURRENT_SOURCE_DIR}/patches/bhook_add_static_lib.patch)
 FetchContent_Declare(
         bhook
-        GIT_REPOSITORY https://github.com/bytedance/bhook.git
+        GIT_REPOSITORY git@github.com:bytedance/bhook.git
         GIT_TAG v1.0.5
         PATCH_COMMAND ${patch_book}
         SOURCE_SUBDIR bytehook/src/main/cpp
