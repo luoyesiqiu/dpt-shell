@@ -1,6 +1,7 @@
 package com.luoye.dpt.dex;
 
 import com.google.dexmaker.*;
+import com.luoye.dpt.util.LogUtils;
 
 import java.io.File;
 import java.io.IOException;
@@ -16,9 +17,8 @@ import java.util.Set;
  * @author luoyesiqiu
  */
 public class JunkCodeGenerator {
-
     private static final String BASE_CLASS_NAME = "com/luoye/dpt/junkcode/JunkClass";
-
+    private static final int MAX_GENERATE_COUNT = 100;
     private static final Set<String> classNameSet = new HashSet<>();
 
     private static void insertSystemExit(Code code, boolean returnVoid) {
@@ -35,7 +35,6 @@ public class JunkCodeGenerator {
         }
     }
 
-
     private static void insertNullExceptionCode(Code code) {
         TypeId<NullPointerException> nullPointerExceptionTypeId = TypeId.get(NullPointerException.class);
         Local<NullPointerException> throwableLocal = code.newLocal(nullPointerExceptionTypeId);
@@ -43,7 +42,6 @@ public class JunkCodeGenerator {
         code.newInstance(throwableLocal, constructor);
         code.throwValue(throwableLocal);
     }
-
 
     private static String generateIdentifier() {
         SecureRandom secureRandom = new SecureRandom();
@@ -67,14 +65,14 @@ public class JunkCodeGenerator {
 
     private static String generateClassName() {
         SecureRandom secureRandom = new SecureRandom();
-        int number = secureRandom.nextInt() % 100;
+        int number = secureRandom.nextInt() % (MAX_GENERATE_COUNT * 10);
 
         return String.format(Locale.US, "L%s%d;", BASE_CLASS_NAME, number);
     }
 
     public static void generateJunkCodeDex(File file) throws IOException {
         SecureRandom secureRandom = new SecureRandom();
-        final int generateClassCount = secureRandom.nextInt(10) + 10;
+        final int generateClassCount = secureRandom.nextInt(MAX_GENERATE_COUNT / 2) + (MAX_GENERATE_COUNT / 2);
 
         DexMaker dexMaker = new DexMaker();
 
@@ -110,14 +108,12 @@ public class JunkCodeGenerator {
             for (int j = 0; j < methodCount; j++) {
                 String methodName = generateIdentifier();
 
+                MethodId<?, Void> randomMethod = typeId.getMethod(TypeId.VOID, methodName);
+                Code randomMethodCode = dexMaker.declare(randomMethod, Modifier.PUBLIC);
                 if(j % 2 == 0) {
-                    MethodId<?, Void> randomMethod = typeId.getMethod(TypeId.VOID, methodName);
-                    Code randomMethodCode = dexMaker.declare(randomMethod, Modifier.PUBLIC);
                     insertSystemExit(randomMethodCode, true);
                 }
                 else {
-                    MethodId<?, Void> randomMethod = typeId.getMethod(TypeId.VOID, methodName);
-                    Code randomMethodCode = dexMaker.declare(randomMethod, Modifier.PUBLIC);
                     insertNullExceptionCode(randomMethodCode);
                 }
 
@@ -125,7 +121,8 @@ public class JunkCodeGenerator {
         }
 
         byte[] generate = dexMaker.generate();
-
         Files.write(Paths.get(file.getAbsolutePath()), generate);
+        LogUtils.info("generated junk class count: %d", generateClassCount);
+
     }
 }
