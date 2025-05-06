@@ -3,12 +3,13 @@ plugins {
 }
 
 android {
-    compileSdk 34
+    namespace 'com.luoye.dpt'
+    compileSdk 36
 
     defaultConfig {
         applicationId "com.luoye.dpt"
         minSdkVersion 21
-        targetSdkVersion 34
+        targetSdkVersion 36
         versionCode 1
         versionName "1.0"
 
@@ -47,19 +48,35 @@ android {
 }
 
 def afterAssembleCopy(Project project, Map archMap, boolean debug) {
-    def buildTypeName = "release"
-    def dexSourceDirName = "minifyReleaseWithR8"
+    def buildTypeName = null
+    def dexSourceDirName = null
+    def soFileTypeName = null
+    def sourceSoLibsDir = null
     if(debug) {
         buildTypeName = "debug"
         dexSourceDirName = "mergeDexDebug"
+        soFileTypeName = "cmake"
+        sourceSoLibsDir = file(project.buildDir.absolutePath + File.separator
+                + "intermediates" + File.separator
+                + soFileTypeName + File.separator
+                + buildTypeName + File.separator
+                + "obj" + File.separator
+        )
+
     }
-    def sourceSoLibsDir = file(project.buildDir.absolutePath + File.separator
-            + "intermediates" + File.separator
-            + "stripped_native_libs" + File.separator
-            + buildTypeName + File.separator
-            + "out" + File.separator
-            + "lib" + File.separator
-    )
+    else {
+        buildTypeName = "release"
+        dexSourceDirName = "minifyReleaseWithR8"
+        soFileTypeName = "stripped_native_libs"
+        sourceSoLibsDir = file(project.buildDir.absolutePath + File.separator
+                + "intermediates" + File.separator
+                + soFileTypeName + File.separator
+                + buildTypeName + File.separator
+                + "out" + File.separator
+                + "lib" + File.separator
+        )
+    }
+
     def targetDir = file(project.rootDir.absolutePath + File.separator + "executable" + File.separator + "shell-files")
     def targetSoLibsDir = file(targetDir.absolutePath + File.separator + "libs")
 

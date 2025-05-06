@@ -27,3 +27,7 @@
     public static int i(...);
     public static int v(...);
 }
+
+-keep class com.luoyesiqiu.shell.JniBridge {
+    native <methods>;
+}
