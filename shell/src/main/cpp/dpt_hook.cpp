@@ -298,7 +298,7 @@ DPT_ENCRYPT  void hook_DefineClass() {
     }
     void* defineClassAddress = DobbySymbolResolver(GetClassLinkerDefineClassLibPath(), sym);
 
-    int hookResult;
+    __unused int hookResult;
     if(g_sdkLevel >= __ANDROID_API_L_MR1__) {
         hookResult = DobbyHook(defineClassAddress, (void *) DefineClassV22, (void **) &g_originDefineClassV22);
     }

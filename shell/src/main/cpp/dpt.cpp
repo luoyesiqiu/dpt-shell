@@ -267,9 +267,12 @@ void decrypt_section(const char* section_name, int temp_prot, int target_prot) {
               size);
 
     memcpy(target,bitcode,size);
-    free(bitcode);
+    DPT_FREE(bitcode);
 
-    dpt_mprotect(target,(void *)((uint8_t *)target + size),target_prot);
+    int mprotect_ret = dpt_mprotect(target,(void *)((uint8_t *)target + size),target_prot);
+    if(mprotect_ret == -1) {
+        abort();
+    }
 }
 
 void decrypt_bitcode() {
@@ -415,6 +418,9 @@ DPT_ENCRYPT void replaceApplicationOnLoadedApk(JNIEnv *env, jclass __unused,jobj
 
 DPT_ENCRYPT static bool registerNativeMethods(JNIEnv *env) {
     jclass JniBridgeClass = env->FindClass("com/luoyesiqiu/shell/JniBridge");
+    if(JniBridgeClass == nullptr) {
+        DLOGF("%s cannot find JniBridge class!", __FUNCTION__);
+    }
     if (env->RegisterNatives(JniBridgeClass, gMethods, sizeof(gMethods) / sizeof(gMethods[0])) ==
         0) {
         return JNI_TRUE;
@@ -484,10 +490,12 @@ DPT_ENCRYPT JNIEXPORT jint JNI_OnLoad(JavaVM *vm, void *__unused) {
 
     JNIEnv *env = nullptr;
     if (vm->GetEnv((void **) &env, JNI_VERSION_1_6) != JNI_OK) {
+        DLOGF("JNI_OnLoad GetEnv() fail!");
         return JNI_ERR;
     }
 
     if (registerNativeMethods(env) == JNI_FALSE) {
+        DLOGF("JNI_OnLoad register native methods fail!");
         return JNI_ERR;
     }
 
