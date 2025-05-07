@@ -36,8 +36,13 @@ public class Dpt {
         helpFormatter.printHelp("java -jar dpt.jar [option] -f <package_file>",options);
     }
 
+    private static void printVersion() {
+        System.out.println(Const.PROGRAM_VERSION);
+    }
+
     private static AndroidPackage parseOptions(String[] args) {
         Options options = new Options();
+        options.addOption(new Option(Const.OPTION_VERSION,Const.OPTION_VERSION_LONG,false,"Show program's version number."));
         options.addOption(new Option(Const.OPTION_NO_SIGN_PACKAGE,Const.OPTION_NO_SIGN_PACKAGE_LONG,false,"Do not sign package."));
         options.addOption(new Option(Const.OPTION_DUMP_CODE,Const.OPTION_DUMP_CODE_LONG,false,"Dump the code item of DEX and save it to .json files."));
         options.addOption(new Option(Const.OPTION_OPEN_NOISY_LOG,Const.OPTION_OPEN_NOISY_LOG_LONG,false,"Open noisy log."));
@@ -55,10 +60,17 @@ public class Dpt {
         CommandLineParser commandLineParser = new DefaultParser();
         try {
             CommandLine commandLine = commandLineParser.parse(options, args);
+
+            if(commandLine.hasOption(Const.OPTION_VERSION)) {
+                printVersion();
+                return null;
+            }
+
             if(!commandLine.hasOption(Const.OPTION_INPUT_FILE)) {
                 usage(options,"Need a file path.");
                 return null;
             }
+
             LogUtils.setOpenNoisyLog(commandLine.hasOption(Const.OPTION_OPEN_NOISY_LOG));
 
 
@@ -108,6 +120,5 @@ public class Dpt {
 
         return null;
     }
-
 
 }

@@ -46,6 +46,7 @@ usage: java -jar dpt.jar [option] -f <package_file>
                            file.
  -l,--noisy-log            Open noisy log.
  -o,--output <arg>         Output directory for protected package.
+ -v,--version              Show program's version number.
  -x,--no-sign              Do not sign package.
 ```
 

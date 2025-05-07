@@ -4,6 +4,8 @@ package com.luoye.dpt;
  * @author luoyesiqiu
  */
 public class Const {
+    public static final String PROGRAM_VERSION = "2.0.0";
+
     public static final String OPTION_OPEN_NOISY_LOG_LONG = "noisy-log";
     public static final String OPTION_OPEN_NOISY_LOG = "l";
     public static final String OPTION_NO_SIGN_PACKAGE_LONG = "no-sign";
@@ -20,6 +22,8 @@ public class Const {
     public static final String OPTION_OUTPUT_PATH_LONG = "output";
     public static final String OPTION_EXCLUDE_ABI = "e";
     public static final String OPTION_EXCLUDE_ABI_LONG = "exclude-abi";
+    public static final String OPTION_VERSION = "v";
+    public static final String OPTION_VERSION_LONG = "version";
 
     public static final String STORE_PASSWORD = "android";
     public static final String KEY_PASSWORD = "android";
@@ -32,4 +36,5 @@ public class Const {
     public static final short MULTI_DEX_CODE_VERSION = 2;
 
     public static final String RC4_KEY_SYMBOL = "DPT_UNKNOWN_DATA";
+
 }
