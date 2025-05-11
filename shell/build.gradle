@@ -55,12 +55,14 @@ def afterAssembleCopy(Project project, Map archMap, boolean debug) {
     if(debug) {
         buildTypeName = "debug"
         dexSourceDirName = "mergeDexDebug"
-        soFileTypeName = "cmake"
+        soFileTypeName = "merged_native_libs"
         sourceSoLibsDir = file(project.buildDir.absolutePath + File.separator
                 + "intermediates" + File.separator
                 + soFileTypeName + File.separator
                 + buildTypeName + File.separator
-                + "obj" + File.separator
+                + "mergeDebugNativeLibs" + File.separator
+                + "out" + File.separator
+                + "lib" + File.separator
         )
 
     }
@@ -72,6 +74,7 @@ def afterAssembleCopy(Project project, Map archMap, boolean debug) {
                 + "intermediates" + File.separator
                 + soFileTypeName + File.separator
                 + buildTypeName + File.separator
+                + "stripReleaseDebugSymbols" + File.separator
                 + "out" + File.separator
                 + "lib" + File.separator
         )
@@ -106,14 +109,19 @@ def afterAssembleCopy(Project project, Map archMap, boolean debug) {
 
 def afterNativeBuildCopy(Project project, Map archMap, boolean debug) {
     def buildTypeName = "release"
+    def subBuildTypeName = "mergeReleaseNativeLibs"
     if(debug) {
         buildTypeName = "debug"
+        subBuildTypeName = "mergeDebugNativeLibs"
     }
     def sourceDir = file(project.buildDir.absolutePath + File.separator
             + "intermediates" + File.separator
-            + "cmake" + File.separator
+            + "merged_native_libs" + File.separator
             + buildTypeName + File.separator
-            + "obj" + File.separator)
+            + subBuildTypeName + File.separator
+            + "out" + File.separator
+            + "lib" + File.separator
+    )
 
     def targetDir = file(project.projectDir.absolutePath + File.separator
             + "src" + File.separator
@@ -122,6 +130,7 @@ def afterNativeBuildCopy(Project project, Map archMap, boolean debug) {
             + "vwwwwwvwww")
 
     println("[" + project.name + "] " + sourceDir.absolutePath + " -> " + targetDir.absolutePath)
+
     def status = delete(fileTree(targetDir.absolutePath) {
         include "/**/*.so"
     })
@@ -148,8 +157,8 @@ afterEvaluate { Project project ->
     def assembleTask = project.tasks.getByName("assemble")
     def assembleDebugTask = project.tasks.getByName("assembleDebug")
     def assembleReleaseTask = project.tasks.getByName("assembleRelease")
-    def nativeDebugBuildTask = project.tasks.getByName("externalNativeBuildDebug")
-    def nativeReleaseBuildTask = project.tasks.getByName("externalNativeBuildRelease")
+    def nativeDebugBuildTask = project.tasks.getByName("mergeDebugNativeLibs")
+    def nativeReleaseBuildTask = project.tasks.getByName("mergeReleaseNativeLibs")
 
     def archMap = [
             "armeabi-v7a":"arm",
