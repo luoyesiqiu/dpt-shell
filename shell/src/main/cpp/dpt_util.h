@@ -55,7 +55,7 @@ void unload_apk(void *apk_addr,size_t apk_size);
 bool read_zip_file_entry(void* zip_addr,off_t zip_size,const char* entry_name, void ** entry_addr,uint64_t *entry_size);
 int find_in_maps(int count,...);
 int find_in_threads_list(int count,...);
-const char* find_symbol_in_elf_file(const char *elf_file,int keyword_count,...);
+void find_symbol_in_elf_file(const char *elf_file, char *symbol_name_out, size_t max_out_len, int keyword_count,...);
 void get_elf_section(Elf_Shdr *target,const char *elf_path,const char *sh_name);
 
 int dpt_mprotect(void *start,void *end,int prot);
