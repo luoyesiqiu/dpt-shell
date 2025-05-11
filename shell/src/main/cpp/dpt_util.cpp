@@ -413,7 +413,7 @@ void get_elf_section(Elf_Shdr *target,const char *elf_path,const char *sh_name) 
     fclose(elf_fp);
 }
 
-DPT_ENCRYPT const char* find_symbol_in_elf_file(const char *elf_file,int keyword_count,...) {
+DPT_ENCRYPT void find_symbol_in_elf_file(const char *elf_file, char *symbol_name_out, size_t max_out_len, int keyword_count, ...) {
     FILE *elf_fp = fopen(elf_file, "r");
 
     char* item_value = nullptr;
@@ -423,10 +423,10 @@ DPT_ENCRYPT const char* find_symbol_in_elf_file(const char *elf_file,int keyword
         size_t lib_size = ftell(elf_fp);
         fseek(elf_fp, 0L, SEEK_SET);
 
-        char *data = (char *) calloc(lib_size, 1);
-        fread(data, 1, lib_size, elf_fp);
+        uint8_t *lib_buffer = (uint8_t *) calloc(lib_size, 1);
+        fread(lib_buffer, 1, lib_size, elf_fp);
 
-        char *elf_bytes_data = data;
+        uint8_t *elf_bytes_data = lib_buffer;
         Elf_Ehdr *ehdr = (Elf_Ehdr*)elf_bytes_data;
 
         Elf_Shdr *shdr = (Elf_Shdr *)(((uint8_t*) elf_bytes_data) + ehdr->e_shoff);
@@ -434,14 +434,13 @@ DPT_ENCRYPT const char* find_symbol_in_elf_file(const char *elf_file,int keyword
         va_list kw_list;
 
         for (int i = 0; i < ehdr->e_shnum;i++) {
-
-            if(shdr->sh_type == SHT_STRTAB){
+            if(shdr->sh_type == SHT_STRTAB) {
                 const char* str_base = (char *)((uint8_t*)elf_bytes_data + shdr->sh_offset);
                 char* ptr = (char *)str_base;
 
                 for(;ptr < (str_base + shdr->sh_size);){
                     item_value = ptr;
-                    size_t item_len = strnlen(item_value,128);
+                    size_t item_len = strlen(item_value);
                     ptr += (item_len + 1);
 
                     if(item_len == 0){
@@ -450,26 +449,27 @@ DPT_ENCRYPT const char* find_symbol_in_elf_file(const char *elf_file,int keyword
                     int match_count = 0;
                     va_start(kw_list,keyword_count);
                     for(int n = 0;n < keyword_count;n++){
-                        const char *keyword = va_arg(kw_list,const char*);
+                        const char *keyword = va_arg(kw_list, const char*);
                         if(strstr(item_value,keyword)){
                             match_count++;
                         }
                     }
                     va_end(kw_list);
                     if(match_count == keyword_count){
-                        goto release;
+                        snprintf(symbol_name_out, max_out_len, "%s", item_value);
+                        goto tail;
                     }
                 }
                 break;
             }
 
             shdr++;
-        }
-        release:
-            fclose(elf_fp);
-            free(data);
-    }
-    return item_value;
+        } //for
+        tail: {
+        DPT_FREE(lib_buffer);
+        fclose(elf_fp);
+    };
+    } // if
 }
 
 DPT_ENCRYPT int find_in_maps(int count,...) {

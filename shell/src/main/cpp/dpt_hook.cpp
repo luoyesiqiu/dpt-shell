@@ -50,16 +50,6 @@ const char *GetClassLinkerDefineClassLibPath(){
     return GetArtLibPath();
 }
 
-const char *getClassLinkerDefineClassSymbol() {
-    const char *sym = find_symbol_in_elf_file(GetClassLinkerDefineClassLibPath(), 2, "ClassLinker", "DefineClass");
-    return sym;
-}
-
-const char *getClassLinkerLoadClassSymbol() {
-    const char *sym = find_symbol_in_elf_file(GetArtLibPath(), 2, "ClassLinker", "LoadClass");
-    return sym;
-}
-
 void change_dex_protective(uint8_t * begin,int dexSize,int dexIndex){
     uintptr_t start = PAGE_START((uintptr_t) (begin));
     uint32_t pageSize = sysconf(_SC_PAGE_SIZE);
@@ -250,7 +240,10 @@ DPT_ENCRYPT void hook_LoadClass() {
 
     void* loadClassAddress = nullptr;
     if(g_sdkLevel >= 36 || strcmp(codename, "Baklava") == 0) {
-        loadClassAddress = DobbySymbolResolver(GetArtLibPath(), getClassLinkerLoadClassSymbol());
+        char sym[256] = {0};
+        find_symbol_in_elf_file(GetClassLinkerDefineClassLibPath(), sym, ARRAY_LENGTH(sym), 2, "ClassLinker", "LoadClass");
+
+        loadClassAddress = DobbySymbolResolver(GetArtLibPath(), sym);
 
         __unused int hookResult = DobbyHook(loadClassAddress, (void *) LoadClassV36, (void **) &g_originLoadClassV36);
 
@@ -291,14 +284,22 @@ DPT_ENCRYPT void *DefineClassV21(void* thiz,
 }
 
 DPT_ENCRYPT  void hook_DefineClass() {
-    const char *sym = getClassLinkerDefineClassSymbol();
-    if(sym == nullptr) {
+    char sym[256] = {0};
+    find_symbol_in_elf_file(GetClassLinkerDefineClassLibPath(), sym, ARRAY_LENGTH(sym), 2, "ClassLinker", "DefineClass");
+
+    if(strlen(sym) == 0) {
         DLOGW("%s cannot find symbol: DefineClass",__FUNCTION__);
         return;
     }
+
     void* defineClassAddress = DobbySymbolResolver(GetClassLinkerDefineClassLibPath(), sym);
 
-    __unused int hookResult;
+    if(defineClassAddress == nullptr) {
+        DLOGE("%s defineClass address is null, sym: %s",__FUNCTION__, sym);
+        return;
+    }
+
+    int hookResult;
     if(g_sdkLevel >= __ANDROID_API_L_MR1__) {
         hookResult = DobbyHook(defineClassAddress, (void *) DefineClassV22, (void **) &g_originDefineClassV22);
     }
@@ -306,7 +307,12 @@ DPT_ENCRYPT  void hook_DefineClass() {
         hookResult = DobbyHook(defineClassAddress, (void *) DefineClassV21, (void **) &g_originDefineClassV21);
     }
 
-    DLOGD("%s hook result: %d",__FUNCTION__,hookResult);
+    if(hookResult == 0) {
+        DLOGD("%s hook success.", __FUNCTION__);
+    }
+    else {
+        DLOGE("%s hook fail!", __FUNCTION__);
+    }
 }
 
 const char *getArtLibName() {
