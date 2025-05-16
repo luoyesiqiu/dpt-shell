@@ -67,3 +67,4 @@ This project has not too many tests, be careful use in prod environment. Otherwi
 - [JSON-java](https://github.com/stleary/JSON-java)
 - [zip4j](https://github.com/srikanth-lingala/zip4j)
 - [commons-cli](https://github.com/apache/commons-cli)
+- [dexmaker](https://android.googlesource.com/platform/external/dexmaker)
