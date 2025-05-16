@@ -22,8 +22,10 @@ void dpt_hook() {
     g_sdkLevel = android_get_device_api_level();
     hook_execve();
     hook_mmap();
-    hook_DefineClass();
-    hook_LoadClass();
+    bool hookSuccess = hook_DefineClass();
+    if(!hookSuccess) {
+        hook_LoadClass();
+    }
 }
 
 const char *GetArtLibPath() {
@@ -225,31 +227,28 @@ DPT_ENCRYPT void LoadClassV36(void* thiz,
                                const void* dex_file,
                                const void* dex_class_def,
                                const char* klass) {
-    if(LIKELY(g_originLoadClassV36 != nullptr)) {
+    if(LIKELY(g_originLoadClassV23 != nullptr)) {
         patchClass(nullptr,dex_file,dex_class_def);
-        g_originLoadClassV36(thiz, self, dex_file, dex_class_def, klass);
+        g_originLoadClassV23(thiz, self, dex_file, dex_class_def, klass);
     }
 }
 
-DPT_ENCRYPT void hook_LoadClass() {
-    if(g_sdkLevel < 35) {
-        return;
+DPT_ENCRYPT bool hook_LoadClass() {
+    if(g_sdkLevel < __ANDROID_API_M__) {
+        return false;
     }
-    char codename[128] = {0};
-    __system_property_get("ro.build.version.codename", codename);
 
     void* loadClassAddress = nullptr;
-    if(g_sdkLevel >= 36 || strcmp(codename, "Baklava") == 0) {
-        char sym[256] = {0};
-        find_symbol_in_elf_file(GetClassLinkerDefineClassLibPath(), sym, ARRAY_LENGTH(sym), 2, "ClassLinker", "LoadClass");
 
-        loadClassAddress = DobbySymbolResolver(GetArtLibPath(), sym);
+    char sym[256] = {0};
+    find_symbol_in_elf_file(GetClassLinkerDefineClassLibPath(), sym, ARRAY_LENGTH(sym), 2, "ClassLinker", "LoadClass");
 
-        __unused int hookResult = DobbyHook(loadClassAddress, (void *) LoadClassV36, (void **) &g_originLoadClassV36);
+    loadClassAddress = DobbySymbolResolver(GetArtLibPath(), sym);
 
-        DLOGD("%s hook result: %d", __FUNCTION__, hookResult);
-    }
+    int hookResult = DobbyHook(loadClassAddress, (void *) LoadClassV36, (void **) &g_originLoadClassV23);
 
+    DLOGD("%s hook result: %d", __FUNCTION__, hookResult);
+    return hookResult == 0;
 }
 
 DPT_ENCRYPT void *DefineClassV22(void* thiz,void* self,
@@ -283,20 +282,20 @@ DPT_ENCRYPT void *DefineClassV21(void* thiz,
     return nullptr;
 }
 
-DPT_ENCRYPT  void hook_DefineClass() {
+DPT_ENCRYPT bool hook_DefineClass() {
     char sym[256] = {0};
     find_symbol_in_elf_file(GetClassLinkerDefineClassLibPath(), sym, ARRAY_LENGTH(sym), 2, "ClassLinker", "DefineClass");
 
     if(strlen(sym) == 0) {
         DLOGW("%s cannot find symbol: DefineClass",__FUNCTION__);
-        return;
+        return false;
     }
 
     void* defineClassAddress = DobbySymbolResolver(GetClassLinkerDefineClassLibPath(), sym);
 
     if(defineClassAddress == nullptr) {
         DLOGE("%s defineClass address is null, sym: %s",__FUNCTION__, sym);
-        return;
+        return false;
     }
 
     int hookResult;
@@ -309,9 +308,11 @@ DPT_ENCRYPT  void hook_DefineClass() {
 
     if(hookResult == 0) {
         DLOGD("%s hook success.", __FUNCTION__);
+        return true;
     }
     else {
         DLOGE("%s hook fail!", __FUNCTION__);
+        return false;
     }
 }
 

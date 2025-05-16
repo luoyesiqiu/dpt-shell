@@ -32,13 +32,13 @@ static void* (*g_originDefineClassV21)(void* thiz,
                                     const void* dex_class_def);
 
 
-static void (*g_originLoadClassV36)(void* thiz,
+static void (*g_originLoadClassV23)(void* thiz,
                                        const void* self,
                                        const void* dex_file,
                                        const void* dex_class_def,
                                        const char* klass);
-void hook_LoadClass();
-void hook_DefineClass();
+bool hook_LoadClass();
+bool hook_DefineClass();
 void hook_mmap();
 void hook_execve();
 #endif //DPT_DPT_HOOK_H
