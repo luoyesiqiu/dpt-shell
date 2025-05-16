@@ -83,10 +83,10 @@ public class JunkCodeGenerator {
                 className = generateBaseClassName();
             }
             else {
-                className = generateClassName();
-                if (classNameSet.contains(className)) {
+                do {
                     className = generateClassName();
                 }
+                while(classNameSet.contains(className));
                 classNameSet.add(className);
             }
 
