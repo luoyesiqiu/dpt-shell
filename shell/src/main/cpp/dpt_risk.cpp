@@ -5,23 +5,18 @@
 #include "dpt_risk.h"
 
 DPT_ENCRYPT NO_INLINE void dpt_crash() {
+    asm volatile(
 #ifdef __aarch64__
-    asm volatile(
-            "mov x30,#0\t\n"
-            );
+    "mov x30,#0\t\n"
 #elif __arm__
-    asm volatile(
-        "mov lr,#0\t\n"
-    );
+    "mov lr,#0\t\n"
 #elif __i386__
-    asm volatile(
-            "ret\t\n"
-            );
+    "ret\t\n"
 #elif __x86_64__
-    asm volatile(
-            "pop %rbp\t\n"
-    );
+    "pop %rbp\t\n"
 #endif
+);
+
 }
 
 DPT_ENCRYPT void junkCodeDexProtect(JNIEnv *env) {
