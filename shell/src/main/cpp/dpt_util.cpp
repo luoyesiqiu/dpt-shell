@@ -129,7 +129,7 @@ AAsset *getAsset(JNIEnv *env, jobject context, const char *filename) {
     return nullptr;
 }
 
-void getApkPath(JNIEnv *env,char *apkPathOut,size_t max_out_len){
+void getSourceDir(JNIEnv *env, char *sourceDirOut, size_t max_out_len) {
     reflect::android_app_ActivityThread activityThread(env);
     jobject mBoundApplicationObj = activityThread.getBoundApplication();
 
@@ -140,9 +140,9 @@ void getApkPath(JNIEnv *env,char *apkPathOut,size_t max_out_len){
     auto sourceDir = applicationInfo.getSourceDir();
 
     const char *sourceDirChs = env->GetStringUTFChars(sourceDir,nullptr);
-    snprintf(apkPathOut,max_out_len,"%s",sourceDirChs);
+    snprintf(sourceDirOut, max_out_len, "%s", sourceDirChs);
 
-    DLOGD("apk path: %s", apkPathOut);
+    DLOGD("source dir: %s", sourceDirOut);
 }
 
 void getDataDir(JNIEnv *env,char *dataDirOut,size_t max_out_len) {
@@ -161,11 +161,11 @@ void getDataDir(JNIEnv *env,char *dataDirOut,size_t max_out_len) {
     DLOGD("data dir: %s",dataDirOut);
 }
 
-jstring getApkPathExport(JNIEnv *env,jclass __unused) {
-    char apkPathChs[512] = {0};
-    getApkPath(env,apkPathChs, ARRAY_LENGTH(apkPathChs));
+jstring getSourceDirExport(JNIEnv *env,jclass __unused) {
+    char sourceDirChs[512] = {0};
+    getSourceDir(env, sourceDirChs, ARRAY_LENGTH(sourceDirChs));
 
-    return env->NewStringUTF(apkPathChs);
+    return env->NewStringUTF(sourceDirChs);
 }
 
 void getCompressedDexesPath(JNIEnv *env,char *outDexZipPath,size_t max_len) {
@@ -198,13 +198,13 @@ static uint32_t readZipLength(const uint8_t *data, size_t size) {
     return length;
 }
 
-DPT_ENCRYPT static void writeDexAchieve(const char *dexAchievePath,void *apk_addr,size_t apk_size) {
+DPT_ENCRYPT static void writeDexAchieve(const char *dexAchievePath, void *package_addr, size_t package_size) {
     DLOGD("zipCode open = %s",dexAchievePath);
     FILE *fp = fopen(dexAchievePath, "wb");
     if(fp != nullptr){
         uint64_t dex_files_size = 0;
         void *dexFilesData = nullptr;
-        bool needFree = read_zip_file_entry(apk_addr,apk_size,COMBINE_DEX_FILES_NAME_IN_ZIP,&dexFilesData,&dex_files_size);
+        bool needFree = read_zip_file_entry(package_addr, package_size, COMBINE_DEX_FILES_NAME_IN_ZIP, &dexFilesData, &dex_files_size);
         if (dexFilesData != nullptr) {
             DLOGD("Read classes.dex of size: %lu", (unsigned long)dex_files_size);
             uint32_t zipDataLen = readZipLength((uint8_t *)dexFilesData, dex_files_size);
@@ -231,7 +231,7 @@ DPT_ENCRYPT static void writeDexAchieve(const char *dexAchievePath,void *apk_add
     }
 }
 
-DPT_ENCRYPT void extractDexesInNeeded(JNIEnv *env,void *apk_addr,size_t apk_size) {
+DPT_ENCRYPT void extractDexesInNeeded(JNIEnv *env, void *package_addr, size_t package_size) {
     char compressedDexesPathChs[256] = {0};
     getCompressedDexesPath(env,compressedDexesPathChs, ARRAY_LENGTH(compressedDexesPathChs));
 
@@ -240,7 +240,7 @@ DPT_ENCRYPT void extractDexesInNeeded(JNIEnv *env,void *apk_addr,size_t apk_size
 
     if(access(codeCachePathChs, F_OK) == 0){
         if(access(compressedDexesPathChs, F_OK) != 0) {
-            writeDexAchieve(compressedDexesPathChs,apk_addr,apk_size);
+            writeDexAchieve(compressedDexesPathChs, package_addr, package_size);
             chmod(compressedDexesPathChs,0444);
             DLOGI("%s write finish", compressedDexesPathChs);
 
@@ -251,7 +251,7 @@ DPT_ENCRYPT void extractDexesInNeeded(JNIEnv *env,void *apk_addr,size_t apk_size
     }
     else {
         if(mkdir(codeCachePathChs,0775) == 0){
-            writeDexAchieve(compressedDexesPathChs,apk_addr,apk_size);
+            writeDexAchieve(compressedDexesPathChs, package_addr, package_size);
             chmod(compressedDexesPathChs,0444);
         }
         else {
@@ -259,7 +259,6 @@ DPT_ENCRYPT void extractDexesInNeeded(JNIEnv *env,void *apk_addr,size_t apk_size
         }
     }
 }
-
 
 DPT_ENCRYPT static void load_zip_by_mmap(const char* zip_file_path,void **zip_addr,size_t *zip_size) {
     int fd = open(zip_file_path,O_RDONLY);
@@ -290,17 +289,17 @@ static void load_zip(const char* zip_file_path,void **zip_addr,size_t *zip_size)
     DLOGD("start: %p size: %zu", *zip_addr,*zip_size);
 }
 
-void load_apk(JNIEnv *env,void **apk_addr,size_t *apk_size) {
-    char apkPathChs[512] = {0};
-    getApkPath(env,apkPathChs,ARRAY_LENGTH(apkPathChs));
-    load_zip(apkPathChs,apk_addr,apk_size);
+void load_package(JNIEnv *env, void **package_addr, size_t *package_size) {
+    char sourceDirChs[512] = {0};
+    getSourceDir(env, sourceDirChs, ARRAY_LENGTH(sourceDirChs));
+    load_zip(sourceDirChs, package_addr, package_size);
 
 }
 
-void unload_apk(void *apk_addr,size_t apk_size) {
-    if(apk_addr != nullptr) {
-        munmap(apk_addr,apk_size);
-        DLOGD("addr: " FMT_POINTER " size: %zu", (uintptr_t)apk_addr, apk_size);
+void unload_package(void *package_addr,size_t package_size) {
+    if(package_addr != nullptr) {
+        munmap(package_addr, package_size);
+        DLOGD("addr: " FMT_POINTER " size: %zu", (uintptr_t)package_addr, package_size);
     }
 }
 

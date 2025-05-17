@@ -22,7 +22,7 @@ static JNINativeMethod gMethods[] = {
         {"craoc", "(Ljava/lang/String;)V",                               (void *) callRealApplicationOnCreate},
         {"craa",  "(Landroid/content/Context;Ljava/lang/String;)V",      (void *) callRealApplicationAttach},
         {"ia",    "()V", (void *) init_app},
-        {"gap",   "()Ljava/lang/String;",         (void *) getApkPathExport},
+        {"gap",   "()Ljava/lang/String;",         (void *) getSourceDirExport},
         {"gdp",   "()Ljava/lang/String;",         (void *) getCompressedDexesPathExport},
         {"rcf",   "()Ljava/lang/String;",         (void *) readAppComponentFactory},
         {"rapn",   "()Ljava/lang/String;",        (void *) readApplicationName},
@@ -174,13 +174,13 @@ DPT_ENCRYPT void removeDexElements(JNIEnv* env,jclass __unused,jobject classLoad
 DPT_ENCRYPT jstring readAppComponentFactory(JNIEnv *env, jclass __unused) {
 
     if(appComponentFactoryChs == nullptr) {
-        void *apk_addr = nullptr;
-        size_t apk_size = 0;
-        load_apk(env,&apk_addr,&apk_size);
+        void *package_addr = nullptr;
+        size_t package_size = 0;
+        load_package(env,&package_addr,&package_size);
 
         uint64_t entry_size = 0;
         void *entry_addr = nullptr;
-        bool needFree = read_zip_file_entry(apk_addr, apk_size ,ACF_NAME_IN_ZIP, &entry_addr, &entry_size);
+        bool needFree = read_zip_file_entry(package_addr, package_size ,ACF_NAME_IN_ZIP, &entry_addr, &entry_size);
         if(!needFree) {
             char *newChs = (char *) calloc(entry_size + 1, sizeof(char));
             if (entry_size != 0) {
@@ -192,7 +192,7 @@ DPT_ENCRYPT jstring readAppComponentFactory(JNIEnv *env, jclass __unused) {
             appComponentFactoryChs = (char *) entry_addr;
 
         }
-        unload_apk(apk_addr,apk_size);
+        unload_package(package_addr, package_size);
     }
 
     DLOGD("result: %s", appComponentFactoryChs);
@@ -201,13 +201,13 @@ DPT_ENCRYPT jstring readAppComponentFactory(JNIEnv *env, jclass __unused) {
 
 DPT_ENCRYPT jstring readApplicationName(JNIEnv *env, jclass __unused) {
     if(applicationNameChs == nullptr) {
-        void *apk_addr = nullptr;
-        size_t apk_size = 0;
-        load_apk(env,&apk_addr,&apk_size);
+        void *package_addr = nullptr;
+        size_t package_size = 0;
+        load_package(env, &package_addr, &package_size);
 
         uint64_t entry_size = 0;
         void *entry_addr = nullptr;
-        bool needFree = read_zip_file_entry(apk_addr, apk_size, APP_NAME_IN_ZIP, &entry_addr,
+        bool needFree = read_zip_file_entry(package_addr, package_size, APP_NAME_IN_ZIP, &entry_addr,
                                             &entry_size);
         if (!needFree) {
             char *newChs = (char *) calloc(entry_size + 1, sizeof(char));
@@ -218,7 +218,7 @@ DPT_ENCRYPT jstring readApplicationName(JNIEnv *env, jclass __unused) {
         } else {
             applicationNameChs = (char *) entry_addr;
         }
-        unload_apk(apk_addr,apk_size);
+        unload_package(package_addr, package_size);
     }
     DLOGD("result: %s", applicationNameChs);
     return env->NewStringUTF((applicationNameChs));
@@ -430,13 +430,13 @@ DPT_ENCRYPT void init_app(JNIEnv *env, jclass __unused) {
     DLOGD("called!");
     clock_t start = clock();
 
-    void *apk_addr = nullptr;
-    size_t apk_size = 0;
-    load_apk(env,&apk_addr,&apk_size);
+    void *package_addr = nullptr;
+    size_t package_size = 0;
+    load_package(env, &package_addr, &package_size);
 
     uint64_t entry_size = 0;
     if(codeItemFilePtr == nullptr) {
-        read_zip_file_entry(apk_addr,apk_size,CODE_ITEM_NAME_IN_ZIP,&codeItemFilePtr,&entry_size);
+        read_zip_file_entry(package_addr, package_size, CODE_ITEM_NAME_IN_ZIP, &codeItemFilePtr, &entry_size);
     }
     else {
         DLOGD("no need read codeitem from zip");
@@ -444,17 +444,16 @@ DPT_ENCRYPT void init_app(JNIEnv *env, jclass __unused) {
     readCodeItem((uint8_t *)codeItemFilePtr,entry_size);
 
     pthread_mutex_lock(&g_write_dexes_mutex);
-    extractDexesInNeeded(env,apk_addr,apk_size);
+    extractDexesInNeeded(env, package_addr, package_size);
     pthread_mutex_unlock(&g_write_dexes_mutex);
 
-    unload_apk(apk_addr,apk_size);
-    printTime("read apk data took =" , start);
+    unload_package(package_addr, package_size);
+    printTime("read package data took =" , start);
 }
 
 DPT_ENCRYPT void readCodeItem(uint8_t *data,size_t data_len) {
 
     if (data != nullptr && data_len >= 0) {
-
         data::MultiDexCode *dexCode = data::MultiDexCode::getInst();
 
         dexCode->init(data, data_len);
