@@ -53,7 +53,7 @@ DPT_ENCRYPT jobjectArray makePathElements(JNIEnv* env,const char *pathChs) {
                                                     nullptr,
                                                     suppressedExceptions.getInstance());
     }
-    printTime("makePathElements success,took = ",cl);
+    printTime("makePathElements success, took = ", cl);
     return elements;
 }
 
@@ -87,7 +87,7 @@ DPT_ENCRYPT void combineDexElement(JNIEnv* env, jclass __unused, jobject targetC
 
     targetDexPathList.setDexElements(newDexElements);
 
-    DLOGD("combineDexElement success");
+    DLOGD("success");
 }
 
 DPT_ENCRYPT void combineDexElements(JNIEnv* env, jclass klass, jobject targetClassLoader) {
@@ -99,7 +99,7 @@ DPT_ENCRYPT void combineDexElements(JNIEnv* env, jclass klass, jobject targetCla
 #ifndef DEBUG
     junkCodeDexProtect(env);
 #endif
-    DLOGD("combineDexElements success");
+    DLOGD("success");
 }
 
 DPT_ENCRYPT void removeDexElements(JNIEnv* env,jclass __unused,jobject classLoader,jstring elementName){
@@ -124,7 +124,7 @@ DPT_ENCRYPT void removeDexElements(JNIEnv* env,jclass __unused,jobject classLoad
         java_io_File javaIoFile(env,fileObj);
         jstring fileName = javaIoFile.getName();
         if(fileName == nullptr){
-            DLOGW("removeDexElements got an empty file name");
+            DLOGW("got an empty file name");
             continue;
         }
         const char* fileNameChs = env->GetStringUTFChars(fileName,nullptr);
@@ -140,7 +140,7 @@ DPT_ENCRYPT void removeDexElements(JNIEnv* env,jclass __unused,jobject classLoad
     jclass ElementClass = arrayElement.getClass();
     jobjectArray newElementArray = env->NewObjectArray(newLen,ElementClass,nullptr);
 
-    DLOGD("removeDexElements oldlen = %d , newlen = %d",oldLen,newLen);
+    DLOGD("oldlen = %d , newlen = %d",oldLen,newLen);
 
     jint newArrayIndex = 0;
 
@@ -152,13 +152,13 @@ DPT_ENCRYPT void removeDexElements(JNIEnv* env,jclass __unused,jobject classLoad
         java_io_File javaIoFile(env,fileObj);
         jstring fileName = javaIoFile.getName();
         if(fileName == nullptr){
-            DLOGW("removeDexElements got an empty file name");
+            DLOGW("got an empty file name");
             continue;
         }
         const char* fileNameChs = env->GetStringUTFChars(fileName,nullptr);
 
         if(strncmp(fileNameChs,removeElementNameChs,256) == 0){
-            DLOGD("removeDexElements will remove item: %s",fileNameChs);
+            DLOGD("will remove item: %s",fileNameChs);
             env->ReleaseStringUTFChars(fileName,fileNameChs);
             continue;
         }
@@ -168,7 +168,7 @@ DPT_ENCRYPT void removeDexElements(JNIEnv* env,jclass __unused,jobject classLoad
     }
 
     dexPathList.setDexElements(newElementArray);
-    DLOGD("removeDexElements success");
+    DLOGD("success");
 }
 
 DPT_ENCRYPT jstring readAppComponentFactory(JNIEnv *env, jclass __unused) {
@@ -195,12 +195,11 @@ DPT_ENCRYPT jstring readAppComponentFactory(JNIEnv *env, jclass __unused) {
         unload_apk(apk_addr,apk_size);
     }
 
-    DLOGD("readAppComponentFactory = %s", appComponentFactoryChs);
+    DLOGD("result: %s", appComponentFactoryChs);
     return env->NewStringUTF((appComponentFactoryChs));
 }
 
 DPT_ENCRYPT jstring readApplicationName(JNIEnv *env, jclass __unused) {
-
     if(applicationNameChs == nullptr) {
         void *apk_addr = nullptr;
         size_t apk_size = 0;
@@ -221,23 +220,23 @@ DPT_ENCRYPT jstring readApplicationName(JNIEnv *env, jclass __unused) {
         }
         unload_apk(apk_addr,apk_size);
     }
-    DLOGD("readApplicationName = %s", applicationNameChs);
+    DLOGD("result: %s", applicationNameChs);
     return env->NewStringUTF((applicationNameChs));
 }
 
 DPT_ENCRYPT void createAntiRiskProcess() {
     pid_t child = fork();
     if(child < 0) {
-        DLOGW("%s fork fail!", __FUNCTION__);
+        DLOGW("fork fail!");
         detectFrida();
     }
     else if(child == 0) {
-        DLOGD("%s in child process", __FUNCTION__);
+        DLOGD("in child process");
         detectFrida();
         doPtrace();
     }
     else {
-        DLOGD("%s in main process, child pid: %d", __FUNCTION__, child);
+        DLOGD("in main process, child pid: %d", child);
         protectChildProcess(child);
         detectFrida();
     }
@@ -283,7 +282,7 @@ void init_dpt() {
 #ifdef DECRYPT_BITCODE
     decrypt_bitcode();
 #endif
-    DLOGI("init_dpt call!");
+    DLOGI("call!");
 
     dpt_hook();
     createAntiRiskProcess();
@@ -331,7 +330,7 @@ DPT_ENCRYPT void callRealApplicationOnCreate(JNIEnv *env, jclass, jstring realAp
     android_app_Application application(env,appInstance);
     application.onCreate();
 
-    DLOGD("callRealApplicationOnCreate call success!");
+    DLOGD("Application.onCreate() called!");
 
 }
 
@@ -343,7 +342,7 @@ DPT_ENCRYPT void callRealApplicationAttach(JNIEnv *env, jclass, jobject context,
     android_app_Application application(env,appInstance);
     application.attach(context);
 
-    DLOGD("callRealApplicationAttach call success!");
+    DLOGD("Application.attach() called!");
 
 }
 
@@ -351,7 +350,7 @@ DPT_ENCRYPT jobject replaceApplication(JNIEnv *env, jclass klass, jstring realAp
 
     jobject appInstance = getApplicationInstance(env, realApplicationClassName);
     if (appInstance == nullptr) {
-        DLOGW("replaceApplication getApplicationInstance fail!");
+        DLOGW("getApplicationInstance fail!");
         return nullptr;
     }
     replaceApplicationOnLoadedApk(env,klass,appInstance);
@@ -363,7 +362,7 @@ DPT_ENCRYPT jobject replaceApplication(JNIEnv *env, jclass klass, jstring realAp
 DPT_ENCRYPT void replaceApplicationOnActivityThread(JNIEnv *env,jclass __unused, jobject realApplication){
     android_app_ActivityThread activityThread(env);
     activityThread.setInitialApplication(realApplication);
-    DLOGD("replaceApplicationOnActivityThread success");
+    DLOGD("setInitialApplication() called!");
 }
 
 DPT_ENCRYPT void replaceApplicationOnLoadedApk(JNIEnv *env, jclass __unused,jobject realApplication) {
@@ -385,7 +384,7 @@ DPT_ENCRYPT void replaceApplicationOnLoadedApk(JNIEnv *env, jclass __unused,jobj
 
     jobject removed = (jobject)arrayList.remove(0);
     if(removed != nullptr){
-        DLOGD("replaceApplicationOnLoadedApk proxy application removed");
+        DLOGD("proxy application removed");
     }
 
     jobject ApplicationInfoObj = loadedApk.getApplicationInfo();
@@ -393,7 +392,7 @@ DPT_ENCRYPT void replaceApplicationOnLoadedApk(JNIEnv *env, jclass __unused,jobj
     android_content_pm_ApplicationInfo applicationInfo(env,ApplicationInfoObj);
 
     char applicationName[128] = {0};
-    getClassName(env,realApplication,applicationName, ARRAY_LENGTH(applicationName));
+    getClassName(env,realApplication, applicationName, ARRAY_LENGTH(applicationName));
 
     DLOGD("applicationName = %s",applicationName);
     char realApplicationNameChs[128] = {0};
@@ -407,19 +406,17 @@ DPT_ENCRYPT void replaceApplicationOnLoadedApk(JNIEnv *env, jclass __unused,jobj
     applicationInfo.setClassName(realApplicationNameGlobal);
     appInfo.setClassName(realApplicationNameGlobal);
 
-    DLOGD("replaceApplicationOnLoadedApk begin makeApplication!");
-
     // call make application
     loadedApk.makeApplication(JNI_FALSE,nullptr);
 
-    DLOGD("replaceApplicationOnLoadedApk success!");
+    DLOGD("makeApplication() called!");
 }
 
 
 DPT_ENCRYPT static bool registerNativeMethods(JNIEnv *env) {
     jclass JniBridgeClass = env->FindClass("com/luoyesiqiu/shell/JniBridge");
     if(JniBridgeClass == nullptr) {
-        DLOGF("%s cannot find JniBridge class!", __FUNCTION__);
+        DLOGF("cannot find JniBridge class!");
     }
     if (env->RegisterNatives(JniBridgeClass, gMethods, sizeof(gMethods) / sizeof(gMethods[0])) ==
         0) {
@@ -430,7 +427,7 @@ DPT_ENCRYPT static bool registerNativeMethods(JNIEnv *env) {
 
 
 DPT_ENCRYPT void init_app(JNIEnv *env, jclass __unused) {
-    DLOGD("init_app!");
+    DLOGD("called!");
     clock_t start = clock();
 
     void *apk_addr = nullptr;
@@ -461,16 +458,16 @@ DPT_ENCRYPT void readCodeItem(uint8_t *data,size_t data_len) {
         data::MultiDexCode *dexCode = data::MultiDexCode::getInst();
 
         dexCode->init(data, data_len);
-        DLOGI("readCodeItem : version = %d , dexCount = %d", dexCode->readVersion(),
+        DLOGI("version = %d, dexCount = %d", dexCode->readVersion(),
               dexCode->readDexCount());
         int indexCount = 0;
         uint32_t *dexCodeIndex = dexCode->readDexCodeIndex(&indexCount);
         for (int i = 0; i < indexCount; i++) {
-            DLOGI("readCodeItem : dexCodeIndex[%d] = %d", i, *(dexCodeIndex + i));
+            DLOGI("dexCodeIndex[%d] = %d", i, *(dexCodeIndex + i));
             uint32_t dexCodeOffset = *(dexCodeIndex + i);
             uint16_t methodCount = dexCode->readUInt16(dexCodeOffset);
 
-            DLOGD("readCodeItem : dexCodeOffset[%d] = %d,methodCount[%d] = %d", i, dexCodeOffset, i,
+            DLOGD("dexCodeOffset[%d] = %d, methodCount[%d] = %d", i, dexCodeOffset, i,
                   methodCount);
             auto codeItemMap = new std::unordered_map<int, data::CodeItem *>();
             uint32_t codeItemIndex = dexCodeOffset + 2;
@@ -482,7 +479,7 @@ DPT_ENCRYPT void readCodeItem(uint8_t *data,size_t data_len) {
             dexMap.insert(std::pair<int, std::unordered_map<int, data::CodeItem *> *>(i, codeItemMap));
 
         }
-        DLOGD("readCodeItem map size = %lu", (unsigned long)dexMap.size());
+        DLOGD("map size = %lu", (unsigned long)dexMap.size());
     }
 }
 
@@ -490,19 +487,19 @@ DPT_ENCRYPT JNIEXPORT jint JNI_OnLoad(JavaVM *vm, void *__unused) {
 
     JNIEnv *env = nullptr;
     if (vm->GetEnv((void **) &env, JNI_VERSION_1_6) != JNI_OK) {
-        DLOGF("JNI_OnLoad GetEnv() fail!");
+        DLOGF("GetEnv() fail!");
         return JNI_ERR;
     }
 
     if (registerNativeMethods(env) == JNI_FALSE) {
-        DLOGF("JNI_OnLoad register native methods fail!");
+        DLOGF("register native methods fail!");
         return JNI_ERR;
     }
 
-    DLOGI("JNI_OnLoad called!");
+    DLOGI("called!");
     return JNI_VERSION_1_6;
 }
 
 JNIEXPORT void JNI_OnUnload(__unused JavaVM* vm,__unused void* reserved) {
-    DLOGI("JNI_OnUnload called!");
+    DLOGI("called!");
 }

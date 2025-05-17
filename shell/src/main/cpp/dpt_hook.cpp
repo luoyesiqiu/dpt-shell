@@ -58,8 +58,7 @@ void change_dex_protective(uint8_t * begin,int dexSize,int dexIndex){
     size_t n = (dexSize / pageSize) + (dexSize % pageSize != 0);
 
     for(int i = 0;i < 10;) {
-        DLOGD("%s mprotect dex[%d] start = " FMT_POINTER ",end = " FMT_POINTER ", page_size = %d, dexSize = %d, block_cnt = %zu",
-              __FUNCTION__,
+        DLOGD("mprotect dex[%d] start = " FMT_POINTER ",end = " FMT_POINTER ", page_size = %d, dexSize = %d, block_cnt = %zu",
               dexIndex,
               start,
               start + pageSize * n,
@@ -70,11 +69,11 @@ void change_dex_protective(uint8_t * begin,int dexSize,int dexIndex){
                            PROT_READ | PROT_WRITE);
 
         if (ret != 0) {
-            DLOGE("%s mprotect fail, address: %p, reason: %d!",__FUNCTION__,begin,ret);
+            DLOGE("mprotect fail, address: %p, reason: %d!", begin, ret);
             i++;
         } else {
             dexMemMap.insert(std::pair<int,uint8_t *>(dexIndex,begin));
-            DLOGD("%s mprotect success, address: %p.",__FUNCTION__,begin);
+            DLOGD("mprotect success, address: %p.", begin);
             break;
         }
     }
@@ -247,7 +246,7 @@ DPT_ENCRYPT bool hook_LoadClass() {
 
     int hookResult = DobbyHook(loadClassAddress, (void *) LoadClassV23, (void **) &g_originLoadClassV23);
 
-    DLOGD("%s hook result: %d", __FUNCTION__, hookResult);
+    DLOGD("hook result: %d", hookResult);
     return hookResult == 0;
 }
 
@@ -287,14 +286,14 @@ DPT_ENCRYPT bool hook_DefineClass() {
     find_symbol_in_elf_file(GetClassLinkerDefineClassLibPath(), sym, ARRAY_LENGTH(sym), 2, "ClassLinker", "DefineClass");
 
     if(strlen(sym) == 0) {
-        DLOGW("%s cannot find symbol: DefineClass",__FUNCTION__);
+        DLOGW("cannot find symbol: DefineClass");
         return false;
     }
 
     void* defineClassAddress = DobbySymbolResolver(GetClassLinkerDefineClassLibPath(), sym);
 
     if(defineClassAddress == nullptr) {
-        DLOGE("%s defineClass address is null, sym: %s",__FUNCTION__, sym);
+        DLOGE("defineClass address is null, sym: %s", sym);
         return false;
     }
 
@@ -307,11 +306,11 @@ DPT_ENCRYPT bool hook_DefineClass() {
     }
 
     if(hookResult == 0) {
-        DLOGD("%s hook success.", __FUNCTION__);
+        DLOGD("hook success.");
         return true;
     }
     else {
-        DLOGE("%s hook fail!", __FUNCTION__);
+        DLOGE("hook fail!");
         return false;
     }
 }
@@ -334,18 +333,18 @@ DPT_ENCRYPT void* fake_mmap(void* __addr, size_t __size, int __prot, int __flags
     dpt_readlink(__fd,fd_path, ARRAY_LENGTH(fd_path));
 
     if(strstr(fd_path,"webview.vdex") != nullptr) {
-        DLOGW("fake_mmap link path: %s, no need to change prot",fd_path);
+        DLOGW("link path: %s, no need to change prot",fd_path);
         goto tail;
     }
 
     if(hasRead && !hasWrite) {
         prot = prot | PROT_WRITE;
-        DLOGD("fake_mmap call fd = %d,size = %zu, prot = %d,flag = %d",__fd,__size, prot,__flags);
+        DLOGD("append write flag fd = %d, size = %zu, prot = %d, flag = %d",__fd,__size, prot,__flags);
     }
 
     if(g_sdkLevel == 30){
         if(strstr(fd_path,"base.vdex") != nullptr){
-            DLOGE("fake_mmap want to mmap base.vdex");
+            DLOGE("want to mmap base.vdex");
             __flags = 0;
         }
     }

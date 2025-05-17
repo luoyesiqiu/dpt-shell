@@ -10,9 +10,9 @@
 #define TAG  "dpt_native"
 
 #define DLOG(_level,...) do { \
-        char logBuffer[1024];                                              \
+        char logBuffer[1024];                                           \
         snprintf(logBuffer, sizeof(logBuffer), __VA_ARGS__);            \
-        __android_log_print(_level,TAG,"[%s] %s",getThreadName(),logBuffer);                            \
+        __android_log_print(_level,TAG,"[%s] %s() %s", getThreadName(), __FUNCTION__, logBuffer);  \
 } while(false)
 
 #ifdef DEBUG
@@ -34,7 +34,7 @@
 #define DLOGD(...)
 #define DLOGE(...)
 #define DLOGW(...)
-#define DLOGF(...) DLOG(ANDROID_LOG_FATAL,__VA_ARGS__)
+#define DLOGF(...)
 
 #define NLOG(...)
 #endif

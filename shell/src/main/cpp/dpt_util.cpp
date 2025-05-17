@@ -28,9 +28,7 @@ int dpt_mprotect(void *start,void *end,int prot) {
     size_t size = end_addr - start_addr;
 
     if (0 != mprotect((void *)start_addr, size, prot)) {
-        DLOGW("%s mprotect 0x%" PRIxPTR  "-0x%" PRIxPTR  " fail, pagesize: %d, err: %s",__FUNCTION__,
-              start_addr,
-              end_addr,
+        DLOGW("mprotect 0x%" PRIxPTR  "-0x%" PRIxPTR  " fail, pagesize: %d, err: %s",start_addr,end_addr,
               getpagesize(),
               strerror(errno));
         return -1;
@@ -144,7 +142,7 @@ void getApkPath(JNIEnv *env,char *apkPathOut,size_t max_out_len){
     const char *sourceDirChs = env->GetStringUTFChars(sourceDir,nullptr);
     snprintf(apkPathOut,max_out_len,"%s",sourceDirChs);
 
-    DLOGD("getApkPath: %s",apkPathOut);
+    DLOGD("apk path: %s", apkPathOut);
 }
 
 void getDataDir(JNIEnv *env,char *dataDirOut,size_t max_out_len) {
@@ -244,11 +242,11 @@ DPT_ENCRYPT void extractDexesInNeeded(JNIEnv *env,void *apk_addr,size_t apk_size
         if(access(compressedDexesPathChs, F_OK) != 0) {
             writeDexAchieve(compressedDexesPathChs,apk_addr,apk_size);
             chmod(compressedDexesPathChs,0444);
-            DLOGI("extractDexes %s write finish",compressedDexesPathChs);
+            DLOGI("%s write finish", compressedDexesPathChs);
 
         }
         else {
-            DLOGI("extractDexes dex files is achieved!");
+            DLOGI("dex files is achieved!");
         }
     }
     else {
@@ -266,14 +264,14 @@ DPT_ENCRYPT void extractDexesInNeeded(JNIEnv *env,void *apk_addr,size_t apk_size
 DPT_ENCRYPT static void load_zip_by_mmap(const char* zip_file_path,void **zip_addr,size_t *zip_size) {
     int fd = open(zip_file_path,O_RDONLY);
     if(fd <= 0){
-        DLOGE("load_zip cannot open file!");
+        DLOGE("cannot open file!");
         return;
     }
     struct stat fst;
     fstat(fd,&fst);
     const int page_size = sysconf(_SC_PAGESIZE);
     const size_t need_zip_size = (fst.st_size / page_size) * page_size + page_size;
-    DLOGD("%s fst.st_size = " FMT_INT64_T ",need size = %zu" ,__FUNCTION__ ,fst.st_size,need_zip_size);
+    DLOGD("fst.st_size: " FMT_INT64_T ", need size: %zu", fst.st_size, need_zip_size);
     *zip_addr = mmap64(nullptr,
                        need_zip_size,
                        PROT_READ ,
@@ -282,14 +280,14 @@ DPT_ENCRYPT static void load_zip_by_mmap(const char* zip_file_path,void **zip_ad
                        0);
     *zip_size = fst.st_size;
 
-    DLOGD("%s addr:" FMT_POINTER " size: %zu" ,__FUNCTION__ ,(uintptr_t)*zip_addr,*zip_size);
+    DLOGD("addr: " FMT_POINTER " size: %zu", (uintptr_t)*zip_addr, *zip_size);
 }
 
 static void load_zip(const char* zip_file_path,void **zip_addr,size_t *zip_size) {
-    DLOGD("load_zip by mmap");
+    DLOGD("by mmap");
     load_zip_by_mmap(zip_file_path, zip_addr, zip_size);
 
-    DLOGD("%s start: %p size: %zu" ,__FUNCTION__ , *zip_addr,*zip_size);
+    DLOGD("start: %p size: %zu", *zip_addr,*zip_size);
 }
 
 void load_apk(JNIEnv *env,void **apk_addr,size_t *apk_size) {
@@ -302,12 +300,12 @@ void load_apk(JNIEnv *env,void **apk_addr,size_t *apk_size) {
 void unload_apk(void *apk_addr,size_t apk_size) {
     if(apk_addr != nullptr) {
         munmap(apk_addr,apk_size);
-        DLOGD("%s addr:" FMT_POINTER " size: %zu" ,__FUNCTION__ ,(uintptr_t)apk_addr,apk_size);
+        DLOGD("addr: " FMT_POINTER " size: %zu", (uintptr_t)apk_addr, apk_size);
     }
 }
 
 DPT_ENCRYPT bool read_zip_file_entry(void* zip_addr,off_t zip_size,const char* entry_name,void **entry_addr,uint64_t *entry_size) {
-    DLOGD("read_zip_file_entry prepare read file: %s",entry_name);
+    DLOGD("prepare read file: %s",entry_name);
 
     bool needFree = false;
 
@@ -326,7 +324,7 @@ DPT_ENCRYPT bool read_zip_file_entry(void* zip_addr,off_t zip_size,const char* e
 
             if (err == MZ_OK) {
                 if (strncmp(file_info->filename, entry_name, 256) == 0) {
-                    DLOGD("read_zip_file_entry found entry name = %s,file size = " FMT_INT64_T,
+                    DLOGD("found entry name = %s,file size = " FMT_INT64_T,
                           file_info->filename,
                           file_info->uncompressed_size);
                     if(file_info->uncompressed_size == 0) {
@@ -337,20 +335,20 @@ DPT_ENCRYPT bool read_zip_file_entry(void* zip_addr,off_t zip_size,const char* e
 
                     err = mz_zip_entry_read_open(zip_handle, 0, nullptr);
                     if (err != MZ_OK) {
-                        DLOGW("read_zip_file_entry not prepared: %d", err);
+                        DLOGW("not prepared: %d", err);
                         continue;
                     }
                     needFree = true;
-                    DLOGD("read_zip_file_entry compress method is: %d",
+                    DLOGD("compress method is: %d",
                           file_info->compression_method);
 
                     *entry_addr = calloc(file_info->uncompressed_size + 1, 1);
-                    DLOGD("read_zip_file_entry start read: %s", file_info->filename);
+                    DLOGD("start read: %s", file_info->filename);
 
                     __unused size_t bytes_read = mz_zip_entry_read(zip_handle, *entry_addr,
                                                           file_info->uncompressed_size);
 
-                    DLOGD("read_zip_file_entry reading entry: %s,read size: %zu", entry_name,
+                    DLOGD("reading entry: %s,read size: %zu", entry_name,
                           bytes_read);
 
                     *entry_size = (file_info->uncompressed_size);
@@ -359,14 +357,14 @@ DPT_ENCRYPT bool read_zip_file_entry(void* zip_addr,off_t zip_size,const char* e
                 } // strncmp
             }
             else{
-                DLOGW("read_zip_file_entry get entry info err: %d",err);
+                DLOGW("get entry info err: %d",err);
                 break;
             }
             err = mz_zip_goto_next_entry(zip_handle);
         } // while
     }
     else{
-        DLOGW("read_zip_file_entry zip open fail: %d",err);
+        DLOGW("zip open fail: %d",err);
     } // zip open
 
     tail: {

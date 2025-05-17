@@ -35,7 +35,7 @@ DPT_ENCRYPT void junkCodeDexProtect(JNIEnv *env) {
     while (true) {
         int frida_so_count = find_in_maps(1,"frida-agent");
         if(frida_so_count > 0) {
-            DLOGD("detectFridaOnThread found frida so");
+            DLOGD("found frida so");
             dpt_crash();
         }
         int frida_thread_count = find_in_threads_list(4
@@ -45,7 +45,7 @@ DPT_ENCRYPT void junkCodeDexProtect(JNIEnv *env) {
                 ,"gum-js-loop");
 
         if(frida_thread_count >= 2) {
-            DLOGD("detectFridaOnThread found frida threads");
+            DLOGD("found frida threads");
             dpt_crash();
         }
         sleep(10);
@@ -60,22 +60,22 @@ DPT_ENCRYPT void detectFrida() {
 
 DPT_ENCRYPT void doPtrace() {
     __unused int ret = sys_ptrace(PTRACE_TRACEME,0,0,0);
-    DLOGD("doPtrace result: %d",ret);
+    DLOGD("result: %d",ret);
 }
 
 DPT_ENCRYPT void *protectProcessOnThread(void *args) {
     pid_t child = *((pid_t *)args);
 
-    DLOGD("%s waitpid %d", __FUNCTION__ ,child);
+    DLOGD("waitpid %d", child);
 
     free(args);
 
     int pid = waitpid(child, nullptr, 0);
     if(pid > 0) {
-        DLOGW("%s detect child process %d exited", __FUNCTION__, pid);
+        DLOGW("detect child process %d exited", pid);
         dpt_crash();
     }
-    DLOGD("%s waitpid %d end", __FUNCTION__ ,child);
+    DLOGD("waitpid %d end", child);
 
     return nullptr;
 }
