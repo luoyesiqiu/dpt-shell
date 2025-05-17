@@ -222,7 +222,7 @@ DPT_ENCRYPT void patchClass(__unused const char* descriptor,
     }
 }
 
-DPT_ENCRYPT void LoadClassV36(void* thiz,
+DPT_ENCRYPT void LoadClassV23(void* thiz,
                                const void* self,
                                const void* dex_file,
                                const void* dex_class_def,
@@ -245,7 +245,7 @@ DPT_ENCRYPT bool hook_LoadClass() {
 
     loadClassAddress = DobbySymbolResolver(GetArtLibPath(), sym);
 
-    int hookResult = DobbyHook(loadClassAddress, (void *) LoadClassV36, (void **) &g_originLoadClassV23);
+    int hookResult = DobbyHook(loadClassAddress, (void *) LoadClassV23, (void **) &g_originLoadClassV23);
 
     DLOGD("%s hook result: %d", __FUNCTION__, hookResult);
     return hookResult == 0;
