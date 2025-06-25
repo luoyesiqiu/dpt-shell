@@ -4,3 +4,6 @@
 [submodule "shell/src/main/cpp/external/bhook"]
 	path = shell/src/main/cpp/external/bhook
 	url = https://github.com/bytedance/bhook.git
+[submodule "shell/src/main/cpp/external/Dobby"]
+	path = shell/src/main/cpp/external/Dobby
+	url = git@github.com:luoyesiqiu/Dobby.git

@@ -482,7 +482,7 @@ DPT_ENCRYPT void readCodeItem(uint8_t *data,size_t data_len) {
     }
 }
 
-DPT_ENCRYPT JNIEXPORT jint JNI_OnLoad(JavaVM *vm, void *__unused) {
+DPT_ENCRYPT JNIEXPORT jint JNI_OnLoad(JavaVM *vm, void *) {
 
     JNIEnv *env = nullptr;
     if (vm->GetEnv((void **) &env, JNI_VERSION_1_6) != JNI_OK) {

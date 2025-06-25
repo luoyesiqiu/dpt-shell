@@ -40,7 +40,24 @@ target_link_libraries(bytehook log)
 
 add_subdirectory(external/minizip-ng)
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -Werror")
+if(NOT TARGET dobby)
+    set(DOBBY_DIR external/Dobby)
+    macro(SET_OPTION option value)
+        set(${option} ${value} CACHE INTERNAL "" FORCE)
+    endmacro()
+    SET_OPTION(DOBBY_DEBUG OFF)
+    SET_OPTION(DOBBY_GENERATE_SHARED OFF)
+    add_subdirectory(${DOBBY_DIR} dobby)
+    get_property(DOBBY_INCLUDE_DIRECTORIES
+            TARGET dobby
+            PROPERTY INCLUDE_DIRECTORIES)
+    include_directories(
+            .
+            ${DOBBY_INCLUDE_DIRECTORIES}
+            $<TARGET_PROPERTY:dobby,INCLUDE_DIRECTORIES>
+    )
+endif()
+
 
 add_definitions(-DDECRYPT_BITCODE)
 
@@ -60,20 +77,20 @@ include_directories(./common)
 
 add_library(dpt SHARED ${DPT_NATIVE_SOURCE})
 
-include_directories(dobby)
-
-add_library(local_dobby STATIC IMPORTED)
-set_target_properties(local_dobby PROPERTIES IMPORTED_LOCATION ${CMAKE_CURRENT_SOURCE_DIR}/../../../libs/${ANDROID_ABI}/libdobby.a)
-
 find_library(log-lib log)
 find_library(android-lib android)
 
+target_compile_options(dpt PRIVATE
+        -Wall
+        -Wextra
+        -Werror
+)
 target_link_options(dpt PRIVATE "-Wl,-z,max-page-size=16384")
 
 target_link_libraries(dpt
             ${log-lib}
             MINIZIP::minizip
-            local_dobby
+            dobby
             bytehook
             ${android-lib}
         )
