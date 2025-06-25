@@ -1,3 +1,6 @@
-[submodule "shell/src/main/cpp/minizip-ng"]
-	path = shell/src/main/cpp/minizip-ng
+[submodule "shell/src/main/cpp/external/minizip-ng"]
+	path = shell/src/main/cpp/external/minizip-ng
 	url = https://github.com/zlib-ng/minizip-ng
+[submodule "shell/src/main/cpp/external/bhook"]
+	path = shell/src/main/cpp/external/bhook
+	url = https://github.com/bytedance/bhook.git
