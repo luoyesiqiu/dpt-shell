@@ -11,10 +11,34 @@
 #include "dpt_util.h"
 #include "common/dpt_log.h"
 #include <mz_strm.h>
+#include <string>
+#include <algorithm>
+#include <cctype>
 
 using namespace dpt;
 
 DPT_DATA_SECTION uint8_t DATA_R_FLAG[] = "r";
+
+bool checkWebViewInFilename(const std::string& path) {
+    size_t lastSlashPos = path.find_last_of("\\/");
+    std::string filename;
+
+    if (lastSlashPos != std::string::npos) {
+        filename = path.substr(lastSlashPos + 1);
+    } else {
+        filename = path;
+    }
+
+    std::string lowercaseFilename;
+    lowercaseFilename.resize(filename.size());
+    std::transform(
+            filename.begin(), filename.end(),
+            lowercaseFilename.begin(),
+            [](unsigned char c) { return std::tolower(c); }
+    );
+
+    return lowercaseFilename.find("webview") != std::string::npos && lowercaseFilename.find("vdex") != std::string::npos;;
+}
 
 size_t dpt_readlink(int fd, char *result_path,size_t path_max_len) {
     char link_path[128] = {0};

@@ -244,7 +244,7 @@ DPT_ENCRYPT bool hook_LoadClass() {
 
     loadClassAddress = DobbySymbolResolver(GetArtLibPath(), sym);
 
-    int hookResult = DobbyHook(loadClassAddress, (dobby_dummy_func_t) LoadClassV23, (dobby_dummy_func_t*) &g_originLoadClassV23);
+    int hookResult = DobbyHook(loadClassAddress, (dobby_dummy_func_t) LoadClassV23, (dobby_dummy_func_t *) &g_originLoadClassV23);
 
     DLOGD("hook result: %d", hookResult);
     return hookResult == 0;
@@ -332,7 +332,8 @@ DPT_ENCRYPT void* fake_mmap(void* __addr, size_t __size, int __prot, int __flags
     char fd_path[256] = {0};
     dpt_readlink(__fd,fd_path, ARRAY_LENGTH(fd_path));
 
-    if(strstr(fd_path,"webview.vdex") != nullptr) {
+    std::string fd_path_str = fd_path;
+    if(checkWebViewInFilename(fd_path_str)) {
         DLOGW("link path: %s, no need to change prot",fd_path);
         goto tail;
     }
