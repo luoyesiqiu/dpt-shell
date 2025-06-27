@@ -1,6 +1,10 @@
 package com.luoye.dpt.dex;
 
-import com.google.dexmaker.*;
+import com.android.dx.Code;
+import com.android.dx.DexMaker;
+import com.android.dx.Local;
+import com.android.dx.MethodId;
+import com.android.dx.TypeId;
 import com.luoye.dpt.util.LogUtils;
 
 import java.io.File;
