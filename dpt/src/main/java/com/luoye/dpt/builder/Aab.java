@@ -212,6 +212,9 @@ public class Aab extends AndroidPackage {
         aab.compressDexFiles(aabMainProcessPath);
         aab.deleteAllDexFiles(aabMainProcessPath);
         aab.combineDexZipWithShellDex(aabMainProcessPath);
+        aab.addKeepDexes(aabMainProcessPath);
+        File keepDexTempDir = aab.getKeepDexTempDir(aabMainProcessPath);
+        FileUtils.deleteRecurse(keepDexTempDir);
 
         /*======================================*
          * Process .so files

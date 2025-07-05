@@ -16,6 +16,8 @@ import com.luoye.dpt.util.MultiDexCodeUtils;
 import com.luoye.dpt.util.RC4Utils;
 import com.luoye.dpt.util.ZipUtils;
 
+import org.apache.commons.lang3.tuple.Pair;
+
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
@@ -31,6 +33,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -261,6 +264,10 @@ public abstract class AndroidPackage {
 
     public abstract String getDexDir(String packageDir);
 
+    public File getKeepDexTempDir(String packageDir) {
+        return FileUtils.getDir(getDexDir(packageDir), "keep-dex-dir");
+    }
+
     protected String getProxyDexPath() {
         return "shell-files" + File.separator + "dex" + File.separator + "classes.dex";
     }
@@ -275,6 +282,19 @@ public abstract class AndroidPackage {
 
     protected void addJunkCodeDex(String packageDir) {
         addDex(getJunkCodeDexPath(), getDexDir(packageDir));
+    }
+
+    protected void addKeepDexes(String packageDir) {
+        File keepDexTempDir = getKeepDexTempDir(packageDir);
+        File[] files = keepDexTempDir.listFiles();
+
+        if(files != null) {
+            for (File file : files) {
+                if(file.getName().endsWith(".dex")) {
+                    addDex(file.getAbsolutePath(), getDexDir(packageDir));
+                }
+            }
+        }
     }
 
     public abstract void compressDexFiles(String packageDir);
@@ -451,27 +471,42 @@ public abstract class AndroidPackage {
     }
 
     public void extractDexCode(String packageDir, String dexCodeSavePath) {
-        List<File> dexFiles = getDexFiles(packageDir);
+        List<File> dexFiles = getDexFiles(getDexDir(packageDir));
         Map<Integer,List<Instruction>> instructionMap = new HashMap<>();
         String appNameNew = "OoooooOooo";
         String dataOutputPath = dexCodeSavePath + File.separator + appNameNew;
 
         CountDownLatch countDownLatch = new CountDownLatch(dexFiles.size());
+        AtomicInteger totalClassesCount = new AtomicInteger(0);
+        AtomicInteger keepClassesCount = new AtomicInteger(0);
         for(File dexFile : dexFiles) {
             ThreadPool.getInstance().execute(() -> {
                 final int dexNo = getDexNumber(dexFile.getName());
-                if(dexNo < 0){
+                if(dexNo < 0) {
                     return;
                 }
+
+                File keepDex = new File(getKeepDexTempDir(packageDir).getAbsolutePath() + File.separator + dexFile.getName());
+                File splitDex = new File(dexFile.getAbsolutePath() + "_split.dex");
+                Pair<Integer, Integer> classesCountPair = DexUtils.splitDex(dexFile, keepDex, splitDex);
+
+                keepClassesCount.set(keepClassesCount.get() + classesCountPair.getKey());
+                totalClassesCount.set(totalClassesCount.get() + classesCountPair.getValue());
+
+                dexFile.delete();
+
+                splitDex.renameTo(dexFile);
+
                 String extractedDexName = dexFile.getName().endsWith(".dex") ? dexFile.getName().replaceAll("\\.dex$", "_extracted.dat") : "_extracted.dat";
                 File extractedDexFile = new File(dexFile.getParent(), extractedDexName);
 
                 List<Instruction> ret = DexUtils.extractAllMethods(dexFile, extractedDexFile, getPackageName(), isDumpCode());
                 instructionMap.put(dexNo,ret);
 
-                File dexFileRightHashes = new File(dexFile.getParent(),FileUtils.getNewFileSuffix(dexFile.getName(),"dat"));
+                File dexFileRightHashes = new File(dexFile.getParent(), FileUtils.getNewFileSuffix(dexFile.getName(),"dat"));
                 DexUtils.writeHashes(extractedDexFile,dexFileRightHashes);
                 dexFile.delete();
+
                 extractedDexFile.delete();
                 dexFileRightHashes.renameTo(dexFile);
                 countDownLatch.countDown();
@@ -487,6 +522,7 @@ public abstract class AndroidPackage {
         catch (Exception ignored){
         }
 
+        LogUtils.info("Keep classes: %d, total classes: %d", keepClassesCount.get(), totalClassesCount.get());
         MultiDexCode multiDexCode = MultiDexCodeUtils.makeMultiDexCode(instructionMap);
 
         MultiDexCodeUtils.writeMultiDexCode(dataOutputPath,multiDexCode);

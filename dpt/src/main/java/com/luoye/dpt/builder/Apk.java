@@ -209,6 +209,8 @@ public class Apk extends AndroidPackage {
         apk.compressDexFiles(apkMainProcessPath);
         apk.deleteAllDexFiles(apkMainProcessPath);
         apk.combineDexZipWithShellDex(apkMainProcessPath);
+        apk.addKeepDexes(apkMainProcessPath);
+        FileUtils.deleteRecurse(apk.getKeepDexTempDir(apkMainProcessPath));
 
         /*======================================*
          * Process .so files

@@ -6,6 +6,17 @@ import com.android.dex.Code;
 import com.android.dex.Dex;
 import com.luoye.dpt.model.Instruction;
 
+import org.apache.commons.lang3.tuple.ImmutablePair;
+import org.apache.commons.lang3.tuple.Pair;
+import org.jf.dexlib2.DexFileFactory;
+import org.jf.dexlib2.Opcodes;
+import org.jf.dexlib2.dexbacked.DexBackedDexFile;
+import org.jf.dexlib2.iface.DexFile;
+import org.jf.dexlib2.immutable.ImmutableDexFile;
+import org.jf.dexlib2.rewriter.DexRewriter;
+import org.jf.dexlib2.rewriter.Rewriter;
+import org.jf.dexlib2.rewriter.RewriterModule;
+import org.jf.dexlib2.rewriter.Rewriters;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
@@ -15,6 +26,7 @@ import java.io.RandomAccessFile;
 import java.security.SecureRandom;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -31,20 +43,96 @@ public class DexUtils {
             "Lcom/squareup/okhttp/.*",
             "Lokio/.*", "Lokhttp3/.*",
             "Lkotlin/.*",
+            "Lkotlinx/.*",
             "Lcom/google/.*",
             "Lrx/.*",
             "Lorg/apache/.*",
             "Lretrofit2/.*",
             "Lcom/alibaba/.*",
+            "Lcom/alipay/.*",
             "Lcom/amap/api/.*",
-            "Lcom/sina/weibo/.*",
+            "Lcom/sina/weibo/sdk/.*",
             "Lcom/xiaomi/.*",
+            "Lcom/huawei/.*",
+            "Lcom/vivo/.*",
+            "Lcom/baytedance/.*",
             "Lcom/eclipsesource/.*",
             "Lcom/blankj/utilcode/.*",
             "Lcom/umeng/.*",
             "Ljavax/.*",
             "Lorg/slf4j/.*"
     };
+
+    public static boolean matchRules(String fullClassDefName) {
+        for(String rule : excludeRule) {
+            if(fullClassDefName.matches(rule)){
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * split dex file
+     * @param originDex The dex file will be split
+     * @param keepDex The dex file will keep in apk
+     * @param splitDex The dex file will be extract
+     */
+    public static Pair<Integer,Integer> splitDex(File originDex, File keepDex, File splitDex) {
+
+        AtomicInteger totalClassesCount = new AtomicInteger();
+        AtomicInteger keepClassesCount = new AtomicInteger();
+        try {
+
+            DexBackedDexFile dexBackedDexFile = DexFileFactory.loadDexFile(originDex, Opcodes.getDefault());
+
+            DexRewriter keepRewriter = new DexRewriter(new RewriterModule() {
+                @Override
+                public Rewriter<DexFile> getDexFileRewriter(Rewriters rewriters) {
+                    return value -> {
+                        Set<? extends org.jf.dexlib2.iface.ClassDef> classes = value.getClasses();
+                        totalClassesCount.set(classes.size());
+                        Set<org.jf.dexlib2.iface.ClassDef> newClasses = new HashSet<>();
+                        for (org.jf.dexlib2.iface.ClassDef aClass : classes) {
+                            // match rules
+                            if (matchRules(aClass.getType())) {
+                                newClasses.add(aClass);
+                                keepClassesCount.getAndIncrement();
+                            }
+                        }
+                        return new ImmutableDexFile(value.getOpcodes(), newClasses);
+                    };
+                }
+            });
+
+            DexFile keepDexFile = keepRewriter.getDexFileRewriter().rewrite(dexBackedDexFile);
+            DexFileFactory.writeDexFile(keepDex.getAbsolutePath(), keepDexFile);
+
+            DexRewriter splitRewriter = new DexRewriter(new RewriterModule() {
+                @Override
+                public Rewriter<DexFile> getDexFileRewriter(Rewriters rewriters) {
+                    return value -> {
+                        Set<? extends org.jf.dexlib2.iface.ClassDef> classes = value.getClasses();
+                        Set<org.jf.dexlib2.iface.ClassDef> newClasses = new HashSet<>();
+                        for (org.jf.dexlib2.iface.ClassDef aClass : classes) {
+                            // do not match
+                            if (!matchRules(aClass.getType())) {
+                                newClasses.add(aClass);
+                            }
+                        }
+                        return new ImmutableDexFile(value.getOpcodes(), newClasses);
+                    };
+                }
+            });
+            DexFile splitDexFile = splitRewriter.getDexFileRewriter().rewrite(dexBackedDexFile);
+            DexFileFactory.writeDexFile(splitDex.getAbsolutePath(), splitDexFile);
+        }
+        catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        return new ImmutablePair<>(keepClassesCount.get(), totalClassesCount.get());
+    }
 
     private static void saveCodeOffAppear(Dex dex, int dexIndex) {
         codeOffAppearMap.clear();
@@ -122,15 +210,8 @@ public class DexUtils {
                     LogUtils.noisy("class '%s' data offset is zero", classDef.toString());
                     continue;
                 }
-                boolean skip = false;
-                //Skip exclude classes name
-                for(String rule : excludeRule) {
-                    if(classDef.toString().matches(rule)){
-                        skip = true;
-                        break;
-                    }
-                }
-                if(skip) {
+                // Skip exclude classes name
+                if(matchRules(classDef.toString())) {
                     continue;
                 }
 

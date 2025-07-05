@@ -18,12 +18,12 @@ public class FileUtils {
     private static final String T_PREFIX = "├── ";
 
 
-    public static String getNewFileName(String fileName,String tag){
+    public static String getNewFileName(String fileName, String tag){
         String fileSuffix = fileName.substring(fileName.lastIndexOf(".") + 1);
         return fileName.replaceAll("\\." + fileSuffix + "$","_" + tag + "." + fileSuffix) ;
     }
 
-    public static String getNewFileSuffix(String fileName,String newSuffix){
+    public static String getNewFileSuffix(String fileName, String newSuffix){
         String fileSuffix = fileName.substring(fileName.lastIndexOf(".") + 1);
         return fileName.replaceAll("\\." + fileSuffix + "$",  "." + newSuffix) ;
     }
@@ -31,7 +31,7 @@ public class FileUtils {
     /**
      * Get a directory and create it if it doesn't exist
      */
-    public static File getDir(String path,String dirName){
+    public static File getDir(String path, String dirName){
         File dirFile = new File(path,dirName);
         if(!dirFile.exists()){
             dirFile.mkdirs();
@@ -135,7 +135,7 @@ public class FileUtils {
         }
     }
 
-    public static void printDirectoryTree(File directory, String prefix) {
+    public synchronized static void printDirectoryTree(File directory, String prefix) {
         if (!directory.exists() || !directory.isDirectory()) {
             return;
         }
@@ -154,8 +154,25 @@ public class FileUtils {
         }
     }
 
-    public static void printDirectoryTree(File directory) {
+    public synchronized static void printDirectoryTree(File directory) {
         System.out.println(directory.getAbsolutePath());
         printDirectoryTree(directory, "");
+    }
+
+    public synchronized static void printDirectoryTreeSimple(File directory) {
+        System.out.println(directory.getAbsolutePath());
+        if (!directory.exists() || !directory.isDirectory()) {
+            return;
+        }
+        File[] files = directory.listFiles();
+        if (files != null) {
+            for (int i = 0; i < files.length; i++) {
+                File file = files[i];
+                boolean isLast = i == files.length - 1;
+                String currentPrefix = isLast ? ELBOW_PREFIX : T_PREFIX;
+                String suffix = file.isDirectory() ? File.separator : "";
+                System.out.println(currentPrefix + file.getName() + suffix);
+            }
+        }
     }
 }
