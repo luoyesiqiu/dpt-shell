@@ -30,11 +30,14 @@ jobs:
       run: chmod +x gradlew
     - name: Building project
       run: ./gradlew build
+    - name: Get latest tag name
+      id: get_latest_tag_name
+      run: echo ::set-output name=VERSION::${GITHUB_REF/refs\/tags\//}
     - name: Compress files
-      run:  zip -r -q executable.zip executable/
+      run:  zip -r -q dpt-shell-${{ steps.get_latest_tag_name.outputs.VERSION }}.zip executable/
     - uses: "marvinpinto/action-automatic-releases@latest"
       with:
         repo_token: "${{ secrets.GITHUB_TOKEN }}"
         prerelease: false
         files: |
-          executable.zip
+          dpt-shell-${{ steps.get_latest_tag_name.outputs.VERSION }}.zip
