@@ -4,6 +4,7 @@ import com.android.dex.ClassData;
 import com.android.dex.ClassDef;
 import com.android.dex.Code;
 import com.android.dex.Dex;
+import com.luoye.dpt.config.ProtectRules;
 import com.luoye.dpt.model.Instruction;
 
 import org.apache.commons.lang3.tuple.ImmutablePair;
@@ -36,42 +37,6 @@ import java.util.regex.Pattern;
 public class DexUtils {
     private final static Map<String,Integer> codeOffAppearMap = new ConcurrentHashMap<>();
 
-    /* The following are the rules for classes that do not extract */
-    private static final String[] excludeRule = {
-            "Landroid/.*",
-            "Landroidx/.*",
-            "Lcom/squareup/okhttp/.*",
-            "Lokio/.*", "Lokhttp3/.*",
-            "Lkotlin/.*",
-            "Lkotlinx/.*",
-            "Lcom/google/.*",
-            "Lrx/.*",
-            "Lorg/apache/.*",
-            "Lretrofit2/.*",
-            "Lcom/alibaba/.*",
-            "Lcom/alipay/.*",
-            "Lcom/amap/api/.*",
-            "Lcom/sina/weibo/sdk/.*",
-            "Lcom/xiaomi/.*",
-            "Lcom/huawei/.*",
-            "Lcom/vivo/.*",
-            "Lcom/baytedance/.*",
-            "Lcom/eclipsesource/.*",
-            "Lcom/blankj/utilcode/.*",
-            "Lcom/umeng/.*",
-            "Ljavax/.*",
-            "Lorg/slf4j/.*"
-    };
-
-    public static boolean matchRules(String fullClassDefName) {
-        for(String rule : excludeRule) {
-            if(fullClassDefName.matches(rule)){
-                return true;
-            }
-        }
-        return false;
-    }
-
     /**
      * split dex file
      * @param originDex The dex file will be split
@@ -82,6 +47,7 @@ public class DexUtils {
 
         AtomicInteger totalClassesCount = new AtomicInteger();
         AtomicInteger keepClassesCount = new AtomicInteger();
+        ProtectRules protectRules = ProtectRules.getsInstance();
         try {
 
             DexBackedDexFile dexBackedDexFile = DexFileFactory.loadDexFile(originDex, Opcodes.getDefault());
@@ -95,7 +61,7 @@ public class DexUtils {
                         Set<org.jf.dexlib2.iface.ClassDef> newClasses = new HashSet<>();
                         for (org.jf.dexlib2.iface.ClassDef aClass : classes) {
                             // match rules
-                            if (matchRules(aClass.getType())) {
+                            if (protectRules.matchRules(aClass.getType())) {
                                 newClasses.add(aClass);
                                 keepClassesCount.getAndIncrement();
                             }
@@ -116,7 +82,7 @@ public class DexUtils {
                         Set<org.jf.dexlib2.iface.ClassDef> newClasses = new HashSet<>();
                         for (org.jf.dexlib2.iface.ClassDef aClass : classes) {
                             // do not match
-                            if (!matchRules(aClass.getType())) {
+                            if (!protectRules.matchRules(aClass.getType())) {
                                 newClasses.add(aClass);
                             }
                         }
@@ -211,7 +177,7 @@ public class DexUtils {
                     continue;
                 }
                 // Skip exclude classes name
-                if(matchRules(classDef.toString())) {
+                if(ProtectRules.getsInstance().matchRules(classDef.toString())) {
                     continue;
                 }
 

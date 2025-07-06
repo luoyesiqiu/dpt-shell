@@ -1,4 +1,4 @@
-package com.luoye.dpt;
+package com.luoye.dpt.config;
 
 /**
  * @author luoyesiqiu
@@ -24,6 +24,8 @@ public class Const {
     public static final String OPTION_EXCLUDE_ABI_LONG = "exclude-abi";
     public static final String OPTION_VERSION = "v";
     public static final String OPTION_VERSION_LONG = "version";
+    public static final String OPTION_DO_NOT_PROTECT_CLASSES_RULES = "r";
+    public static final String OPTION_DO_NOT_PROTECT_CLASSES_RULES_LONG = "rules-file";
 
     public static final String STORE_PASSWORD = "android";
     public static final String KEY_PASSWORD = "android";

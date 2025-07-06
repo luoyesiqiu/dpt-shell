@@ -1,6 +1,6 @@
 package com.luoye.dpt.task;
 
-import com.luoye.dpt.Const;
+import com.luoye.dpt.config.Const;
 
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadFactory;

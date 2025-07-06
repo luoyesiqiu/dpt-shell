@@ -3,6 +3,7 @@ package com.luoye.dpt;
 import com.luoye.dpt.builder.Aab;
 import com.luoye.dpt.builder.AndroidPackage;
 import com.luoye.dpt.builder.Apk;
+import com.luoye.dpt.config.Const;
 import com.luoye.dpt.util.*;
 
 import org.apache.commons.cli.CommandLine;
@@ -50,6 +51,7 @@ public class Dpt {
         options.addOption(new Option(Const.OPTION_DEBUGGABLE,Const.OPTION_DEBUGGABLE_LONG,false,"Make package debuggable."));
         options.addOption(new Option(Const.OPTION_DISABLE_APP_COMPONENT_FACTORY,Const.OPTION_DISABLE_APP_COMPONENT_FACTORY_LONG,false,"Disable app component factory(just use for debug)."));
         options.addOption(new Option(Const.OPTION_OUTPUT_PATH,Const.OPTION_OUTPUT_PATH_LONG,true,"Output directory for protected package."));
+        options.addOption(new Option(Const.OPTION_DO_NOT_PROTECT_CLASSES_RULES,Const.OPTION_DO_NOT_PROTECT_CLASSES_RULES_LONG,true,"Rules file for class names that will not be protected.\n"));
         options.addOption(new Option(Const.OPTION_EXCLUDE_ABI,Const.OPTION_EXCLUDE_ABI_LONG,true,"Exclude specific ABIs (comma separated, e.g. x86,x86_64). \n"
                 + "Supported ABIs:\n"
                 + "- arm       (armeabi-v7a)\n"
@@ -96,6 +98,7 @@ public class Dpt {
                         .appComponentFactory(!commandLine.hasOption(Const.OPTION_DISABLE_APP_COMPONENT_FACTORY))
                         .dumpCode(commandLine.hasOption(Const.OPTION_DUMP_CODE))
                         .excludedAbi(excludedAbi)
+                        .rulesFile(commandLine.getOptionValue(Const.OPTION_DO_NOT_PROTECT_CLASSES_RULES))
                         .build();
             }
             else if(filePath.endsWith(".aab")) {
@@ -107,6 +110,7 @@ public class Dpt {
                         .appComponentFactory(!commandLine.hasOption(Const.OPTION_DISABLE_APP_COMPONENT_FACTORY))
                         .dumpCode(commandLine.hasOption(Const.OPTION_DUMP_CODE))
                         .excludedAbi(excludedAbi)
+                        .rulesFile(commandLine.getOptionValue(Const.OPTION_DO_NOT_PROTECT_CLASSES_RULES))
                         .build();
             }
             else {

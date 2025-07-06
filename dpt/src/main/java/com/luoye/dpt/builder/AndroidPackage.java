@@ -1,7 +1,8 @@
 package com.luoye.dpt.builder;
 
 import com.iyxan23.zipalignjava.ZipAlign;
-import com.luoye.dpt.Const;
+import com.luoye.dpt.config.Const;
+import com.luoye.dpt.config.ProtectRules;
 import com.luoye.dpt.dex.JunkCodeGenerator;
 import com.luoye.dpt.elf.ReadElf;
 import com.luoye.dpt.model.Instruction;
@@ -23,6 +24,7 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.RandomAccessFile;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
@@ -48,6 +50,7 @@ public abstract class AndroidPackage {
         public boolean appComponentFactory = true;
         public boolean dumpCode = false;
         public List<String> excludedAbi;
+        public String rulesFilePath;
 
         public Builder filePath(String path) {
             this.filePath = path;
@@ -89,6 +92,11 @@ public abstract class AndroidPackage {
             return this;
         }
 
+        public Builder rulesFile(String rulesFilePath) {
+            this.rulesFilePath = rulesFilePath;
+            return this;
+        }
+
         public abstract AndroidPackage build();
     } // Builder
 
@@ -101,6 +109,7 @@ public abstract class AndroidPackage {
     private List<String> excludedAbi;
 
     public String outputPath = null;
+    public String rulesFilePath = null;
 
 
     public AndroidPackage(Builder builder) {
@@ -112,6 +121,15 @@ public abstract class AndroidPackage {
         setDumpCode(builder.dumpCode);
         setExcludedAbi(builder.excludedAbi);
         setOutputPath(builder.outputPath);
+        setRulesFilePath(builder.rulesFilePath);
+    }
+
+    private void setRulesFilePath(String rulesFilePath) {
+        this.rulesFilePath = rulesFilePath;
+    }
+
+    public String getRulesFilePath() {
+        return rulesFilePath;
     }
 
     public String getOutputPath() {
@@ -690,6 +708,24 @@ public abstract class AndroidPackage {
         if(!willProtectFile.exists()){
             String msg = String.format(Locale.US, "File not exists: %s", getFilePath());
             throw new FileNotFoundException(msg);
+        }
+
+        try {
+            if(getRulesFilePath() != null) {
+                File file = new File(getRulesFilePath());
+                LogUtils.debug("Exclude rules file: %s", file);
+                List<String> strings = com.google.common.io.Files.readLines(file, StandardCharsets.UTF_8);
+                ProtectRules protectRules = ProtectRules.getsInstance();
+                if (!strings.isEmpty()) {
+                    protectRules.setExcludeRules(strings.toArray(String[]::new));
+                } else {
+                    LogUtils.debug("Exclude rules file is empty", file);
+
+                }
+            }
+        }
+        catch (IOException e) {
+            LogUtils.info("Exclude rules file is unavailable: %s", e.getMessage());
         }
 
         JunkCodeGenerator.generateJunkCodeDex(new File(getJunkCodeDexPath()));

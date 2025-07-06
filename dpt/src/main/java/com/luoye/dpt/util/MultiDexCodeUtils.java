@@ -1,6 +1,6 @@
 package com.luoye.dpt.util;
 
-import com.luoye.dpt.Const;
+import com.luoye.dpt.config.Const;
 import com.luoye.dpt.model.DexCode;
 import com.luoye.dpt.model.Instruction;
 import com.luoye.dpt.model.MultiDexCode;

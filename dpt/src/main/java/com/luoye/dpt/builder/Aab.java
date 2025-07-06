@@ -1,6 +1,6 @@
 package com.luoye.dpt.builder;
 
-import com.luoye.dpt.Const;
+import com.luoye.dpt.config.Const;
 import com.luoye.dpt.res.AabManifestEditor;
 import com.luoye.dpt.util.FileUtils;
 import com.luoye.dpt.util.IoUtils;
