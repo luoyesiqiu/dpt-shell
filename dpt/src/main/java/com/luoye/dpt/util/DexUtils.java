@@ -47,7 +47,7 @@ public class DexUtils {
 
         AtomicInteger totalClassesCount = new AtomicInteger();
         AtomicInteger keepClassesCount = new AtomicInteger();
-        ProtectRules protectRules = ProtectRules.getsInstance();
+        ProtectRules protectRules = ProtectRules.getInstance();
         try {
 
             DexBackedDexFile dexBackedDexFile = DexFileFactory.loadDexFile(originDex, Opcodes.getDefault());
@@ -172,12 +172,13 @@ public class DexUtils {
             saveCodeOffAppear(dex, dexNumber);
 
             for (ClassDef classDef : classDefs) {
-                if(classDef.getClassDataOffset() == 0) {
-                    LogUtils.noisy("class '%s' data offset is zero", classDef.toString());
+                // Skip exclude classes name
+                if(ProtectRules.getInstance().matchRules(classDef.toString())) {
                     continue;
                 }
-                // Skip exclude classes name
-                if(ProtectRules.getsInstance().matchRules(classDef.toString())) {
+
+                if(classDef.getClassDataOffset() == 0) {
+                    LogUtils.noisy("class '%s' data offset is zero", classDef.toString());
                     continue;
                 }
 

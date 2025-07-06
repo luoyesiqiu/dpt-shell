@@ -715,7 +715,7 @@ public abstract class AndroidPackage {
                 File file = new File(getRulesFilePath());
                 LogUtils.debug("Exclude rules file: %s", file);
                 List<String> strings = com.google.common.io.Files.readLines(file, StandardCharsets.UTF_8);
-                ProtectRules protectRules = ProtectRules.getsInstance();
+                ProtectRules protectRules = ProtectRules.getInstance();
                 if (!strings.isEmpty()) {
                     protectRules.setExcludeRules(strings.toArray(String[]::new));
                 } else {

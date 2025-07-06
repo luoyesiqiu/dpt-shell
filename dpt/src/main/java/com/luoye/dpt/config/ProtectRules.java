@@ -34,7 +34,7 @@ public class ProtectRules {
         //ignored
     }
 
-    public static ProtectRules getsInstance() {
+    public static ProtectRules getInstance() {
         return INSTANCE;
     }
 
