@@ -87,7 +87,7 @@ def excludeRules = [
 ]
 
 afterEvaluate {
-    def excludeFile = new File(project.projectDir.getParent() + File.separator + "executable", "dpt-exclude-classes.rules")
+    def excludeFile = new File(project.projectDir.getParent() + File.separator + "executable", "dpt-exclude-classes-template.rules")
 
     if(!excludeFile.exists()) {
         for (excludeRule in excludeRules) {
