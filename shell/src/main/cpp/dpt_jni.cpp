@@ -170,7 +170,7 @@ namespace dpt {
             }
             va_list arg;
             va_start(arg, sig);
-            jobject retObj = env->CallStaticObjectMethod(cls, jmethodId, arg);
+            jobject retObj = env->CallStaticObjectMethodV(cls, jmethodId, arg);
             va_end(arg);
             if (env->ExceptionCheck()) {
                 env->ExceptionClear();
