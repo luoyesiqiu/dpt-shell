@@ -8,12 +8,10 @@ jobjectArray dalvik_system_DexPathList::makePathElements(JNIEnv *env, jobject fi
                         jobject suppressedExceptions) {
 
     jclass cls = env->FindClass("dalvik/system/DexPathList");
-
-    jmethodID jmethodId = env->GetStaticMethodID(cls,
-                                                 "makePathElements",
-                                                 "(Ljava/util/List;Ljava/io/File;Ljava/util/List;)[Ldalvik/system/DexPathList$Element;");
-    jobjectArray retObj = (jobjectArray)env->CallStaticObjectMethod(cls,
-                                                                    jmethodId,
+    jobjectArray retObj = (jobjectArray)jni::CallStaticObjectMethod(env,
+                                                                    cls,
+                                                                    "makePathElements",
+                                                                    "(Ljava/util/List;Ljava/io/File;Ljava/util/List;)[Ldalvik/system/DexPathList$Element;",
                                                                     files,
                                                                     optimizedDirectory,
                                                                     suppressedExceptions);
@@ -24,12 +22,10 @@ jobjectArray dalvik_system_DexPathList::makeDexElements(JNIEnv *env, jobject fil
                                                          jobject suppressedExceptions) {
 
     jclass cls = env->FindClass("dalvik/system/DexPathList");
-
-    jmethodID jmethodId = env->GetStaticMethodID(cls,
-                                                 "makeDexElements",
-                                                 "(Ljava/util/ArrayList;Ljava/io/File;Ljava/util/ArrayList;)[Ldalvik/system/DexPathList$Element;");
-    jobjectArray retObj = (jobjectArray)env->CallStaticObjectMethod(cls,
-                                                                    jmethodId,
+    jobjectArray retObj = (jobjectArray)jni::CallStaticObjectMethod(env,
+                                                                    cls,
+                                                                    "makeDexElements",
+                                                                    "(Ljava/util/ArrayList;Ljava/io/File;Ljava/util/ArrayList;)[Ldalvik/system/DexPathList$Element;",
                                                                     files,
                                                                     optimizedDirectory,
                                                                     suppressedExceptions);
