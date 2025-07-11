@@ -5,6 +5,7 @@ import com.wind.meditor.core.FileProcesser;
 import com.wind.meditor.property.AttributeItem;
 import com.wind.meditor.property.ModificationProperty;
 import com.wind.meditor.utils.NodeValue;
+
 import pxb.android.axml.AxmlParser;
 
 /**
@@ -57,12 +58,19 @@ public class ApkManifestEditor {
         AxmlParser axmlParser = new AxmlParser(axmlData);
         try {
             while (axmlParser.next() != AxmlParser.END_FILE) {
-                if (axmlParser.getAttrCount() != 0 && !axmlParser.getName().equals(tag)) {
-                    continue;
+                if (axmlParser.getAttrCount() != 0) {
+                     if(!axmlParser.getName().equals(tag)) {
+                         continue;
+                     }
                 }
+
                 for (int i = 0; i < axmlParser.getAttrCount(); i++) {
-                    if (axmlParser.getNamespacePrefix().equals(ns) && axmlParser.getAttrName(i).equals(attrName)) {
-                        return (String) axmlParser.getAttrValue(i);
+
+                    if (axmlParser.getNamespacePrefix().equals(ns)) {
+
+                        if(axmlParser.getAttrName(i).equals(attrName)) {
+                            return (String) axmlParser.getAttrValue(i);
+                        }
                     }
                 }
             }
@@ -76,14 +84,17 @@ public class ApkManifestEditor {
      * Get android:name value from AndroidManifest.xml
      */
     public static String getApplicationName(String file) {
-        return getAttributeValue(file,"application","android","name");
+        String attributeValue = getAttributeValue(file, "application", "android", "name");
+        return attributeValue == null ? getAttributeValue(file, "application", "dist", "name") : attributeValue;
     }
 
     /**
      * Get android:appComponentFactory value from AndroidManifest.xml
      */
     public static String getAppComponentFactory(String file) {
-        return getAttributeValue(file,"application","android","appComponentFactory");
+        String attributeValue = getAttributeValue(file, "application", "android", "appComponentFactory");
+        return attributeValue == null ? getAttributeValue(file, "application", "dest", "appComponentFactory") : attributeValue;
+
     }
 
     public static String getPackageName(String file) {
