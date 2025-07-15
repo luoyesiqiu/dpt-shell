@@ -44,6 +44,10 @@ usage: java -jar dpt.jar [option] -f <package_file>
                            - x86_64
  -f,--package-file <arg>   Need to protect android package(*.apk, *.aab)
                            file.
+ -K,--keep-classes         Keeping some classes in the package can improve
+                           the app's startup speed to a certain extent,
+                           but it is not supported by some application
+                           packages.
  -l,--noisy-log            Open noisy log.
  -o,--output <arg>         Output directory for protected package.
  -r,--rules-file <arg>     Rules file for class names that will not be

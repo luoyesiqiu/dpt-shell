@@ -51,6 +51,7 @@ public abstract class AndroidPackage {
         public boolean dumpCode = false;
         public List<String> excludedAbi;
         public String rulesFilePath;
+        public boolean keepClasses = false;
 
         public Builder filePath(String path) {
             this.filePath = path;
@@ -97,6 +98,11 @@ public abstract class AndroidPackage {
             return this;
         }
 
+        public Builder keepClasses(boolean keepClasses) {
+            this.keepClasses = keepClasses;
+            return this;
+        }
+
         public abstract AndroidPackage build();
     } // Builder
 
@@ -111,6 +117,7 @@ public abstract class AndroidPackage {
     public String outputPath = null;
     public String rulesFilePath = null;
 
+    public boolean keepClasses = false;
 
     public AndroidPackage(Builder builder) {
         setFilePath(builder.filePath);
@@ -122,6 +129,15 @@ public abstract class AndroidPackage {
         setExcludedAbi(builder.excludedAbi);
         setOutputPath(builder.outputPath);
         setRulesFilePath(builder.rulesFilePath);
+        setKeepClasses(builder.keepClasses);
+    }
+
+    private void setKeepClasses(boolean keepClasses) {
+        this.keepClasses = keepClasses;
+    }
+
+    public boolean isKeepClasses() {
+        return keepClasses;
     }
 
     private void setRulesFilePath(String rulesFilePath) {
@@ -504,16 +520,18 @@ public abstract class AndroidPackage {
                     return;
                 }
 
-                File keepDex = new File(getKeepDexTempDir(packageDir).getAbsolutePath() + File.separator + dexFile.getName());
-                File splitDex = new File(dexFile.getAbsolutePath() + "_split.dex");
-                Pair<Integer, Integer> classesCountPair = DexUtils.splitDex(dexFile, keepDex, splitDex);
+                if(isKeepClasses()) {
+                    File keepDex = new File(getKeepDexTempDir(packageDir).getAbsolutePath() + File.separator + dexFile.getName());
+                    File splitDex = new File(dexFile.getAbsolutePath() + "_split.dex");
+                    Pair<Integer, Integer> classesCountPair = DexUtils.splitDex(dexFile, keepDex, splitDex);
 
-                keepClassesCount.set(keepClassesCount.get() + classesCountPair.getKey());
-                totalClassesCount.set(totalClassesCount.get() + classesCountPair.getValue());
+                    keepClassesCount.set(keepClassesCount.get() + classesCountPair.getKey());
+                    totalClassesCount.set(totalClassesCount.get() + classesCountPair.getValue());
 
-                dexFile.delete();
+                    dexFile.delete();
 
-                splitDex.renameTo(dexFile);
+                    splitDex.renameTo(dexFile);
+                }
 
                 String extractedDexName = dexFile.getName().endsWith(".dex") ? dexFile.getName().replaceAll("\\.dex$", "_extracted.dat") : "_extracted.dat";
                 File extractedDexFile = new File(dexFile.getParent(), extractedDexName);
@@ -540,7 +558,9 @@ public abstract class AndroidPackage {
         catch (Exception ignored){
         }
 
-        LogUtils.info("Keep classes: %d, total classes: %d", keepClassesCount.get(), totalClassesCount.get());
+        if(isKeepClasses()) {
+            LogUtils.info("Keep classes: %d, total classes: %d", keepClassesCount.get(), totalClassesCount.get());
+        }
         MultiDexCode multiDexCode = MultiDexCodeUtils.makeMultiDexCode(instructionMap);
 
         MultiDexCodeUtils.writeMultiDexCode(dataOutputPath,multiDexCode);
