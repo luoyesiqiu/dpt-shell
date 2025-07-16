@@ -74,3 +74,4 @@ This project has not too many tests, be careful use in prod environment. Otherwi
 - [zip4j](https://github.com/srikanth-lingala/zip4j)
 - [commons-cli](https://github.com/apache/commons-cli)
 - [dexmaker](https://android.googlesource.com/platform/external/dexmaker)
+- [Obfuscate](https://github.com/adamyaxley/Obfuscate)

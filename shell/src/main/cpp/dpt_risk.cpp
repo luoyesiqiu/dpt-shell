@@ -20,24 +20,31 @@ DPT_ENCRYPT NO_INLINE void dpt_crash() {
 }
 
 DPT_ENCRYPT void junkCodeDexProtect(JNIEnv *env) {
-    jclass klass = dpt::jni::FindClass(env,JUNK_CLASS_FULL_NAME);
+    const char *className = AY_OBFUSCATE(JUNK_CLASS_FULL_NAME);
+    jclass klass = dpt::jni::FindClass(env, className);
     if(klass == nullptr) {
         dpt_crash();
     }
 }
 
 [[noreturn]] DPT_ENCRYPT void *detectFridaOnThread(__unused void *args) {
+    const char *frida_agent = AY_OBFUSCATE("frida-agent");
+    const char *pool_frida = AY_OBFUSCATE("pool-frida");
+    const char *gmain = AY_OBFUSCATE("gmain");
+    const char *gbus = AY_OBFUSCATE("gdbus");
+    const char *gum_js_loop = AY_OBFUSCATE("gum-js-loop");
     while (true) {
-        int frida_so_count = find_in_maps(1,"frida-agent");
+
+        int frida_so_count = find_in_maps(1, frida_agent);
         if(frida_so_count > 0) {
             DLOGD("found frida so");
             dpt_crash();
         }
         int frida_thread_count = find_in_threads_list(4
-                ,"pool-frida"
-                ,"gmain"
-                ,"gdbus"
-                ,"gum-js-loop");
+                ,pool_frida
+                ,gmain
+                ,gbus
+                ,gum_js_loop);
 
         if(frida_thread_count >= 2) {
             DLOGD("found frida threads");

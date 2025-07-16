@@ -78,3 +78,4 @@ usage: java -jar dpt.jar [option] -f <package_file>
 - [zip4j](https://github.com/srikanth-lingala/zip4j)
 - [commons-cli](https://github.com/apache/commons-cli)
 - [dexmaker](https://android.googlesource.com/platform/external/dexmaker)
+- [Obfuscate](https://github.com/adamyaxley/Obfuscate)

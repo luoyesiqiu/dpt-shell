@@ -13,7 +13,9 @@
 #include "dex/dex_file.h"
 #include "common/dpt_log.h"
 #include "common/dpt_macro.h"
+#include "common/obfuscate.h"
 #include "dobby.h"
+
 
 void dpt_hook();
 

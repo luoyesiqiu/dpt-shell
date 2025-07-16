@@ -20,6 +20,7 @@
 #include "dpt_log.h"
 #include "dpt_jni.h"
 #include "linux_syscall_support.h"
+#include "common/obfuscate.h"
 
 void dpt_crash();
 void detectFrida();
