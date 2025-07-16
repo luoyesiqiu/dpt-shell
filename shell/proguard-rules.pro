@@ -27,7 +27,7 @@
     public static int i(...);
     public static int v(...);
 }
-
+-repackageclasses com.luoyesiqiu.shell
 -keep class com.luoyesiqiu.shell.JniBridge {
     native <methods>;
 }
