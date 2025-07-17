@@ -47,6 +47,7 @@ if(NOT TARGET dobby)
     endmacro()
     SET_OPTION(DOBBY_DEBUG OFF)
     SET_OPTION(DOBBY_GENERATE_SHARED OFF)
+    add_definitions(-DLOGGING_DISABLE)
     add_subdirectory(${DOBBY_DIR} dobby)
     get_property(DOBBY_INCLUDE_DIRECTORIES
             TARGET dobby
