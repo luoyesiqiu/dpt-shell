@@ -43,59 +43,54 @@ public class DexUtils {
      * @param keepDex The dex file will keep in apk
      * @param splitDex The dex file will be extract
      */
-    public static Pair<Integer,Integer> splitDex(File originDex, File keepDex, File splitDex) {
+    public static Pair<Integer,Integer> splitDex(File originDex, File keepDex, File splitDex) throws IOException {
 
         AtomicInteger totalClassesCount = new AtomicInteger();
         AtomicInteger keepClassesCount = new AtomicInteger();
         ProtectRules protectRules = ProtectRules.getInstance();
-        try {
 
-            DexBackedDexFile dexBackedDexFile = DexFileFactory.loadDexFile(originDex, Opcodes.getDefault());
+        DexBackedDexFile dexBackedDexFile = DexFileFactory.loadDexFile(originDex, Opcodes.getDefault());
 
-            DexRewriter keepRewriter = new DexRewriter(new RewriterModule() {
-                @Override
-                public Rewriter<DexFile> getDexFileRewriter(Rewriters rewriters) {
-                    return value -> {
-                        Set<? extends org.jf.dexlib2.iface.ClassDef> classes = value.getClasses();
-                        totalClassesCount.set(classes.size());
-                        Set<org.jf.dexlib2.iface.ClassDef> newClasses = new HashSet<>();
-                        for (org.jf.dexlib2.iface.ClassDef aClass : classes) {
-                            // match rules
-                            if (protectRules.matchRules(aClass.getType())) {
-                                newClasses.add(aClass);
-                                keepClassesCount.getAndIncrement();
-                            }
+        DexRewriter keepRewriter = new DexRewriter(new RewriterModule() {
+            @Override
+            public Rewriter<DexFile> getDexFileRewriter(Rewriters rewriters) {
+                return value -> {
+                    Set<? extends org.jf.dexlib2.iface.ClassDef> classes = value.getClasses();
+                    totalClassesCount.set(classes.size());
+                    Set<org.jf.dexlib2.iface.ClassDef> newClasses = new HashSet<>();
+                    for (org.jf.dexlib2.iface.ClassDef aClass : classes) {
+                        // match rules
+                        if (protectRules.matchRules(aClass.getType())) {
+                            newClasses.add(aClass);
+                            keepClassesCount.getAndIncrement();
                         }
-                        return new ImmutableDexFile(value.getOpcodes(), newClasses);
-                    };
-                }
-            });
+                    }
+                    return new ImmutableDexFile(value.getOpcodes(), newClasses);
+                };
+            }
+        });
 
-            DexFile keepDexFile = keepRewriter.getDexFileRewriter().rewrite(dexBackedDexFile);
-            DexFileFactory.writeDexFile(keepDex.getAbsolutePath(), keepDexFile);
+        DexFile keepDexFile = keepRewriter.getDexFileRewriter().rewrite(dexBackedDexFile);
+        DexFileFactory.writeDexFile(keepDex.getAbsolutePath(), keepDexFile);
 
-            DexRewriter splitRewriter = new DexRewriter(new RewriterModule() {
-                @Override
-                public Rewriter<DexFile> getDexFileRewriter(Rewriters rewriters) {
-                    return value -> {
-                        Set<? extends org.jf.dexlib2.iface.ClassDef> classes = value.getClasses();
-                        Set<org.jf.dexlib2.iface.ClassDef> newClasses = new HashSet<>();
-                        for (org.jf.dexlib2.iface.ClassDef aClass : classes) {
-                            // do not match
-                            if (!protectRules.matchRules(aClass.getType())) {
-                                newClasses.add(aClass);
-                            }
+        DexRewriter splitRewriter = new DexRewriter(new RewriterModule() {
+            @Override
+            public Rewriter<DexFile> getDexFileRewriter(Rewriters rewriters) {
+                return value -> {
+                    Set<? extends org.jf.dexlib2.iface.ClassDef> classes = value.getClasses();
+                    Set<org.jf.dexlib2.iface.ClassDef> newClasses = new HashSet<>();
+                    for (org.jf.dexlib2.iface.ClassDef aClass : classes) {
+                        // do not match
+                        if (!protectRules.matchRules(aClass.getType())) {
+                            newClasses.add(aClass);
                         }
-                        return new ImmutableDexFile(value.getOpcodes(), newClasses);
-                    };
-                }
-            });
-            DexFile splitDexFile = splitRewriter.getDexFileRewriter().rewrite(dexBackedDexFile);
-            DexFileFactory.writeDexFile(splitDex.getAbsolutePath(), splitDexFile);
-        }
-        catch (Exception e) {
-            e.printStackTrace();
-        }
+                    }
+                    return new ImmutableDexFile(value.getOpcodes(), newClasses);
+                };
+            }
+        });
+        DexFile splitDexFile = splitRewriter.getDexFileRewriter().rewrite(dexBackedDexFile);
+        DexFileFactory.writeDexFile(splitDex.getAbsolutePath(), splitDexFile);
 
         return new ImmutablePair<>(keepClassesCount.get(), totalClassesCount.get());
     }

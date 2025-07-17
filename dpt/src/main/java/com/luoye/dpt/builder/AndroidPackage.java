@@ -523,14 +523,22 @@ public abstract class AndroidPackage {
                 if(isKeepClasses()) {
                     File keepDex = new File(getKeepDexTempDir(packageDir).getAbsolutePath() + File.separator + dexFile.getName());
                     File splitDex = new File(dexFile.getAbsolutePath() + "_split.dex");
-                    Pair<Integer, Integer> classesCountPair = DexUtils.splitDex(dexFile, keepDex, splitDex);
 
-                    keepClassesCount.set(keepClassesCount.get() + classesCountPair.getKey());
-                    totalClassesCount.set(totalClassesCount.get() + classesCountPair.getValue());
+                    try {
+                        Pair<Integer, Integer> classesCountPair = DexUtils.splitDex(dexFile, keepDex, splitDex);
 
-                    dexFile.delete();
+                        keepClassesCount.set(keepClassesCount.get() + classesCountPair.getKey());
+                        totalClassesCount.set(totalClassesCount.get() + classesCountPair.getValue());
 
-                    splitDex.renameTo(dexFile);
+                        dexFile.delete();
+
+                        splitDex.renameTo(dexFile);
+                    } catch (Exception e) {
+                        LogUtils.warn("WARNING: split %s fail", dexFile.getName());
+                        keepDex.delete();
+                        splitDex.delete();
+                    }
+
                 }
 
                 String extractedDexName = dexFile.getName().endsWith(".dex") ? dexFile.getName().replaceAll("\\.dex$", "_extracted.dat") : "_extracted.dat";
