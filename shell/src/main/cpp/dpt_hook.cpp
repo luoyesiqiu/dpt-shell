@@ -79,7 +79,9 @@ void change_dex_protective(uint8_t * begin,int dexSize,int dexIndex){
     }
 }
 
-DPT_ENCRYPT void patchMethod(uint8_t *begin,
+DPT_ENCRYPT
+ALWAYS_INLINE
+void patchMethod(uint8_t *begin,
                              __unused const char *location,
                              uint32_t dexSize,
                              int dexIndex,

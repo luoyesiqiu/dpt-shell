@@ -496,9 +496,16 @@ DPT_ENCRYPT void find_symbol_in_elf_file(const char *elf_file, char *symbol_name
 DPT_ENCRYPT int find_in_maps(int count,...) {
     const int MAX_READ_LINE = 10 * 1024;
     char maps_path[128] = {0};
-    snprintf(maps_path, ARRAY_LENGTH(maps_path), "/proc/%d/maps", getpid());
+    snprintf(maps_path, ARRAY_LENGTH(maps_path), AY_OBFUSCATE("/proc/%d/maps"), getpid());
     FILE *fp = fopen(maps_path, "r");
     int found = 0;
+
+#ifdef __LP64__
+    const char* maps_line_fmt = AY_OBFUSCATE("%*llx-%*llx %*s %*llx %*s %*s %s");
+#else
+    const char* maps_line_fmt = AY_OBFUSCATE("%*x-%*x %*s %*x %*s %*s %s");
+#endif
+
     if (fp != nullptr) {
         char line[512] = {0};
         int read_line = 0;
@@ -508,11 +515,8 @@ DPT_ENCRYPT int find_in_maps(int count,...) {
                 break;
             }
             char item_name[128] = {0};
-#ifdef __LP64__
-            int ret = sscanf(line, "%*llx-%*llx %*s %*llx %*s %*s %s", item_name);
-#else
-            int ret = sscanf(line, "%*x-%*x %*s %*x %*s %*s %s", item_name);
-#endif
+
+            int ret = sscanf(line, maps_line_fmt, item_name);
 
             if(ret != 1) {
                 continue;
@@ -521,7 +525,7 @@ DPT_ENCRYPT int find_in_maps(int count,...) {
 
             for(int i = 0;i < count;i++) {
                 const char *arg = va_arg(ap,const char *);
-                if(dpt_strstr(item_name,arg) != 0) {
+                if(dpt_strstr(item_name, arg) != nullptr) {
                     DLOGD("found %s in %s",arg,item_name);
                     found++;
                 }
@@ -537,7 +541,8 @@ DPT_ENCRYPT int find_in_maps(int count,...) {
 DPT_ENCRYPT int find_in_threads_list(int count,...) {
     char task_path[128] = {0};
     pid_t pid = getpid();
-    snprintf(task_path, ARRAY_LENGTH(task_path), "/proc/%d/task",pid);
+    const char *path_fmt = AY_OBFUSCATE("/proc/%d/task");
+    snprintf(task_path, ARRAY_LENGTH(task_path), path_fmt, pid);
     DIR *task_dir;
     if((task_dir = opendir(task_path)) == nullptr) {
         return 0;
@@ -547,6 +552,7 @@ DPT_ENCRYPT int find_in_threads_list(int count,...) {
 
     struct dirent *de;
     va_list ap;
+    const char *stat = AY_OBFUSCATE("stat");
     while ((de = readdir(task_dir)) != nullptr) {
         if(isdigit(de->d_name[0])) {
             int tid = atoi(de->d_name);
@@ -554,7 +560,7 @@ DPT_ENCRYPT int find_in_threads_list(int count,...) {
                 continue;
             }
             char stat_path[256] = {0};
-            snprintf(stat_path, ARRAY_LENGTH(stat_path),"%s/%d/%s",task_path,tid,"stat");
+            snprintf(stat_path, ARRAY_LENGTH(stat_path),"%s/%d/%s", task_path, tid, stat);
             FILE *fp = fopen(stat_path,"r");
             char buf[256] = {0};
             if(fp) {

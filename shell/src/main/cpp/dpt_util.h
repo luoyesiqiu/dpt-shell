@@ -30,6 +30,7 @@
 #include "common/dpt_log.h"
 #include "common/dpt_macro.h"
 #include "common/dpt_string.h"
+#include "common/obfuscate.h"
 
 #include "reflect/android_app_ActivityThread.h"
 #include "reflect/android_content_pm_ApplicationInfo.h"

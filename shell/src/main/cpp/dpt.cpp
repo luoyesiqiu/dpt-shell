@@ -180,7 +180,7 @@ DPT_ENCRYPT jstring readAppComponentFactory(JNIEnv *env, jclass __unused) {
 
         uint64_t entry_size = 0;
         void *entry_addr = nullptr;
-        bool needFree = read_zip_file_entry(package_addr, package_size ,ACF_NAME_IN_ZIP, &entry_addr, &entry_size);
+        bool needFree = read_zip_file_entry(package_addr, package_size , AY_OBFUSCATE(ACF_NAME_IN_ZIP), &entry_addr, &entry_size);
         if(!needFree) {
             char *newChs = (char *) calloc(entry_size + 1, sizeof(char));
             if (entry_size != 0) {
@@ -207,7 +207,7 @@ DPT_ENCRYPT jstring readApplicationName(JNIEnv *env, jclass __unused) {
 
         uint64_t entry_size = 0;
         void *entry_addr = nullptr;
-        bool needFree = read_zip_file_entry(package_addr, package_size, APP_NAME_IN_ZIP, &entry_addr,
+        bool needFree = read_zip_file_entry(package_addr, package_size, AY_OBFUSCATE(APP_NAME_IN_ZIP), &entry_addr,
                                             &entry_size);
         if (!needFree) {
             char *newChs = (char *) calloc(entry_size + 1, sizeof(char));
@@ -275,7 +275,7 @@ void decrypt_section(const char* section_name, int temp_prot, int target_prot) {
 }
 
 void decrypt_bitcode() {
-    decrypt_section((char *)DATA_SECTION_BITCODE,PROT_READ | PROT_WRITE | PROT_EXEC,PROT_READ | PROT_EXEC);
+    decrypt_section((char *)DATA_SECTION_BITCODE, PROT_READ | PROT_WRITE | PROT_EXEC, PROT_READ | PROT_EXEC);
 }
 
 void init_dpt() {
@@ -414,7 +414,7 @@ DPT_ENCRYPT void replaceApplicationOnLoadedApk(JNIEnv *env, jclass __unused,jobj
 
 
 DPT_ENCRYPT static bool registerNativeMethods(JNIEnv *env) {
-    jclass JniBridgeClass = env->FindClass("com/luoyesiqiu/shell/JniBridge");
+    jclass JniBridgeClass = env->FindClass(AY_OBFUSCATE("com/luoyesiqiu/shell/JniBridge"));
     if(JniBridgeClass == nullptr) {
         DLOGF("cannot find JniBridge class!");
     }
@@ -436,7 +436,7 @@ DPT_ENCRYPT void init_app(JNIEnv *env, jclass __unused) {
 
     uint64_t entry_size = 0;
     if(codeItemFilePtr == nullptr) {
-        read_zip_file_entry(package_addr, package_size, CODE_ITEM_NAME_IN_ZIP, &codeItemFilePtr, &entry_size);
+        read_zip_file_entry(package_addr, package_size, AY_OBFUSCATE(CODE_ITEM_NAME_IN_ZIP), &codeItemFilePtr, &entry_size);
     }
     else {
         DLOGD("no need read codeitem from zip");
