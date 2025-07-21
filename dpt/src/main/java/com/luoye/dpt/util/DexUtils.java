@@ -4,20 +4,21 @@ import com.android.dex.ClassData;
 import com.android.dex.ClassDef;
 import com.android.dex.Code;
 import com.android.dex.Dex;
+import com.android.tools.smali.dexlib2.DexFileFactory;
+import com.android.tools.smali.dexlib2.Opcodes;
+import com.android.tools.smali.dexlib2.dexbacked.DexBackedDexFile;
+import com.android.tools.smali.dexlib2.iface.DexFile;
+import com.android.tools.smali.dexlib2.immutable.ImmutableDexFile;
+import com.android.tools.smali.dexlib2.rewriter.DexRewriter;
+import com.android.tools.smali.dexlib2.rewriter.Rewriter;
+import com.android.tools.smali.dexlib2.rewriter.RewriterModule;
+import com.android.tools.smali.dexlib2.rewriter.Rewriters;
 import com.luoye.dpt.config.ProtectRules;
 import com.luoye.dpt.model.Instruction;
 
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.commons.lang3.tuple.Pair;
-import org.jf.dexlib2.DexFileFactory;
-import org.jf.dexlib2.Opcodes;
-import org.jf.dexlib2.dexbacked.DexBackedDexFile;
-import org.jf.dexlib2.iface.DexFile;
-import org.jf.dexlib2.immutable.ImmutableDexFile;
-import org.jf.dexlib2.rewriter.DexRewriter;
-import org.jf.dexlib2.rewriter.Rewriter;
-import org.jf.dexlib2.rewriter.RewriterModule;
-import org.jf.dexlib2.rewriter.Rewriters;
+
 import org.json.JSONArray;
 import org.json.JSONObject;
 
@@ -55,10 +56,10 @@ public class DexUtils {
             @Override
             public Rewriter<DexFile> getDexFileRewriter(Rewriters rewriters) {
                 return value -> {
-                    Set<? extends org.jf.dexlib2.iface.ClassDef> classes = value.getClasses();
+                    Set<? extends com.android.tools.smali.dexlib2.iface.ClassDef> classes = value.getClasses();
                     totalClassesCount.set(classes.size());
-                    Set<org.jf.dexlib2.iface.ClassDef> newClasses = new HashSet<>();
-                    for (org.jf.dexlib2.iface.ClassDef aClass : classes) {
+                    Set<com.android.tools.smali.dexlib2.iface.ClassDef> newClasses = new HashSet<>();
+                    for (com.android.tools.smali.dexlib2.iface.ClassDef aClass : classes) {
                         // match rules
                         if (protectRules.matchRules(aClass.getType())) {
                             newClasses.add(aClass);
@@ -77,9 +78,9 @@ public class DexUtils {
             @Override
             public Rewriter<DexFile> getDexFileRewriter(Rewriters rewriters) {
                 return value -> {
-                    Set<? extends org.jf.dexlib2.iface.ClassDef> classes = value.getClasses();
-                    Set<org.jf.dexlib2.iface.ClassDef> newClasses = new HashSet<>();
-                    for (org.jf.dexlib2.iface.ClassDef aClass : classes) {
+                    Set<? extends com.android.tools.smali.dexlib2.iface.ClassDef> classes = value.getClasses();
+                    Set<com.android.tools.smali.dexlib2.iface.ClassDef> newClasses = new HashSet<>();
+                    for (com.android.tools.smali.dexlib2.iface.ClassDef aClass : classes) {
                         // do not match
                         if (!protectRules.matchRules(aClass.getType())) {
                             newClasses.add(aClass);
