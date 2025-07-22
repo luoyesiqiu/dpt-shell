@@ -4,7 +4,7 @@
 
 English | [简体中文](./README.zh-CN.md) 
 
-dpt-shell is an android Dex protect shell that makes Dex's functions code empty and fix on run.
+dpt-shell is an Android Dex protection shell that hollows out Dex method implementations and reconstructs them at runtime.
 
 ## Usage
 
