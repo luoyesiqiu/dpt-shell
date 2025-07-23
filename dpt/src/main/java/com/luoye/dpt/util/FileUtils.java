@@ -1,11 +1,12 @@
 package com.luoye.dpt.util;
 
+import com.luoye.dpt.Dpt;
+
 import java.io.File;
 import java.io.IOException;
+import java.net.URL;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.util.LinkedList;
-import java.util.Queue;
 import java.util.zip.Adler32;
 
 /**
@@ -56,10 +57,22 @@ public class FileUtils {
         }
     }
 
+    public static String getExecutablePath() {
+        try {
+            URL location = Dpt.class.getProtectionDomain().getCodeSource().getLocation();
+            File jarFile = new File(location.toURI());
+            return jarFile.getParent();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return "";
+    }
+
+
     /**
      * Gets the directory where the current command tool is located
      */
-    public static String getExecutablePath(){
+    public static String getUserDir() {
         return System.getProperty("user.dir");
     }
 
@@ -134,6 +147,7 @@ public class FileUtils {
             return "jarsigner";
         }
     }
+
 
     public synchronized static void printDirectoryTree(File directory, String prefix) {
         if (!directory.exists() || !directory.isDirectory()) {

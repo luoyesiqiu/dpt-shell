@@ -222,12 +222,12 @@ public class Aab extends AndroidPackage {
         aab.copyNativeLibs(aabMainProcessPath);
 
         byte[] rc4key = RC4Utils.generateRC4Key();
-        aab.encryptSoFiles(aabMainProcessPath,rc4key);
+        aab.encryptSoFiles(aabMainProcessPath, rc4key);
 
         /*======================================*
          * Build package
          *======================================*/
-        aab.buildPackage(aabFile.getAbsolutePath(), aabMainProcessPath, FileUtils.getExecutablePath());
+        aab.buildPackage(aabFile.getAbsolutePath(), aabMainProcessPath, FileUtils.getUserDir());
 
         File apkMainProcessFile = new File(aabMainProcessPath);
 

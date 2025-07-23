@@ -223,7 +223,7 @@ public class Apk extends AndroidPackage {
         /*======================================*
          * Build package
          *======================================*/
-        apk.buildPackage(apkFile.getAbsolutePath(),apkMainProcessPath, FileUtils.getExecutablePath());
+        apk.buildPackage(apkFile.getAbsolutePath(), apkMainProcessPath, FileUtils.getUserDir());
 
         File apkMainProcessFile = new File(apkMainProcessPath);
         if (apkMainProcessFile.exists()) {

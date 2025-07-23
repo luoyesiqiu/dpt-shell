@@ -303,7 +303,7 @@ public abstract class AndroidPackage {
     }
 
     protected String getProxyDexPath() {
-        return "shell-files" + File.separator + "dex" + File.separator + "classes.dex";
+        return FileUtils.getExecutablePath() + File.separator + "shell-files" + File.separator + "dex" + File.separator + "classes.dex";
     }
 
     private void addProxyDex(String packageOutDir) {
@@ -311,7 +311,7 @@ public abstract class AndroidPackage {
     }
 
     protected String getJunkCodeDexPath() {
-        return "shell-files" + File.separator + "dex" + File.separator + "junkcode.dex";
+        return FileUtils.getExecutablePath() + File.separator + "shell-files" + File.separator + "dex" + File.separator + "junkcode.dex";
     }
 
     protected void addJunkCodeDex(String packageDir) {
@@ -334,7 +334,7 @@ public abstract class AndroidPackage {
     public abstract void compressDexFiles(String packageDir);
 
     public void copyNativeLibs(String packageDir) {
-        File sourceDirRoot = new File(FileUtils.getExecutablePath(), "shell-files/libs");
+        File sourceDirRoot = new File(FileUtils.getExecutablePath(), "shell-files" + File.separator + "libs");
         File destDirRoot = new File(getOutAssetsDir(packageDir).getAbsolutePath(), "vwwwwwvwww");
 
         if (!destDirRoot.exists()) {
@@ -725,8 +725,9 @@ public abstract class AndroidPackage {
     public void protect() throws IOException {
 
         String path = "shell-files";
-        if(!new File(path).exists()) {
-            String msg = "Cannot find directory: shell-files!";
+        File shellFiles = new File(FileUtils.getExecutablePath() + File.separator + path);
+        if(!shellFiles.exists()) {
+            String msg = "Cannot find directory: shell-files!" + shellFiles;
             LogUtils.error(msg);
             throw new FileNotFoundException(msg);
         }
