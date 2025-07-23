@@ -4,7 +4,7 @@ package com.luoye.dpt.config;
  * @author luoyesiqiu
  */
 public class Const {
-    public static final String PROGRAM_VERSION = "2.2.4";
+    public static final String PROGRAM_VERSION = "2.2.5";
 
     public static final String OPTION_OPEN_NOISY_LOG_LONG = "noisy-log";
     public static final String OPTION_OPEN_NOISY_LOG = "l";
