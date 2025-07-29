@@ -23,8 +23,8 @@ import java.util.zip.ZipFile;
  public class FileUtils {
      private static final String TAG = "dpt";
 
-     public static void unzipLibs(String sourceDir,String dataDir) {
-         String abiName = EnvUtils.getAbiDirName(sourceDir);
+     public static void unzipLibs(String sourceDir, String dataDir) {
+         String abiName = EnvUtils.getAbiDirName();
 
          File libsOutDir = new File(dataDir + File.separator + Global.LIB_DIR + File.separator + abiName);
          FileUtils.unzipInNeeded(sourceDir,

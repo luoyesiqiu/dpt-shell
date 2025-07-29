@@ -26,10 +26,10 @@ public class JniBridge {
     public static native Object ra(String originApplicationClassName);
     public static native String rapn();
 
-    public static void loadShellLibs(String workspacePath,String apkPath) {
+    public static void loadShellLibs(String workspacePath) {
         final String[] allowLibNames = {Global.SHELL_SO_NAME};
         try {
-            String abiDirName = EnvUtils.getAbiDirName(apkPath);
+            String abiDirName = EnvUtils.getAbiDirName();
             File shellLibsFile = new File(workspacePath + File.separator + Global.LIB_DIR + File.separator + abiDirName);
             File[] files = shellLibsFile.listFiles();
             if(files != null) {

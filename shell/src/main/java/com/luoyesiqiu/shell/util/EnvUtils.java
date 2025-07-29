@@ -1,39 +1,24 @@
 package com.luoyesiqiu.shell.util;
 
 import android.content.pm.ApplicationInfo;
-import android.os.Build;
-import android.util.Log;
-
-import java.io.File;
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 
 public class EnvUtils {
     private static final String TAG = "EnvUtils";
-    public static String getAbiDirName(String apkPath) {
-        String[] abiArray = {"arm", "arm64", "x86", "x86_64"};
+    public static String getAbiDirName() {
 
-        for (String abi : abiArray) {
-            File nativeLibPath = new File(apkPath.substring(0,apkPath.lastIndexOf("/")) + File.separator + "lib" ,abi);
-            if(nativeLibPath.exists()) {
-                return abi;
-            }
+        try {
+            Class<?> clazz = Class.forName("dalvik.system.VMRuntime");
+            Method getRuntime = clazz.getDeclaredMethod("getRuntime");
+            Object runtime = getRuntime.invoke(null);
+            Method vmInstructionSet = clazz.getDeclaredMethod("vmInstructionSet");
+            return (String) vmInstructionSet.invoke(runtime);
         }
-        String[] supportedAbis = Build.SUPPORTED_ABIS;
-        for (String supportedAbi : supportedAbis) {
-            if(supportedAbi.contains("x86_64")) {
-                return "x86_64";
-            }
-            else if(supportedAbi.contains("x86")) {
-                return "x86";
-            }
-            else if(supportedAbi.contains("arm64-v8a")) {
-                return "arm64";
-            }
-            else if(supportedAbi.contains("armeabi-v7a")) {
-                return "arm";
-            }
+        catch (Exception e) {
+            e.printStackTrace();
         }
-        return null;
+        return "arm64";
     }
 
     public static ApplicationInfo getApplicationInfo() {

@@ -69,7 +69,7 @@ public class ProxyComponentFactory extends AppComponentFactory {
             String dataDir = EnvUtils.getApplicationInfo().dataDir;
             String sourceDir = EnvUtils.getApplicationInfo().sourceDir;
             FileUtils.unzipLibs(sourceDir,dataDir);
-            JniBridge.loadShellLibs(dataDir,sourceDir);
+            JniBridge.loadShellLibs(dataDir);
         }
         JniBridge.ia();
 
@@ -132,8 +132,8 @@ public class ProxyComponentFactory extends AppComponentFactory {
     @Override
     public ClassLoader instantiateClassLoader(@NonNull ClassLoader cl, @NonNull ApplicationInfo aInfo) {
         Log.d(TAG, "instantiateClassLoader() called with: cl = [" + cl + "], aInfo = [" + aInfo + "]");
-        FileUtils.unzipLibs(aInfo.sourceDir,aInfo.dataDir);
-        JniBridge.loadShellLibs(aInfo.dataDir,aInfo.sourceDir);
+        FileUtils.unzipLibs(aInfo.sourceDir, aInfo.dataDir);
+        JniBridge.loadShellLibs(aInfo.dataDir);
 
         JniBridge.ia();
 

@@ -61,7 +61,7 @@ public class ProxyApplication extends Application {
                 throw new NullPointerException("application info is null");
             }
             FileUtils.unzipLibs(applicationInfo.sourceDir,applicationInfo.dataDir);
-            JniBridge.loadShellLibs(applicationInfo.dataDir,applicationInfo.sourceDir);
+            JniBridge.loadShellLibs(applicationInfo.dataDir);
             Log.d(TAG,"ProxyApplication init");
             JniBridge.ia();
             ClassLoader targetClassLoader = base.getClassLoader();
