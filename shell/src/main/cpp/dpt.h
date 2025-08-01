@@ -4,6 +4,7 @@
 
 #ifndef DPT_DPT_H
 #define DPT_DPT_H
+
 #include <jni.h>
 #include <string>
 #include <inttypes.h>
@@ -34,6 +35,9 @@
 #include "reflect/android_app_Application.h"
 #include "reflect/android_app_LoadedApk.h"
 
+using namespace dpt;
+
+std::unordered_map<int,std::vector<data::CodeItem *> *> dexMap;
 
 void callRealApplicationOnCreate(JNIEnv *env, jclass, jstring realApplicationClassName);
 
@@ -52,6 +56,5 @@ void removeDexElements(JNIEnv* env,jclass __unused,jobject classLoader,jstring e
 jobject replaceApplication(JNIEnv *env, jclass __unused, jstring originApplication);
 void replaceApplicationOnActivityThread(JNIEnv *env,jclass __unused, jobject realApplication);
 void replaceApplicationOnLoadedApk(JNIEnv *env, jclass __unused, jobject realApplication);
-std::unordered_map<int,std::unordered_map<int,dpt::data::CodeItem*>*> dexMap;
 
 #endif //DPT_DPT_H

@@ -13,7 +13,7 @@
 
 using namespace dpt;
 
-extern std::unordered_map<int, std::unordered_map<int, data::CodeItem*>*> dexMap;
+extern std::unordered_map<int, std::vector<data::CodeItem*>*> dexMap;
 std::map<int,uint8_t *> dexMemMap;
 int g_sdkLevel = 0;
 
@@ -95,11 +95,9 @@ void patchMethod(uint8_t *begin,
             change_dex_protective(begin, dexSize, dexIndex);
         }
 
-        auto codeItemMap = dexIt->second;
-        auto codeItemIt = codeItemMap->find(methodIdx);
-
-        if (LIKELY(codeItemIt != codeItemMap->end())) {
-            data::CodeItem* codeItem = codeItemIt->second;
+        auto codeItemVec = dexIt->second;
+        auto codeItem = codeItemVec->at(methodIdx);
+        if (LIKELY(codeItem != nullptr)) {
             if(codeOff == 0) {
                 NLOG("dex: %d methodIndex: %d no need patch!",dexIndex,methodIdx);
                 return;

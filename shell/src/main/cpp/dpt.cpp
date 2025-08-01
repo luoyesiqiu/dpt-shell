@@ -461,6 +461,7 @@ DPT_ENCRYPT void readCodeItem(uint8_t *data,size_t data_len) {
               dexCode->readDexCount());
         int indexCount = 0;
         uint32_t *dexCodeIndex = dexCode->readDexCodeIndex(&indexCount);
+        dexMap.reserve(indexCount);
         for (int i = 0; i < indexCount; i++) {
             DLOGI("dexCodeIndex[%d] = %d", i, *(dexCodeIndex + i));
             uint32_t dexCodeOffset = *(dexCodeIndex + i);
@@ -468,14 +469,14 @@ DPT_ENCRYPT void readCodeItem(uint8_t *data,size_t data_len) {
 
             DLOGD("dexCodeOffset[%d] = %d, methodCount[%d] = %d", i, dexCodeOffset, i,
                   methodCount);
-            auto codeItemMap = new std::unordered_map<int, data::CodeItem *>();
+            auto codeItemVec = new std::vector<data::CodeItem *>(65536);
             uint32_t codeItemIndex = dexCodeOffset + 2;
             for (int k = 0; k < methodCount; k++) {
                 data::CodeItem *codeItem = dexCode->nextCodeItem(&codeItemIndex);
                 uint32_t methodIdx = codeItem->getMethodIdx();
-                codeItemMap->insert(std::pair<int, data::CodeItem *>(methodIdx, codeItem));
+                codeItemVec->at(methodIdx) = codeItem;
             }
-            dexMap.insert(std::pair<int, std::unordered_map<int, data::CodeItem *> *>(i, codeItemMap));
+            dexMap.emplace(i, codeItemVec);
 
         }
         DLOGD("map size = %lu", (unsigned long)dexMap.size());
