@@ -232,17 +232,26 @@ public class ZipUtils {
     /**
      * Compress to common zip file
      */
-    public static void compress(List<File> files, String destFile) {
+    public static void compress(List<File> files, String destFile, Map<String, CompressionMethod> rulesMap) {
         ZipFile zipFile = new ZipFile(destFile);
         if (files == null) {
             return;
         }
         try {
             for (File f : files) {
+                ZipParameters zipParameters = new ZipParameters();
+                if(rulesMap != null) {
+                    for (String key : rulesMap.keySet()) {
+                        if (f.getName().matches(key)) {
+                            zipParameters.setCompressionMethod(rulesMap.get(key));
+                            break;
+                        }
+                    }
+                }
                 if (f.isDirectory()) {
-                    zipFile.addFolder(f.getAbsoluteFile());
+                    zipFile.addFolder(f.getAbsoluteFile(), zipParameters);
                 } else {
-                    zipFile.addFile(f.getAbsoluteFile());
+                    zipFile.addFile(f.getAbsoluteFile(), zipParameters);
                 }
             }
         } catch (Exception e) {

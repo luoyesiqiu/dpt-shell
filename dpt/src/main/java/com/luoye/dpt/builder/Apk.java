@@ -31,11 +31,6 @@ public class Apk extends AndroidPackage {
     }
 
     @Override
-    public void compressDexFiles(String packageDir) {
-        ZipUtils.compress(getDexFiles(packageDir),getOutAssetsDir(packageDir).getAbsolutePath() + File.separator + "i11111i111.zip");
-    }
-
-    @Override
     protected File getOutAssetsDir(String packageDir) {
         return FileUtils.getDir(packageDir,"assets");
     }

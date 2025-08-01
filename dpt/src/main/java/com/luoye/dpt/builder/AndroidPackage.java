@@ -17,6 +17,8 @@ import com.luoye.dpt.util.MultiDexCodeUtils;
 import com.luoye.dpt.util.RC4Utils;
 import com.luoye.dpt.util.ZipUtils;
 
+import net.lingala.zip4j.model.enums.CompressionMethod;
+
 import org.apache.commons.lang3.tuple.Pair;
 
 import java.io.File;
@@ -331,7 +333,14 @@ public abstract class AndroidPackage {
         }
     }
 
-    public abstract void compressDexFiles(String packageDir);
+    public void compressDexFiles(String packageDir) {
+        Map<String, CompressionMethod> rulesMap = new HashMap<>();
+        rulesMap.put("classes\\d*.dex", CompressionMethod.STORE);
+        ZipUtils.compress(getDexFiles(getDexDir(packageDir))
+                , getOutAssetsDir(packageDir).getAbsolutePath() + File.separator + "i11111i111.zip"
+                , rulesMap
+        );
+    }
 
     public void copyNativeLibs(String packageDir) {
         File sourceDirRoot = new File(FileUtils.getExecutablePath(), "shell-files" + File.separator + "libs");

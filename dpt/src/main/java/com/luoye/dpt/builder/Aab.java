@@ -135,11 +135,6 @@ public class Aab extends AndroidPackage {
     }
 
     @Override
-    public void compressDexFiles(String packageDir) {
-        ZipUtils.compress(getDexFiles(getDexDir(packageDir)),getOutAssetsDir(packageDir).getAbsolutePath() + File.separator + "i11111i111.zip");
-    }
-
-    @Override
     protected boolean sign(String packagePath, String keyStorePath, String signedPackagePath, String keyAlias, String storePassword, String KeyPassword) {
         List<String> command = new ArrayList<>();
         command.add(FileUtils.getJarSignerCommand());
