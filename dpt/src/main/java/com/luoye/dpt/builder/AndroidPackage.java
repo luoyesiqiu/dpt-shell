@@ -336,10 +336,41 @@ public abstract class AndroidPackage {
     public void compressDexFiles(String packageDir) {
         Map<String, CompressionMethod> rulesMap = new HashMap<>();
         rulesMap.put("classes\\d*.dex", CompressionMethod.STORE);
+        String unalignedFilePath = getOutAssetsDir(packageDir).getAbsolutePath() + File.separator + "i11111i111_unaligned.zip";
+        String alignedFilePath = getOutAssetsDir(packageDir).getAbsolutePath() + File.separator + "i11111i111.zip";
         ZipUtils.compress(getDexFiles(getDexDir(packageDir))
-                , getOutAssetsDir(packageDir).getAbsolutePath() + File.separator + "i11111i111.zip"
+                , unalignedFilePath
                 , rulesMap
         );
+        RandomAccessFile randomAccessFile = null;
+        FileOutputStream out = null;
+        boolean isAligned = false;
+        try {
+            randomAccessFile = new RandomAccessFile(unalignedFilePath, "r");
+            out = new FileOutputStream(alignedFilePath);
+            ZipAlign.alignZip(randomAccessFile, out);
+            IoUtils.close(randomAccessFile);
+            IoUtils.close(out);
+            org.apache.commons.io.FileUtils.forceDelete(new File(unalignedFilePath));
+            LogUtils.info("zip aligned: " + alignedFilePath);
+            isAligned = true;
+        }
+        catch (Exception e) {
+            LogUtils.warn("WARNING: ZipAlign failed: %s", unalignedFilePath);
+        }
+        finally {
+            IoUtils.close(randomAccessFile);
+            IoUtils.close(out);
+        }
+
+        if(!isAligned) {
+            try {
+                Files.move(Paths.get(unalignedFilePath), Paths.get(alignedFilePath), StandardCopyOption.REPLACE_EXISTING);
+            }
+            catch (Exception e1) {
+                e1.printStackTrace();
+            }
+        }
     }
 
     public void copyNativeLibs(String packageDir) {
