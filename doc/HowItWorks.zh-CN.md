@@ -495,7 +495,8 @@ dpt在AppComponentFactory类的instantiateClassLoader和instantiateApplication�
 
 ### (5) 性能优化
 
-dpt中有两个性能优化的细节：
+dpt中有几个性能优化的细节：
 
 - 使用`mmap`函数映射apk到内存，然后再从内存中读取apk中的信息，这样做比从本地直接读apk性能要好上不少，尤其体现在大型apk上。
-- 对于需要填充的CodeItem来讲，插入和查找非常频繁，但是在内存中存储的顺序并不重要。基于这个需求，dpt使用`unordered_map`来存储从本地加载到的CodeItem，插入和查找对应函数的CodeItem在正常情况下都是O(1)。
+- 对于需要填充的CodeItem来讲，插入和查找非常频繁，但是在内存中存储的顺序并不重要。基于这个需求，使用足够的`std::vector`来存储从本地加载到的CodeItem地址，插入和查找对应函数的CodeItem的时间复杂度都是O(1)。
+- 加载对齐（zipalign）且未压缩的zip文件来存储dex文件，可以避免art额外的解压耗时。
