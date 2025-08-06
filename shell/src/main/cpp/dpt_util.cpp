@@ -8,12 +8,13 @@
 #include <pthread.h>
 #include <errno.h>
 #include <dlfcn.h>
-#include "dpt_util.h"
-#include "common/dpt_log.h"
 #include <mz_strm.h>
 #include <string>
 #include <algorithm>
 #include <cctype>
+
+#include "dpt_util.h"
+#include "common/dpt_log.h"
 
 using namespace dpt;
 
@@ -613,11 +614,4 @@ void appendLog(const char* log){
 void printTime(__unused const char* msg,__unused clock_t start){
     __unused clock_t end = clock();
     DLOGD("%s %lf",msg,(double)(end - start) / CLOCKS_PER_SEC);
-}
-
-const char* getThreadName(){
-    static char threadName[256];
-    memset(threadName, 0, 256);
-    prctl(PR_GET_NAME, (unsigned long)threadName);
-    return threadName;
 }

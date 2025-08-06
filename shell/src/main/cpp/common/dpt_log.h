@@ -6,8 +6,17 @@
 #define DPT_DPT_LOG_H
 
 #include <android/log.h>
+#include <sys/prctl.h>
+#include <cstring>
 
 #define TAG  "dpt_native"
+
+inline const char* getThreadName() {
+    static char threadName[256];
+    memset(threadName, 0, 256);
+    prctl(PR_GET_NAME, (unsigned long)threadName);
+    return threadName;
+}
 
 #define DLOG(_level,...) do { \
         char logBuffer[1024];                                           \
