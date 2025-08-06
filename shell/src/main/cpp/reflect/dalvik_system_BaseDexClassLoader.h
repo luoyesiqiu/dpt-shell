@@ -7,7 +7,6 @@
 #include "dpt_reflect.h"
 #include "../dpt_jni.h"
 
-using namespace dpt::reflect;
 
 namespace dpt {
     namespace reflect {
@@ -24,7 +23,7 @@ namespace dpt {
             void setPathList(jobject pathList);
 
         protected:
-            const char *getClassName() {
+            const char *getClassName() override {
                 return "dalvik/system/BaseDexClassLoader";
             }
         };

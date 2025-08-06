@@ -7,8 +7,7 @@
 
 #include "dpt_reflect.h"
 
-namespace dpt {
-    namespace reflect {
+namespace dpt::reflect {
 
         class android_app_Application : public Reflect{
         private:
@@ -38,7 +37,6 @@ namespace dpt {
 
         };
 
-    } // dpt
-} // reflect
+    } // reflect
 
 #endif //DPT_ANDROID_APP_APPLICATION_H

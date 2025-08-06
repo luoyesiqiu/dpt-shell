@@ -7,8 +7,7 @@
 #include "dpt_reflect.h"
 #include "../dpt_jni.h"
 
-namespace dpt {
-    namespace reflect {
+namespace dpt::reflect {
 
         class android_app_LoadedApk : Reflect {
             jni::JNINativeField m_application_field = {"mApplication",
@@ -34,7 +33,6 @@ namespace dpt {
             }
         };
 
-    } // dpt
-} // reflect
+    } // reflect
 
 #endif //DPT_ANDROID_APP_LOADEDAPK_H

@@ -4,6 +4,8 @@
 
 #include "dalvik_system_DexPathList.h"
 
+using namespace dpt::reflect;
+
 jobjectArray dalvik_system_DexPathList::makePathElements(JNIEnv *env, jobject files, jobject optimizedDirectory,
                         jobject suppressedExceptions) {
 

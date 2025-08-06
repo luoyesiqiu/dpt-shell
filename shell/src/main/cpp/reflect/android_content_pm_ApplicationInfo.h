@@ -7,10 +7,8 @@
 
 #include "dpt_reflect.h"
 
-namespace dpt {
-    namespace reflect {
-
-        class android_content_pm_ApplicationInfo: public Reflect{
+namespace dpt::reflect {
+        class android_content_pm_ApplicationInfo: public Reflect {
         private:
             jni::JNINativeField source_dir_field = {"sourceDir","Ljava/lang/String;"};
             jni::JNINativeField data_dir_field = {"dataDir","Ljava/lang/String;"};
@@ -24,12 +22,11 @@ namespace dpt {
             jstring getDataDir();
             void setClassName(jobject className);
         protected:
-            const char * getClassName() override{
+            const char * getClassName() override {
                 return "android/content/pm/ApplicationInfo";
             }
         };
 
-    } // dpt
-} // reflect
+    } // reflect
 
 #endif //DPT_ANDROID_CONTENT_PM_APPLICATIONINFO_H

@@ -8,10 +8,7 @@
 #include "dpt_reflect.h"
 #include "../dpt_jni.h"
 
-using namespace dpt::reflect;
-
-namespace dpt{
-    namespace reflect{
+namespace dpt::reflect{
         class java_io_File : public Reflect{
         private:
             const char *className = "java/io/File";
@@ -30,11 +27,10 @@ namespace dpt{
             }
             jstring getName();
         protected:
-            const char *getClassName() {
+            const char *getClassName() override {
                 return className;
             }
         };
     }
-}
 
 #endif //DPT_JAVA_IO_FILE_H

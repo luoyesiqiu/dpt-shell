@@ -7,8 +7,7 @@
 
 #include "dpt_reflect.h"
 
-namespace dpt {
-    namespace reflect {
+namespace dpt::reflect {
         class android_app_ActivityThread : public Reflect {
         private:
             jni::JNINativeField bound_application_field = {"mBoundApplication",
@@ -18,7 +17,7 @@ namespace dpt {
             jni::JNINativeField m_initial_application_field = {"mInitialApplication",
                                                             "Landroid/app/Application;"};
         public:
-            android_app_ActivityThread(JNIEnv *env){
+            explicit android_app_ActivityThread(JNIEnv *env){
                 this->m_env = env;
                 this->m_obj = currentActivityThread();
             }
@@ -28,7 +27,7 @@ namespace dpt {
             void setInitialApplication(jobject application);
 
         protected:
-            const char *getClassName() {
+            const char *getClassName() override {
                 return "android/app/ActivityThread";
             }
         public:
@@ -40,7 +39,7 @@ namespace dpt {
                 jni::JNINativeField info_field = {"info",
                                                       "Landroid/app/LoadedApk;"};
             protected:
-                const char *getClassName() {
+                const char *getClassName() override {
                     return "android/app/ActivityThread$AppBindData";
                 }
             public:
@@ -53,8 +52,6 @@ namespace dpt {
 
             };
         };
-    }
-
-} // dpt
+    } // dpt
 
 #endif //DPT_ANDROID_APP_ACTIVITYTHREAD_H

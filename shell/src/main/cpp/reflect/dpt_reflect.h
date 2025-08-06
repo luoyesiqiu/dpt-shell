@@ -10,8 +10,7 @@
 #include "dpt_jni.h"
 #include "dpt_log.h"
 
-namespace dpt{
-    namespace reflect {
+namespace dpt::reflect {
         class Reflect {
         protected:
             JNIEnv *m_env = nullptr;
@@ -36,6 +35,5 @@ namespace dpt{
 
         };
     }
-}
 
 #endif //DPT_REFLECT_H

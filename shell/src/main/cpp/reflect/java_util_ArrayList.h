@@ -10,8 +10,7 @@
 using namespace dpt::reflect;
 
 #include "dpt_reflect.h"
-namespace dpt {
-    namespace reflect {
+namespace dpt::reflect {
         class java_util_ArrayList : public Reflect{
         private:
             const char *className = "java/util/ArrayList";
@@ -21,7 +20,7 @@ namespace dpt {
                 this->m_obj = obj;
             }
 
-            java_util_ArrayList(JNIEnv *env){
+            explicit java_util_ArrayList(JNIEnv *env){
                 this->m_env = env;
                 jclass ArrayListClass = jni::FindClass(env,className);
                 this->m_obj = jni::NewObject(env, ArrayListClass,"()V");
@@ -32,10 +31,9 @@ namespace dpt {
             void add(int i,jobject obj);
 
         protected:
-            const char *getClassName() {
+            const char *getClassName() override {
                 return className;
             }
         };
     }
-}
 #endif //DPT_JAVA_UTIL_ARRAYLIST_H

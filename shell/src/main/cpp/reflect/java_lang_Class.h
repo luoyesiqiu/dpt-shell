@@ -7,8 +7,8 @@
 
 #include "dpt_reflect.h"
 #include "../dpt_jni.h"
-namespace dpt {
-    namespace reflect {
+
+namespace dpt::reflect {
 
         class java_lang_Class : Reflect{
         public:
@@ -19,13 +19,12 @@ namespace dpt {
         public:
             jstring getName();
         protected:
-            const char * getClassName() override{
+            const char * getClassName() override {
                 return "java/lang/Class";
             }
 
         };
 
-    } // dpt
-} // reflect
+    } // reflect
 
 #endif //DPT_JAVA_LANG_CLASS_H

@@ -7,10 +7,8 @@
 
 #include "dpt_reflect.h"
 
-using namespace dpt::reflect;
 
-namespace dpt{
-    namespace reflect {
+namespace dpt::reflect {
         //DexPathList
         class dalvik_system_DexPathList : public Reflect {
         private:
@@ -32,7 +30,7 @@ namespace dpt{
                                                  jobject suppressedExceptions);
 
             protected:
-                const char *getClassName() {
+                const char *getClassName() override {
                     return "dalvik/system/DexPathList";
                 }
         public:
@@ -50,12 +48,11 @@ namespace dpt{
                     void setPath(jobject path);
 
                 protected:
-                    const char *getClassName() {
+                    const char *getClassName() override {
                         return "dalvik/system/DexPathList$Element";
                     }
             };
 
         };
     }
-}
 #endif //DPT_DALVIK_SYSTEM_DEXPATHLIST_H
