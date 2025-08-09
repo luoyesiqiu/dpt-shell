@@ -39,6 +39,7 @@
 static AAssetManager *g_AssetMgrInstance = nullptr;
 static jclass g_ContextClass = nullptr;
 
+std::string find_so_path(const char* so_name);
 bool checkWebViewInFilename(const std::string& path);
 int parse_dex_number(std::string *location);
 jclass getContextClass(JNIEnv *env);

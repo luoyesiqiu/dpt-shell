@@ -245,15 +245,24 @@ DPT_ENCRYPT void createAntiRiskProcess() {
 void decrypt_section(const char* section_name, int temp_prot, int target_prot) {
     Dl_info info;
     dladdr((const void *)decrypt_section,&info);
-    Elf_Shdr shdr;
+    std::string so_path = {};
+    if(strstr(info.dli_fname, "/data") != nullptr) {
+        so_path.assign(info.dli_fname);
+    }
+    else {
+        auto path = find_so_path("libdpt.so");
+        so_path.assign(path);
+    }
+    Elf_Shdr shdr = {};
 
-    get_elf_section(&shdr,info.dli_fname,section_name);
+    get_elf_section(&shdr, so_path.c_str(), section_name);
     Elf_Off offset = shdr.sh_offset;
     Elf_Word size = shdr.sh_size;
 
+    DLOGD("section name: %s, offset: %p, size: %d", section_name, (uint8_t *)offset, size);
     void *target = (u_char *)info.dli_fbase + offset;
 
-    int ret = dpt_mprotect(target,(void *)((uint8_t *)target + size),temp_prot);
+    int ret = dpt_mprotect(target, (void *)((uint8_t *)target + size), temp_prot);
     if(ret == -1) {
         abort();
     }

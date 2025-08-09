@@ -20,6 +20,45 @@ using namespace dpt;
 
 DPT_DATA_SECTION uint8_t DATA_R_FLAG[] = "r";
 
+std::string find_so_path(const char* so_name) {
+    const int MAX_READ_LINE = 10 * 1024;
+    char maps_path[128] = {0};
+    snprintf(maps_path, ARRAY_LENGTH(maps_path), AY_OBFUSCATE("/proc/%d/maps"), getpid());
+    FILE *fp = fopen(maps_path, "r");
+
+#ifdef __LP64__
+    const char* maps_line_fmt = AY_OBFUSCATE("%*llx-%*llx %*s %*llx %*s %*s %s");
+#else
+    const char* maps_line_fmt = AY_OBFUSCATE("%*x-%*x %*s %*x %*s %*s %s");
+#endif
+
+    std::string so_path_result = {};
+    if (fp != nullptr) {
+        char line[512] = {0};
+        int read_line = 0;
+        while (fgets(line, sizeof(line), fp) != nullptr) {
+            if (read_line++ >= MAX_READ_LINE) {
+                break;
+            }
+            char item_name[128] = {0};
+
+            int ret = sscanf(line, maps_line_fmt, item_name);
+
+            if(ret != 1) {
+                continue;
+            }
+
+            if(strstr(item_name, so_name) != nullptr) {
+                so_path_result = item_name;
+                break;
+            }
+        } // while
+        fclose(fp);
+    }
+
+    return so_path_result;
+}
+
 bool checkWebViewInFilename(const std::string& path) {
     size_t lastSlashPos = path.find_last_of("\\/");
     std::string filename;
@@ -53,7 +92,7 @@ int dpt_mprotect(void *start,void *end,int prot) {
     size_t size = end_addr - start_addr;
 
     if (0 != mprotect((void *)start_addr, size, prot)) {
-        DLOGW("mprotect 0x%" PRIxPTR  "-0x%" PRIxPTR  " fail, pagesize: %d, err: %s",start_addr,end_addr,
+        DLOGW("mprotect 0x%" PRIxPTR  "-0x%" PRIxPTR  " fail, pagesize: %d, err: %s", start_addr, end_addr,
               getpagesize(),
               strerror(errno));
         return -1;
@@ -396,13 +435,14 @@ DPT_ENCRYPT bool read_zip_file_entry(void* zip_addr,off_t zip_size,const char* e
     }
 }
 
-void get_elf_section(Elf_Shdr *target,const char *elf_path,const char *sh_name) {
+void get_elf_section(Elf_Shdr *target, const char *elf_path, const char *sh_name) {
     if(elf_path == NULL) {
         return;
     }
 
     FILE *elf_fp = fopen(elf_path, (char *)DATA_R_FLAG);
     if(!elf_fp) {
+        DLOGW("cannot open elf file: %s", elf_path);
         return;
     }
 
@@ -424,12 +464,20 @@ void get_elf_section(Elf_Shdr *target,const char *elf_path,const char *sh_name) 
 
     uint8_t *shstr_addr = elf_bytes_data + shstr_shdr->sh_offset;
 
+    bool found = false;
     for (int i = 0; i < ehdr->e_shnum; i++) {
         const char *section_name = reinterpret_cast<const char *>((char *)shstr_addr + shdr->sh_name);
         if (strcmp(section_name, sh_name) == 0) {
-            memcpy(target,shdr,sizeof(Elf_Shdr));
+            memcpy(target, shdr, sizeof(Elf_Shdr));
+            DLOGD("find section: %s", sh_name);
+            found = true;
+            break;
         }
         shdr++;
+    }
+
+    if(!found) {
+        DLOGE("cannot find section: %s", sh_name);
     }
     free(data);
     fclose(elf_fp);
