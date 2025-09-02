@@ -66,7 +66,7 @@ public class ApkManifestEditor {
 
                 for (int i = 0; i < axmlParser.getAttrCount(); i++) {
 
-                    if (axmlParser.getNamespacePrefix().equals(ns)) {
+                    if (ns == null || axmlParser.getNamespacePrefix().equals(ns)) {
 
                         if(axmlParser.getAttrName(i).equals(attrName)) {
                             return (String) axmlParser.getAttrValue(i);
@@ -85,7 +85,22 @@ public class ApkManifestEditor {
      */
     public static String getApplicationName(String file) {
         String attributeValue = getAttributeValue(file, "application", "android", "name");
-        return attributeValue == null ? getAttributeValue(file, "application", "dist", "name") : attributeValue;
+
+        attributeValue = attributeValue == null ? getAttributeValue(file, "application", "dist", "name") : attributeValue;
+
+        /*
+         * xmlns:android="http://schemas.android.com/apk/res/android" xmlns:n1="http://schemas.android.com/apk/distribution"
+         * The result parsed by MainifestEditor seems to have an issue, as it recognizes Android as n1 when there are
+         * two namespaces in the manifest file at the same time
+         * */
+
+        /*
+         * xmlns:android="http://schemas.android.com/apk/res/android" xmlns:n1="http://schemas.android.com/apk/distribution"
+         * MainifestEditor 解析的结果似乎是存在问题的，当清单文件中同时存在两个命名空间时它会把 android 识别为 n1
+         * */
+        attributeValue = attributeValue == null ? getAttributeValue(file, "application", null,"name") : attributeValue;
+
+        return attributeValue;
     }
 
     /**
@@ -93,8 +108,12 @@ public class ApkManifestEditor {
      */
     public static String getAppComponentFactory(String file) {
         String attributeValue = getAttributeValue(file, "application", "android", "appComponentFactory");
-        return attributeValue == null ? getAttributeValue(file, "application", "dest", "appComponentFactory") : attributeValue;
 
+        attributeValue = attributeValue == null ? getAttributeValue(file, "application", "android", "appComponentFactory") : attributeValue;
+
+        attributeValue = attributeValue == null ? getAttributeValue(file, "application", null,"appComponentFactory") : attributeValue;
+
+        return attributeValue;
     }
 
     public static String getPackageName(String file) {
