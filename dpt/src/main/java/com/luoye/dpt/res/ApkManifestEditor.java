@@ -66,7 +66,7 @@ public class ApkManifestEditor {
 
                 for (int i = 0; i < axmlParser.getAttrCount(); i++) {
 
-                    if (axmlParser.getNamespacePrefix().equals(ns)) {
+                    if (ns == null || axmlParser.getNamespacePrefix().equals(ns)) {
 
                         if(axmlParser.getAttrName(i).equals(attrName)) {
                             return (String) axmlParser.getAttrValue(i);
@@ -85,7 +85,13 @@ public class ApkManifestEditor {
      */
     public static String getApplicationName(String file) {
         String attributeValue = getAttributeValue(file, "application", "android", "name");
-        return attributeValue == null ? getAttributeValue(file, "application", "dist", "name") : attributeValue;
+
+        attributeValue = attributeValue == null ? getAttributeValue(file, "application", "dist", "name") : attributeValue;
+
+        // some times ns is null
+        attributeValue = attributeValue == null ? getAttributeValue(file, "application", null,"name") : attributeValue;
+
+        return attributeValue;
     }
 
     /**
