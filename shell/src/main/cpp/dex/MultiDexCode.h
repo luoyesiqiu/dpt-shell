@@ -10,8 +10,7 @@
 #include "CodeItem.h"
 #include "common/dpt_log.h"
 
-namespace dpt {
-    namespace data {
+namespace dpt::data {
         class MultiDexCode {
         private:
             size_t m_size;
@@ -36,7 +35,6 @@ namespace dpt {
             dpt::data::CodeItem *nextCodeItem(uint32_t *offset);
         };
     }
-}
 
 
 

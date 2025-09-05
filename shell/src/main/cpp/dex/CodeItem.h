@@ -7,8 +7,7 @@
 
 #include <stdint.h>
 
-namespace dpt {
-    namespace data {
+namespace dpt::data {
         class CodeItem {
         private:
             uint32_t mMethodIdx;
@@ -35,6 +34,5 @@ namespace dpt {
             ~CodeItem();
         };
     }
-}
 
 #endif //DPT_CODEITEM_H
