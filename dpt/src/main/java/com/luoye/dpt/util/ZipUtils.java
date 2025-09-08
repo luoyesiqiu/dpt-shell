@@ -30,17 +30,22 @@ import java.util.zip.ZipInputStream;
 import java.util.zip.ZipOutputStream;
 
 public class ZipUtils {
-    private static final List<String> storeList = Arrays.asList(
+    private static final List<String> defaultStoreList = Arrays.asList(
             "assets/app_acf",
             "assets/app_name",
             "assets/i11111i111.zip",
             "assets/OoooooOooo"
     );
 
+    private static final List<String> biggerFileList = Arrays.asList(
+            "assets/OoooooOooo"
+    );
+
+
     /**
      * don not compress file list
      */
-    private static final List<String> doNotCompress = new ArrayList<>(storeList);
+    private static final List<String> doNotCompress = new ArrayList<>(defaultStoreList);
     /**
      * when unzip apk on window, the file name maybe conflict.
      * this is fix it
@@ -87,7 +92,7 @@ public class ZipUtils {
         if (compressedLevelMap.containsKey(fileName)) {
             zipParameters.setCompressionMethod(compressedLevelMap.get(fileName));
         }
-        if(storeList.contains(fileName)) {
+        if(defaultStoreList.contains(fileName)) {
             zipParameters.setCompressionMethod(CompressionMethod.STORE);
         }
     }
@@ -328,7 +333,10 @@ public class ZipUtils {
      * @param dirPath apk/aab unzip dir path
      * @param zipPath zip apk path
      */
-    public static void zip(String dirPath, String zipPath) {
+    public static void zip(String dirPath, String zipPath, boolean smaller) {
+        if(smaller) {
+            doNotCompress.removeAll(biggerFileList);
+        }
         try {
             File zip = new File(zipPath);
             if(zip.exists()) {

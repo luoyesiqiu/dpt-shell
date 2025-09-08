@@ -54,6 +54,7 @@ public abstract class AndroidPackage {
         public List<String> excludedAbi;
         public String rulesFilePath;
         public boolean keepClasses = false;
+        public boolean smaller = false;
 
         public Builder filePath(String path) {
             this.filePath = path;
@@ -72,6 +73,11 @@ public abstract class AndroidPackage {
 
         public Builder packageName(String packageName) {
             this.packageName = packageName;
+            return this;
+        }
+
+        public Builder smaller(boolean smaller) {
+            this.smaller = smaller;
             return this;
         }
 
@@ -113,7 +119,8 @@ public abstract class AndroidPackage {
     public boolean debuggable = false;
     public boolean sign = true;
     public boolean appComponentFactory = true;
-    private boolean dumpCode;
+    private boolean dumpCode = false;
+    private boolean smaller = false;
     private List<String> excludedAbi;
 
     public String outputPath = null;
@@ -132,6 +139,15 @@ public abstract class AndroidPackage {
         setOutputPath(builder.outputPath);
         setRulesFilePath(builder.rulesFilePath);
         setKeepClasses(builder.keepClasses);
+        setSmaller(builder.smaller);
+    }
+
+    public boolean isSmaller() {
+        return smaller;
+    }
+
+    public void setSmaller(boolean smaller) {
+        this.smaller = smaller;
     }
 
     private void setKeepClasses(boolean keepClasses) {
@@ -584,7 +600,8 @@ public abstract class AndroidPackage {
                 String extractedDexName = dexFile.getName().endsWith(".dex") ? dexFile.getName().replaceAll("\\.dex$", "_extracted.dat") : "_extracted.dat";
                 File extractedDexFile = new File(dexFile.getParent(), extractedDexName);
 
-                List<Instruction> ret = DexUtils.extractAllMethods(dexFile, extractedDexFile, getPackageName(), isDumpCode());
+                boolean obfuscate = !isSmaller();
+                List<Instruction> ret = DexUtils.extractAllMethods(dexFile, extractedDexFile, getPackageName(), isDumpCode(), obfuscate);
                 instructionMap.put(dexNo,ret);
 
                 File dexFileRightHashes = new File(dexFile.getParent(), FileUtils.getNewFileSuffix(dexFile.getName(),"dat"));
@@ -659,8 +676,10 @@ public abstract class AndroidPackage {
                 + File.separator
                 + (resultFileName != null ? "temp_" + resultFileName : getUnzipalignPackageName(originPackageName));
 
-
-        ZipUtils.zip(unpackFilePath, unzipalignPackagePath);
+        if(isSmaller()) {
+            LogUtils.info("Used smaller option");
+        }
+        ZipUtils.zip(unpackFilePath, unzipalignPackagePath, isSmaller());
 
         String keyStoreFilePath = packageLastProcessDir + File.separator + "dpt.jks";
 

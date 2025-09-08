@@ -152,7 +152,11 @@ public class DexUtils {
      * @param outDexFile dex output path
      * @return insns list
      */
-    public static List<Instruction> extractAllMethods(File dexFile, File outDexFile,String packageName,boolean dumpCode) {
+    public static List<Instruction> extractAllMethods(File dexFile,
+                                                      File outDexFile,
+                                                      String packageName,
+                                                      boolean dumpCode,
+                                                      boolean smaller) {
         List<Instruction> instructionList = new ArrayList<>();
         Dex dex = null;
         RandomAccessFile randomAccessFile = null;
@@ -192,7 +196,7 @@ public class DexUtils {
                         continue;
                     }
 
-                    Instruction instruction = extractMethod(dex,randomAccessFile,classDef,method);
+                    Instruction instruction = extractMethod(dex, randomAccessFile, classDef, method, smaller);
                     if(instruction != null) {
                         instructionList.add(instruction);
                         putToJSON(classJSONArray, instruction);
@@ -241,8 +245,12 @@ public class DexUtils {
      * @param method will extract method
      * @return a insns
      */
-    private static Instruction extractMethod(Dex dex ,RandomAccessFile outRandomAccessFile,ClassDef classDef,ClassData.Method method)
-            throws Exception{
+    private static Instruction extractMethod(Dex dex,
+                                             RandomAccessFile outRandomAccessFile,
+                                             ClassDef classDef,
+                                             ClassData.Method method,
+                                             boolean obfuscateIns) throws Exception {
+
         String returnTypeName = dex.typeNames().get(dex.protoIds().get(dex.methodIds().get(method.getMethodIndex()).getProtoIndex()).getReturnTypeIndex());
         String methodName = dex.strings().get(dex.methodIds().get(method.getMethodIndex()).getNameIndex());
         String className = dex.typeNames().get(classDef.getTypeIndex());
@@ -292,7 +300,12 @@ public class DexUtils {
             byteCode[i * 2] = outRandomAccessFile.readByte();
             byteCode[i * 2 + 1] = outRandomAccessFile.readByte();
             outRandomAccessFile.seek(insnsOffset + (i * 2));
-            outRandomAccessFile.writeShort(insRandom.nextInt());
+            if(obfuscateIns) {
+                outRandomAccessFile.writeShort(insRandom.nextInt());
+            }
+            else {
+                outRandomAccessFile.writeShort(0x0e);
+            }
         }
         instruction.setInstructionsData(byteCode);
         outRandomAccessFile.seek(insnsOffset);

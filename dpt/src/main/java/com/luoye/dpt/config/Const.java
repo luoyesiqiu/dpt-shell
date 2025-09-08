@@ -28,6 +28,8 @@ public class Const {
     public static final String OPTION_DO_NOT_PROTECT_CLASSES_RULES_LONG = "rules-file";
     public static final String OPTION_KEEP_CLASSES = "K";
     public static final String OPTION_KEEP_CLASSES_LONG = "keep-classes";
+    public static final String OPTION_SMALLER = "S";
+    public static final String OPTION_SMALLER_LONG = "smaller";
 
     public static final String STORE_PASSWORD = "android";
     public static final String KEY_PASSWORD = "android";
