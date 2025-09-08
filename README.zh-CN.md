@@ -30,11 +30,11 @@ java -jar dpt.jar -f /path/to/android-package-file
 
 ```text
 usage: java -jar dpt.jar [option] -f <package_file>
- -c,--disable-acf          Disable app component factory(just use for
+    --debug                Make package debuggable.
+    --disable-acf          Disable app component factory(just use for
                            debug).
- -d,--dump-code            Dump the code item of DEX and save it to .json
+    --dump-code            Dump the code item of DEX and save it to .json
                            files.
- -D,--debug                Make package debuggable.
  -e,--exclude-abi <arg>    Exclude specific ABIs (comma separated, e.g.
                            x86,x86_64).
                            Supported ABIs:
@@ -48,10 +48,12 @@ usage: java -jar dpt.jar [option] -f <package_file>
                            the app's startup speed to a certain extent,
                            but it is not supported by some application
                            packages.
- -l,--noisy-log            Open noisy log.
+    --noisy-log            Open noisy log.
  -o,--output <arg>         Output directory for protected package.
  -r,--rules-file <arg>     Rules file for class names that will not be
                            protected.
+ -S,--smaller              Trade some of the app's performance for a
+                           smaller app size.
  -v,--version              Show program's version number.
  -x,--no-sign              Do not sign package.
 ```

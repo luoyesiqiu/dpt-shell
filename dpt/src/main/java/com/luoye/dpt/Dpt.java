@@ -43,18 +43,18 @@ public class Dpt {
 
     private static AndroidPackage parseOptions(String[] args) {
         Options options = new Options();
-        options.addOption(new Option(Const.OPTION_VERSION,Const.OPTION_VERSION_LONG,false,"Show program's version number."));
-        options.addOption(new Option(Const.OPTION_NO_SIGN_PACKAGE,Const.OPTION_NO_SIGN_PACKAGE_LONG,false,"Do not sign package."));
-        options.addOption(new Option(Const.OPTION_DUMP_CODE,Const.OPTION_DUMP_CODE_LONG,false,"Dump the code item of DEX and save it to .json files."));
-        options.addOption(new Option(Const.OPTION_OPEN_NOISY_LOG,Const.OPTION_OPEN_NOISY_LOG_LONG,false,"Open noisy log."));
-        options.addOption(new Option(Const.OPTION_INPUT_FILE,Const.OPTION_INPUT_FILE_LONG,true,"Need to protect android package(*.apk, *.aab) file."));
-        options.addOption(new Option(Const.OPTION_DEBUGGABLE,Const.OPTION_DEBUGGABLE_LONG,false,"Make package debuggable."));
-        options.addOption(new Option(Const.OPTION_DISABLE_APP_COMPONENT_FACTORY,Const.OPTION_DISABLE_APP_COMPONENT_FACTORY_LONG,false,"Disable app component factory(just use for debug)."));
-        options.addOption(new Option(Const.OPTION_OUTPUT_PATH,Const.OPTION_OUTPUT_PATH_LONG,true,"Output directory for protected package."));
-        options.addOption(new Option(Const.OPTION_DO_NOT_PROTECT_CLASSES_RULES,Const.OPTION_DO_NOT_PROTECT_CLASSES_RULES_LONG,true,"Rules file for class names that will not be protected.\n"));
-        options.addOption(new Option(Const.OPTION_KEEP_CLASSES,Const.OPTION_KEEP_CLASSES_LONG,false,"Keeping some classes in the package can improve the app's startup speed to a certain extent, but it is not supported by some application packages.\n"));
-        options.addOption(new Option(Const.OPTION_SMALLER,Const.OPTION_SMALLER_LONG,false,"Trade some of the app's performance for a smaller app size.\n"));
-        options.addOption(new Option(Const.OPTION_EXCLUDE_ABI,Const.OPTION_EXCLUDE_ABI_LONG,true,"Exclude specific ABIs (comma separated, e.g. x86,x86_64). \n"
+        options.addOption(new Option(Const.OPTION_VERSION, Const.OPTION_VERSION_LONG, false, "Show program's version number."));
+        options.addOption(new Option(Const.OPTION_NO_SIGN_PACKAGE, Const.OPTION_NO_SIGN_PACKAGE_LONG, false, "Do not sign package."));
+        options.addOption(new Option(null, Const.OPTION_DUMP_CODE_LONG, false, "Dump the code item of DEX and save it to .json files."));
+        options.addOption(new Option(null, Const.OPTION_OPEN_NOISY_LOG_LONG, false, "Open noisy log."));
+        options.addOption(new Option(Const.OPTION_INPUT_FILE, Const.OPTION_INPUT_FILE_LONG, true, "Need to protect android package(*.apk, *.aab) file."));
+        options.addOption(new Option(null, Const.OPTION_DEBUGGABLE_LONG, false, "Make package debuggable."));
+        options.addOption(new Option(null, Const.OPTION_DISABLE_APP_COMPONENT_FACTORY_LONG, false, "Disable app component factory(just use for debug)."));
+        options.addOption(new Option(Const.OPTION_OUTPUT_PATH, Const.OPTION_OUTPUT_PATH_LONG, true, "Output directory for protected package."));
+        options.addOption(new Option(Const.OPTION_DO_NOT_PROTECT_CLASSES_RULES, Const.OPTION_DO_NOT_PROTECT_CLASSES_RULES_LONG, true, "Rules file for class names that will not be protected.\n"));
+        options.addOption(new Option(Const.OPTION_KEEP_CLASSES, Const.OPTION_KEEP_CLASSES_LONG, false, "Keeping some classes in the package can improve the app's startup speed to a certain extent, but it is not supported by some application packages.\n"));
+        options.addOption(new Option(Const.OPTION_SMALLER, Const.OPTION_SMALLER_LONG, false, "Trade some of the app's performance for a smaller app size.\n"));
+        options.addOption(new Option(Const.OPTION_EXCLUDE_ABI, Const.OPTION_EXCLUDE_ABI_LONG, true, "Exclude specific ABIs (comma separated, e.g. x86,x86_64). \n"
                 + "Supported ABIs:\n"
                 + "- arm       (armeabi-v7a)\n"
                 + "- arm64     (arm64-v8a)\n"
@@ -75,7 +75,7 @@ public class Dpt {
                 return null;
             }
 
-            LogUtils.setOpenNoisyLog(commandLine.hasOption(Const.OPTION_OPEN_NOISY_LOG));
+            LogUtils.setOpenNoisyLog(commandLine.hasOption(Const.OPTION_OPEN_NOISY_LOG_LONG));
 
 
             List<String> excludedAbi = new ArrayList<>();
@@ -96,9 +96,9 @@ public class Dpt {
                         .filePath(filePath)
                         .outputPath(commandLine.getOptionValue(Const.OPTION_OUTPUT_PATH))
                         .sign(!commandLine.hasOption(Const.OPTION_NO_SIGN_PACKAGE))
-                        .debuggable(commandLine.hasOption(Const.OPTION_DEBUGGABLE))
-                        .appComponentFactory(!commandLine.hasOption(Const.OPTION_DISABLE_APP_COMPONENT_FACTORY))
-                        .dumpCode(commandLine.hasOption(Const.OPTION_DUMP_CODE))
+                        .debuggable(commandLine.hasOption(Const.OPTION_DEBUGGABLE_LONG))
+                        .appComponentFactory(!commandLine.hasOption(Const.OPTION_DISABLE_APP_COMPONENT_FACTORY_LONG))
+                        .dumpCode(commandLine.hasOption(Const.OPTION_DUMP_CODE_LONG))
                         .excludedAbi(excludedAbi)
                         .rulesFile(commandLine.getOptionValue(Const.OPTION_DO_NOT_PROTECT_CLASSES_RULES))
                         .keepClasses(commandLine.hasOption(Const.OPTION_KEEP_CLASSES))
@@ -110,9 +110,9 @@ public class Dpt {
                         .filePath(filePath)
                         .outputPath(commandLine.getOptionValue(Const.OPTION_OUTPUT_PATH))
                         .sign(!commandLine.hasOption(Const.OPTION_NO_SIGN_PACKAGE))
-                        .debuggable(commandLine.hasOption(Const.OPTION_DEBUGGABLE))
-                        .appComponentFactory(!commandLine.hasOption(Const.OPTION_DISABLE_APP_COMPONENT_FACTORY))
-                        .dumpCode(commandLine.hasOption(Const.OPTION_DUMP_CODE))
+                        .debuggable(commandLine.hasOption(Const.OPTION_DEBUGGABLE_LONG))
+                        .appComponentFactory(!commandLine.hasOption(Const.OPTION_DISABLE_APP_COMPONENT_FACTORY_LONG))
+                        .dumpCode(commandLine.hasOption(Const.OPTION_DUMP_CODE_LONG))
                         .excludedAbi(excludedAbi)
                         .rulesFile(commandLine.getOptionValue(Const.OPTION_DO_NOT_PROTECT_CLASSES_RULES))
                         .keepClasses(commandLine.hasOption(Const.OPTION_KEEP_CLASSES))
