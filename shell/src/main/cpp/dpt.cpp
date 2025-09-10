@@ -12,7 +12,7 @@ static jobject g_realApplicationInstance = nullptr;
 static jclass g_realApplicationClass = nullptr;
 char *appComponentFactoryChs = nullptr;
 char *applicationNameChs = nullptr;
-void *codeItemFilePtr = nullptr;
+std::optional<std::tuple<uint8_t *,size_t>> g_codeItemFileData;
 
 DPT_DATA_SECTION uint8_t DATA_SECTION_BITCODE[] = ".bitcode";
 DPT_DATA_SECTION uint8_t DATA_SECTION_RO_DATA[] = ".rodata";
@@ -178,20 +178,16 @@ DPT_ENCRYPT jstring readAppComponentFactory(JNIEnv *env, jclass __unused) {
         size_t package_size = 0;
         load_package(env,&package_addr,&package_size);
 
-        uint64_t entry_size = 0;
-        void *entry_addr = nullptr;
-        bool needFree = read_zip_file_entry(package_addr, package_size , AY_OBFUSCATE(ACF_NAME_IN_ZIP), &entry_addr, &entry_size);
-        if(!needFree) {
-            char *newChs = (char *) calloc(entry_size + 1, sizeof(char));
-            if (entry_size != 0) {
-                memcpy(newChs, entry_addr, entry_size);
-            }
-            appComponentFactoryChs = (char *)newChs;
-        }
-        else {
-            appComponentFactoryChs = (char *) entry_addr;
+        auto entry = read_zip_file_entry(package_addr, package_size , AY_OBFUSCATE(ACF_NAME_IN_ZIP));
+        if(entry.has_value()) {
+            auto [entry_data, entry_size] = entry.value();
+            if(entry_size > 0) {
+                DLOGD("read acf: %zu", entry_size);
 
+                appComponentFactoryChs = (char *) entry_data;
+            }
         }
+
         unload_package(package_addr, package_size);
     }
 
@@ -205,18 +201,13 @@ DPT_ENCRYPT jstring readApplicationName(JNIEnv *env, jclass __unused) {
         size_t package_size = 0;
         load_package(env, &package_addr, &package_size);
 
-        uint64_t entry_size = 0;
-        void *entry_addr = nullptr;
-        bool needFree = read_zip_file_entry(package_addr, package_size, AY_OBFUSCATE(APP_NAME_IN_ZIP), &entry_addr,
-                                            &entry_size);
-        if (!needFree) {
-            char *newChs = (char *) calloc(entry_size + 1, sizeof(char));
-            if (entry_size != 0) {
-                memcpy(newChs, entry_addr, entry_size);
+        auto entry = read_zip_file_entry(package_addr, package_size , AY_OBFUSCATE(APP_NAME_IN_ZIP));
+        if(entry.has_value()) {
+            auto [entry_data, entry_size] = entry.value();
+            if(entry_size > 0) {
+                DLOGD("read application: %zu", entry_size);
+                applicationNameChs = (char *) entry_data;
             }
-            applicationNameChs = newChs;
-        } else {
-            applicationNameChs = (char *) entry_addr;
         }
         unload_package(package_addr, package_size);
     }
@@ -443,14 +434,19 @@ DPT_ENCRYPT void init_app(JNIEnv *env, jclass __unused) {
     size_t package_size = 0;
     load_package(env, &package_addr, &package_size);
 
-    uint64_t entry_size = 0;
-    if(codeItemFilePtr == nullptr) {
-        read_zip_file_entry(package_addr, package_size, AY_OBFUSCATE(CODE_ITEM_NAME_IN_ZIP), &codeItemFilePtr, &entry_size);
+    if(!g_codeItemFileData.has_value()) {
+        auto entry_data = read_zip_file_entry(package_addr, package_size, AY_OBFUSCATE(CODE_ITEM_NAME_IN_ZIP));
+        if(entry_data.has_value()) {
+            g_codeItemFileData = std::move(entry_data);
+        }
+        printTime("read codeitem data took =" , start);
+
     }
     else {
         DLOGD("no need read codeitem from zip");
     }
-    readCodeItem((uint8_t *)codeItemFilePtr,entry_size);
+    auto [entry_data, entry_size] = g_codeItemFileData.value();
+    readCodeItem((uint8_t *)entry_data, entry_size);
 
     pthread_mutex_lock(&g_write_dexes_mutex);
     extractDexesInNeeded(env, package_addr, package_size);

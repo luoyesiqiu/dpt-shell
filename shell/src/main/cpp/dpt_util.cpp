@@ -12,6 +12,8 @@
 #include <string>
 #include <algorithm>
 #include <cctype>
+#include <vector>
+#include <optional>
 
 #include "dpt_util.h"
 #include "common/dpt_log.h"
@@ -265,30 +267,29 @@ static uint32_t readZipLength(const uint8_t *data, size_t size) {
 DPT_ENCRYPT static void writeDexAchieve(const char *dexAchievePath, void *package_addr, size_t package_size) {
     DLOGD("zipCode open = %s",dexAchievePath);
     FILE *fp = fopen(dexAchievePath, "wb");
-    if(fp != nullptr){
-        uint64_t dex_files_size = 0;
-        void *dexFilesData = nullptr;
-        bool needFree = read_zip_file_entry(package_addr, package_size, COMBINE_DEX_FILES_NAME_IN_ZIP, &dexFilesData, &dex_files_size);
-        if (dexFilesData != nullptr) {
-            DLOGD("Read classes.dex of size: %lu", (unsigned long)dex_files_size);
-            uint32_t zipDataLen = readZipLength((uint8_t *)dexFilesData, dex_files_size);
+    if(fp != nullptr) {
+        auto entry = read_zip_file_entry(package_addr, package_size, COMBINE_DEX_FILES_NAME_IN_ZIP);
+        if (entry.has_value()) {
+            auto [entry_data, entry_size] = entry.value();
+            DLOGD("Read classes.dex of size: %lu", (unsigned long)entry_size);
+            uint32_t zipDataLen = readZipLength((uint8_t *)entry_data, entry_size);
             DLOGD("Extracted zip data length: %u", (unsigned int)zipDataLen);
 
-            if (zipDataLen > 0 && dex_files_size > zipDataLen + 4) {
+            if (zipDataLen > 0 && entry_size > zipDataLen + 4) {
                 // Zip file data starts at the end of classes.dex minus the zip length and 4 bytes for the length field
-                uint8_t *zipDataStart = (uint8_t *)dexFilesData + (dex_files_size - zipDataLen - 4);
+                uint8_t *zipDataStart = (uint8_t *)entry_data + (entry_size - zipDataLen - 4);
                 fwrite(zipDataStart, 1, zipDataLen, fp);
                 DLOGD("Zip file extracted and written successfully.");
             } else {
-                DLOGE("Invalid zip data length: %u. dex_files_size: %lu", (unsigned int)zipDataLen, (unsigned long)dex_files_size);
+                DLOGE("Invalid zip data length: %u. dex_files_size: %lu", (unsigned int)zipDataLen, (unsigned long)entry_size);
             }
+
+            delete[] entry_data;
         } else {
             DLOGE("Failed to read classes.dex.");
         }
         fclose(fp);
-        if(needFree) {
-            DPT_FREE(dexFilesData);
-        }
+
     }
     else {
         DLOGE("WTF! zipCode write fail: %s", strerror(errno));
@@ -300,7 +301,7 @@ DPT_ENCRYPT void extractDexesInNeeded(JNIEnv *env, void *package_addr, size_t pa
     getCompressedDexesPath(env,compressedDexesPathChs, ARRAY_LENGTH(compressedDexesPathChs));
 
     char codeCachePathChs[256] = {0};
-    getCodeCachePath(env,codeCachePathChs, ARRAY_LENGTH(codeCachePathChs));
+    getCodeCachePath(env, codeCachePathChs, ARRAY_LENGTH(codeCachePathChs));
 
     if(access(codeCachePathChs, F_OK) == 0){
         if(access(compressedDexesPathChs, F_OK) != 0) {
@@ -367,10 +368,9 @@ void unload_package(void *package_addr,size_t package_size) {
     }
 }
 
-DPT_ENCRYPT bool read_zip_file_entry(void* zip_addr,off_t zip_size,const char* entry_name,void **entry_addr,uint64_t *entry_size) {
+DPT_ENCRYPT
+std::optional<std::tuple<uint8_t*, size_t>> read_zip_file_entry(void* zip_addr, off_t zip_size, const char* entry_name) {
     DLOGD("prepare read file: %s",entry_name);
-
-    bool needFree = false;
 
     void *mem_stream = mz_stream_mem_create();
     mz_stream_mem_set_buffer(mem_stream, zip_addr, zip_size);
@@ -379,21 +379,19 @@ DPT_ENCRYPT bool read_zip_file_entry(void* zip_addr,off_t zip_size,const char* e
     void *zip_handle = mz_zip_create();
     int32_t err = mz_zip_open(zip_handle, mem_stream, MZ_OPEN_MODE_READ);
 
-    if(err == MZ_OK){
+    if(err == MZ_OK) {
         err = mz_zip_goto_first_entry(zip_handle);
         while (err == MZ_OK) {
             mz_zip_file *file_info = nullptr;
             err = mz_zip_entry_get_info(zip_handle, &file_info);
 
             if (err == MZ_OK) {
-                if (strncmp(file_info->filename, entry_name, 256) == 0) {
-                    DLOGD("found entry name = %s,file size = " FMT_INT64_T,
+                if (strcmp(file_info->filename, entry_name) == 0) {
+                    DLOGD("found entry name = %s, file size = " FMT_INT64_T,
                           file_info->filename,
                           file_info->uncompressed_size);
                     if(file_info->uncompressed_size == 0) {
-                        *entry_addr = nullptr;
-                        *entry_size = 0;
-                        return false;
+                        return std::nullopt;
                     }
 
                     err = mz_zip_entry_read_open(zip_handle, 0, nullptr);
@@ -401,22 +399,17 @@ DPT_ENCRYPT bool read_zip_file_entry(void* zip_addr,off_t zip_size,const char* e
                         DLOGW("not prepared: %d", err);
                         continue;
                     }
-                    needFree = true;
                     DLOGD("compress method is: %d",
                           file_info->compression_method);
 
-                    *entry_addr = calloc(file_info->uncompressed_size + 1, 1);
+                    uint8_t *entry_data = new uint8_t[file_info->uncompressed_size + 1];
                     DLOGD("start read: %s", file_info->filename);
 
-                    __unused size_t bytes_read = mz_zip_entry_read(zip_handle, *entry_addr,
+                    __unused size_t bytes_read = mz_zip_entry_read(zip_handle, entry_data,
                                                           file_info->uncompressed_size);
 
-                    DLOGD("reading entry: %s,read size: %zu", entry_name,
-                          bytes_read);
-
-                    *entry_size = (file_info->uncompressed_size);
-
-                    goto tail;
+                    DLOGD("read entry finish: %s, read size: %zu", entry_name, bytes_read);
+                    return {{entry_data, file_info->uncompressed_size}};
                 } // strncmp
             }
             else{
@@ -430,9 +423,7 @@ DPT_ENCRYPT bool read_zip_file_entry(void* zip_addr,off_t zip_size,const char* e
         DLOGW("zip open fail: %d",err);
     } // zip open
 
-    tail: {
-        return needFree;
-    }
+    return std::nullopt;
 }
 
 void get_elf_section(Elf_Shdr *target, const char *elf_path, const char *sh_name) {

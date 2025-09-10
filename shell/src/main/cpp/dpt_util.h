@@ -55,7 +55,9 @@ void appendLog(const char* log);
 void load_package(JNIEnv *env,void **package_addr,size_t *package_size);
 void unload_package(void *apk_addr,size_t package_size);
 void extractDexesInNeeded(JNIEnv *env,void *package_addr,size_t package_size);
-bool read_zip_file_entry(void* zip_addr,off_t zip_size,const char* entry_name, void ** entry_addr,uint64_t *entry_size);
+
+std::optional<std::tuple<uint8_t*, size_t>> read_zip_file_entry(void* zip_addr, off_t zip_size, const char* entry_name);
+
 int find_in_maps(int count,...);
 int find_in_threads_list(int count,...);
 void find_symbol_in_elf_file(const char *elf_file, char *symbol_name_out, size_t max_out_len, int keyword_count,...);
