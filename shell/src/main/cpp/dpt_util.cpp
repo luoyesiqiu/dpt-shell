@@ -402,7 +402,7 @@ std::optional<std::tuple<uint8_t*, size_t>> read_zip_file_entry(void* zip_addr, 
                     DLOGD("compress method is: %d",
                           file_info->compression_method);
 
-                    uint8_t *entry_data = new uint8_t[file_info->uncompressed_size + 1];
+                    uint8_t *entry_data = new uint8_t[file_info->uncompressed_size + 1]();
                     DLOGD("start read: %s", file_info->filename);
 
                     __unused size_t bytes_read = mz_zip_entry_read(zip_handle, entry_data,
