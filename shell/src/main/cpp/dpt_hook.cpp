@@ -53,7 +53,7 @@ const char *GetClassLinkerDefineClassLibPath(){
 }
 
 void change_dex_protective(uint8_t * begin,int dexSize,int dexIndex){
-    uintptr_t start = PAGE_START((uintptr_t) (begin));
+    uintptr_t start = DPT_PAGE_START((uintptr_t) (begin));
     uint32_t pageSize = sysconf(_SC_PAGE_SIZE);
     size_t n = (dexSize / pageSize) + (dexSize % pageSize != 0);
 

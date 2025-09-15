@@ -89,8 +89,8 @@ size_t dpt_readlink(int fd, char *result_path,size_t path_max_len) {
 }
 
 int dpt_mprotect(void *start,void *end,int prot) {
-    uintptr_t start_addr = PAGE_START((uintptr_t)start);
-    uintptr_t end_addr = PAGE_START((uintptr_t)end - 1) + getpagesize();
+    uintptr_t start_addr = DPT_PAGE_START((uintptr_t)start);
+    uintptr_t end_addr = DPT_PAGE_START((uintptr_t)end - 1) + getpagesize();
     size_t size = end_addr - start_addr;
 
     if (0 != mprotect((void *)start_addr, size, prot)) {
