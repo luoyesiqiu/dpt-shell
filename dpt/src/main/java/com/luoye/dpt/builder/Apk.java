@@ -152,6 +152,7 @@ public class Apk extends AndroidPackage {
         String appName = ApkManifestEditor.getApplicationName(androidManifestFile);
 
         appName = appName == null ? "" : appName;
+        appName = appName.startsWith(".") ? appName.substring(1) : appName;
 
         IoUtils.writeFile(appNameOutFile.getAbsolutePath(),appName.getBytes());
     }

@@ -105,6 +105,7 @@ public class Aab extends AndroidPackage {
         String appName = AabManifestEditor.getApplicationName(androidManifestFile);
 
         appName = appName == null ? "" : appName;
+        appName = appName.startsWith(".") ? appName.substring(1) : appName;
 
         IoUtils.writeFile(appNameOutFile.getAbsolutePath(),appName.getBytes());
     }
