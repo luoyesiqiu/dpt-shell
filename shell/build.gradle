@@ -168,6 +168,13 @@ def generateConfig() {
             ]
     def json = JsonOutput.prettyPrint(JsonOutput.toJson(map))
 
+    if(!readOnlyFile.getParentFile().exists()) {
+        readOnlyFile.getParentFile().mkdirs()
+    }
+
+    if(!readOnlyFile.exists()) {
+        readOnlyFile.createNewFile()
+    }
     Files.write(Paths.get(readOnlyFile.getAbsolutePath()), json.toString().getBytes())
 }
 
