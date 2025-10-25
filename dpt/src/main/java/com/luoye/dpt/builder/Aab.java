@@ -30,7 +30,7 @@ public class Aab extends AndroidPackage {
     public void writeProxyAppName(String manifestDir) {
         String inManifestPath = manifestDir + File.separator + "AndroidManifest.xml";
         String outManifestPath = manifestDir + File.separator + "AndroidManifest_new.xml";
-        AabManifestEditor.writeApplicationName(inManifestPath, outManifestPath, Const.PROXY_APPLICATION_NAME);
+        AabManifestEditor.writeApplicationName(inManifestPath, outManifestPath, getProxyApplicationName());
 
         File inManifestFile = new File(inManifestPath);
         File outManifestFile = new File(outManifestPath);
@@ -44,7 +44,7 @@ public class Aab extends AndroidPackage {
     public void writeProxyComponentFactoryName(String manifestDir) {
         String inManifestPath = manifestDir + File.separator + "AndroidManifest.xml";
         String outManifestPath = manifestDir + File.separator + "AndroidManifest_new.xml";
-        AabManifestEditor.writeAppComponentFactory(inManifestPath, outManifestPath, Const.PROXY_COMPONENT_FACTORY);
+        AabManifestEditor.writeAppComponentFactory(inManifestPath, outManifestPath, getProxyComponentFactory());
 
         File inManifestFile = new File(inManifestPath);
         File outManifestFile = new File(outManifestPath);

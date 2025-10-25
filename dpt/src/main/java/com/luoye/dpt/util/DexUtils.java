@@ -13,7 +13,9 @@ import com.android.tools.smali.dexlib2.rewriter.DexRewriter;
 import com.android.tools.smali.dexlib2.rewriter.Rewriter;
 import com.android.tools.smali.dexlib2.rewriter.RewriterModule;
 import com.android.tools.smali.dexlib2.rewriter.Rewriters;
+import com.android.tools.smali.dexlib2.rewriter.TypeRewriter;
 import com.luoye.dpt.config.ProtectRules;
+import com.luoye.dpt.config.ReadOnlyConfig;
 import com.luoye.dpt.model.Instruction;
 
 import org.apache.commons.lang3.tuple.ImmutablePair;
@@ -115,6 +117,40 @@ public class DexUtils {
             }
         }
 
+    }
+
+    public static void renamePackageName(File dexFilePath, File newDexFilePath) throws IOException {
+
+        DexBackedDexFile dexBackedDexFile = DexFileFactory.loadDexFile(dexFilePath, Opcodes.getDefault());
+
+        ReadOnlyConfig readOnlyConfig = ReadOnlyConfig.getInstance();
+
+        LogUtils.debug("Rename shell package name to: " + readOnlyConfig.getShellPackageName());
+        DexRewriter dexMethodRewriter = new DexRewriter(new RewriterModule() {
+            @Override
+            public Rewriter<String> getTypeRewriter(Rewriters rewriters) {
+                return new TypeRewriter() {
+                    @Override
+                    public String rewrite(String value) {
+                        int index = value.lastIndexOf("/");
+                        String className = value.substring(index + 1, value.length() - 1);
+                        if(value.startsWith("Lcom/luoyesiqiu")) {
+                            return String.format(Locale.US, "L%s/%s;", readOnlyConfig.getShellPackageName(), className);
+                        }
+                        else if(value.startsWith("Lcom/luoye")) {
+                            StringBuilder stringBuilder = new StringBuilder(readOnlyConfig.getShellPackageName());
+                            StringBuilder reverse = stringBuilder.reverse();
+                            return String.format(Locale.US, "L%s/%s;", reverse, className);
+                        }
+                        return value;
+                    }
+                };
+            }
+
+        });
+
+        DexFile dexFile = dexMethodRewriter.getDexFileRewriter().rewrite(dexBackedDexFile);
+        DexFileFactory.writeDexFile(newDexFilePath.getAbsolutePath(), dexFile);
     }
 
     private static int getCodeOffAppearCount(int dexIndex, int codeOff) {

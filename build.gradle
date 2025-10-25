@@ -1,3 +1,16 @@
+import java.security.SecureRandom
+
 plugins {
     id 'com.android.application' version '8.10.0' apply false
+}
+
+static def generateHexString() {
+    def secureRandom = new SecureRandom()
+    return Long.toHexString(secureRandom.nextLong())
+}
+
+ext {
+    soName = generateHexString()
+    fullSoName = "lib${soName}.so"
+    shellPackageName = generateHexString()
 }

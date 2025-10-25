@@ -89,7 +89,7 @@ public class Apk extends AndroidPackage {
     public void writeProxyAppName(String manifestDir) {
         String inManifestPath = manifestDir + File.separator + "AndroidManifest.xml";
         String outManifestPath = manifestDir + File.separator + "AndroidManifest_new.xml";
-        ApkManifestEditor.writeApplicationName(inManifestPath,outManifestPath, Const.PROXY_APPLICATION_NAME);
+        ApkManifestEditor.writeApplicationName(inManifestPath,outManifestPath, getProxyApplicationName());
 
         File inManifestFile = new File(inManifestPath);
         File outManifestFile = new File(outManifestPath);
@@ -103,7 +103,7 @@ public class Apk extends AndroidPackage {
     public void writeProxyComponentFactoryName(String manifestDir){
         String inManifestPath = manifestDir + File.separator + "AndroidManifest.xml";
         String outManifestPath = manifestDir + File.separator + "AndroidManifest_new.xml";
-        ApkManifestEditor.writeAppComponentFactory(inManifestPath,outManifestPath, Const.PROXY_COMPONENT_FACTORY);
+        ApkManifestEditor.writeAppComponentFactory(inManifestPath,outManifestPath, getProxyComponentFactory());
 
         File inManifestFile = new File(inManifestPath);
         File outManifestFile = new File(outManifestPath);

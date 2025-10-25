@@ -73,22 +73,26 @@ else()
     message("closed log & stripped so symbols")
 endif()
 
+message("so name: ${SO_NAME}, jni bridge class: ${JNI_BRIDGE_NAME}")
+
+add_compile_definitions(JNI_BRIDGE_NAME="${JNI_BRIDGE_NAME}")
+
 include_directories(./ )
 include_directories(./common)
 
-add_library(dpt SHARED ${DPT_NATIVE_SOURCE})
+add_library(${SO_NAME} SHARED ${DPT_NATIVE_SOURCE})
 
 find_library(log-lib log)
 find_library(android-lib android)
 
-target_compile_options(dpt PRIVATE
+target_compile_options(${SO_NAME} PRIVATE
         -Wall
         -Wextra
         -Werror
 )
-target_link_options(dpt PRIVATE "-Wl,-z,max-page-size=16384")
+target_link_options(${SO_NAME} PRIVATE "-Wl,-z,max-page-size=16384")
 
-target_link_libraries(dpt
+target_link_libraries(${SO_NAME}
             ${log-lib}
             MINIZIP::minizip
             dobby

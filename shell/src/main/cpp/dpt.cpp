@@ -414,9 +414,9 @@ DPT_ENCRYPT void replaceApplicationOnLoadedApk(JNIEnv *env, jclass __unused,jobj
 
 
 DPT_ENCRYPT static bool registerNativeMethods(JNIEnv *env) {
-    jclass JniBridgeClass = env->FindClass(AY_OBFUSCATE("com/luoyesiqiu/shell/JniBridge"));
+    jclass JniBridgeClass = env->FindClass(AY_OBFUSCATE(JNI_BRIDGE_NAME));
     if(JniBridgeClass == nullptr) {
-        DLOGF("cannot find JniBridge class!");
+        DLOGF("cannot find JniBridge class!" JNI_BRIDGE_NAME);
     }
     if (env->RegisterNatives(JniBridgeClass, gMethods, sizeof(gMethods) / sizeof(gMethods[0])) ==
         0) {

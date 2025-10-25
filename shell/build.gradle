@@ -1,3 +1,8 @@
+import groovy.json.JsonOutput
+
+import java.nio.file.Files
+import java.nio.file.Paths
+
 plugins {
     id 'com.android.application'
 }
@@ -5,6 +10,10 @@ plugins {
 android {
     namespace 'com.luoye.dpt'
     compileSdk 36
+
+    buildFeatures {
+        buildConfig = true
+    }
 
     defaultConfig {
         applicationId "com.luoye.dpt"
@@ -20,8 +29,11 @@ android {
             cmake {
                 cppFlags "-std=c++17"
                 abiFilters "armeabi-v7a","arm64-v8a","x86","x86_64"
+                arguments("-DJNI_BRIDGE_NAME=${shellPackageName}/JniBridge", "-DSO_NAME=${soName}")
             }
         }
+
+        buildConfigField "String", "SO_NAME", "\"${fullSoName}\""
     }
 
     buildTypes {
@@ -86,7 +98,7 @@ def afterAssembleCopy(Project project, Map archMap, boolean debug) {
     println("[" + project.name + "] " + sourceSoLibsDir.absolutePath + " -> " + targetSoLibsDir.absolutePath)
 
     def status = delete(fileTree(targetDir.absolutePath) {
-        include 'dex/classes.dex',"libs/**/*.so"
+        include 'dex/classes.dex', "libs/**/*.so"
     })
 
     println("afterAssembleCopy shell-files delete status: " + status)
@@ -98,7 +110,7 @@ def afterAssembleCopy(Project project, Map archMap, boolean debug) {
 
     for(e in archMap) {
         copy {
-            include "**/libdpt.so"
+            include "**/${fullSoName}"
             from file(sourceSoLibsDir.absolutePath + File.separator
                     + e.key)
             into file(targetSoLibsDir.absolutePath + File.separator
@@ -139,13 +151,24 @@ def afterNativeBuildCopy(Project project, Map archMap, boolean debug) {
 
     for(e in archMap) {
         copy {
-            include "**/libdpt.so"
+            include "**/${fullSoName}"
             from file(sourceDir.getAbsolutePath() + File.separator
                     + e.key)
             into file(targetDir.getAbsolutePath() + File.separator
                     + e.value)
         }
     }
+}
+
+def generateConfig() {
+    def readOnlyFile = file(project.rootDir.absolutePath + File.separator + "executable" + File.separator + "shell-files" + File.separator + "readonly-config.json")
+
+    def map = ["soName": fullSoName,
+            "shellPackageName": shellPackageName
+            ]
+    def json = JsonOutput.prettyPrint(JsonOutput.toJson(map))
+
+    Files.write(Paths.get(readOnlyFile.getAbsolutePath()), json.toString().getBytes())
 }
 
 afterEvaluate { Project project ->
@@ -201,6 +224,7 @@ afterEvaluate { Project project ->
 
     nativeBuildTask.doLast {
         afterNativeBuildCopy(project, archMap, debug)
+        generateConfig()
     }
 
 }
