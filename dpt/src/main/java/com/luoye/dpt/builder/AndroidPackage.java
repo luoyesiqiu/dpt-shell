@@ -420,34 +420,40 @@ public abstract class AndroidPackage {
         }
 
         File[] abiDirs = sourceDirRoot.listFiles();
-        if (abiDirs != null) {
-            for (File abiDir : abiDirs) {
-                if (abiDir.isDirectory()) {
-                    String abiName = abiDir.getName();
+        if (abiDirs == null) {
+            return;
+        }
 
-                    if (excludedAbi != null && excludedAbi.contains(abiName)) {
-                        LogUtils.info("Skipping excluded ABI: " + abiName);
-                        continue;
-                    }
+        for (File abiDir : abiDirs) {
+            if (!abiDir.isDirectory()) {
+                continue;
+            }
 
-                    File destAbiDir = new File(destDirRoot, abiName);
-                    if (!destAbiDir.exists()) {
-                        destAbiDir.mkdirs();
-                    }
+            String abiName = abiDir.getName();
 
-                    File[] libFiles = abiDir.listFiles();
-                    if (libFiles != null) {
-                        for (File libFile : libFiles) {
-                            if (libFile.isFile() && libFile.getName().endsWith(".so")) {
-                                File destFile = new File(destAbiDir, libFile.getName());
-                                try {
-                                    Files.copy(libFile.toPath(), destFile.toPath(),
-                                            java.nio.file.StandardCopyOption.REPLACE_EXISTING);
-                                } catch (IOException e) {
-                                    LogUtils.error("Failed to copy library: " + e.getMessage());
-                                }
-                            }
-                        }
+            if (excludedAbi != null && excludedAbi.contains(abiName)) {
+                LogUtils.info("Skipping excluded ABI: " + abiName);
+                continue;
+            }
+
+            File destAbiDir = new File(destDirRoot, abiName);
+            if (!destAbiDir.exists()) {
+                destAbiDir.mkdirs();
+            }
+
+            File[] libFiles = abiDir.listFiles();
+            if (libFiles == null) {
+                continue;
+            }
+
+            for (File libFile : libFiles) {
+                if (libFile.isFile() && libFile.getName().endsWith(".so")) {
+                    File destFile = new File(destAbiDir, libFile.getName());
+                    try {
+                        Files.copy(libFile.toPath(), destFile.toPath(),
+                                java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+                    } catch (IOException e) {
+                        LogUtils.error("Failed to copy library: " + e.getMessage());
                     }
                 }
             }
@@ -457,18 +463,22 @@ public abstract class AndroidPackage {
     public void encryptSoFiles(String packageOutDir, byte[] rc4Key){
         File obfDir = new File(getOutAssetsDir(packageOutDir).getAbsolutePath() + File.separator, "vwwwwwvwww");
         File[] soAbiDirs = obfDir.listFiles();
-        if(soAbiDirs != null) {
-            for (File soAbiDir : soAbiDirs) {
-                File[] soFiles = soAbiDir.listFiles();
-                if(soFiles != null) {
-                    for (File soFile : soFiles) {
-                        if(!soFile.getAbsolutePath().endsWith(".so")) {
-                            continue;
-                        }
-                        encryptSoFile(soFile, rc4Key);
-                        writeSoFileCryptKey(soFile, rc4Key);
-                    }
+        if(soAbiDirs == null) {
+            return;
+        }
+
+        for (File soAbiDir : soAbiDirs) {
+            File[] soFiles = soAbiDir.listFiles();
+            if(soFiles == null) {
+                continue;
+            }
+
+            for (File soFile : soFiles) {
+                if(!soFile.getAbsolutePath().endsWith(".so")) {
+                    continue;
                 }
+                encryptSoFile(soFile, rc4Key);
+                writeSoFileCryptKey(soFile, rc4Key);
             }
         }
 
@@ -566,22 +576,6 @@ public abstract class AndroidPackage {
                 || f.getAbsolutePath().endsWith(".aab");
     }
 
-    /**
-     * Get dex file number
-     * ex：classes2.dex return 1
-     */
-    private int getDexNumber(String dexName){
-        Pattern pattern = Pattern.compile("classes(\\d*)\\.dex$");
-        Matcher matcher = pattern.matcher(dexName);
-        if(matcher.find()){
-            String dexNo = matcher.group(1);
-            return (dexNo == null || dexNo.isEmpty()) ? 0 : Integer.parseInt(dexNo) - 1;
-        }
-        else{
-            return  -1;
-        }
-    }
-
     public void extractDexCode(String packageDir, String dexCodeSavePath) {
         List<File> dexFiles = getDexFiles(getDexDir(packageDir));
         Map<Integer,List<Instruction>> instructionMap = new HashMap<>();
@@ -593,7 +587,7 @@ public abstract class AndroidPackage {
         AtomicInteger keepClassesCount = new AtomicInteger(0);
         for(File dexFile : dexFiles) {
             ThreadPool.getInstance().execute(() -> {
-                final int dexNo = getDexNumber(dexFile.getName());
+                final int dexNo = DexUtils.getDexNumber(dexFile.getName());
                 if(dexNo < 0) {
                     return;
                 }
