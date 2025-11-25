@@ -33,9 +33,7 @@ public class MultiDexCodeUtils {
         Iterator<Map.Entry<Integer, List<Instruction>>> iterator = multiDexInsns.entrySet()
                                                                                 .iterator();
         while (iterator.hasNext()) {
-            List<Instruction> insns = iterator.next()
-                                              .getValue();
-            LogUtils.info("DexCode offset = " + fileOffset);
+            List<Instruction> insns = iterator.next().getValue();
             if (insns == null) {
                 continue;
             }
@@ -58,7 +56,6 @@ public class MultiDexCodeUtils {
 
             dexCodeList.add(dexCode);
         }
-        LogUtils.info("fileOffset = " + fileOffset);
 
         multiDexCode.setDexCodes(dexCodeList);
 
@@ -90,9 +87,6 @@ public class MultiDexCodeUtils {
             for (DexCode dexCode : multiDexCode.getDexCodes()) {
                 List<Instruction> insns = dexCode.getInsns();
 
-                int methodCount = dexCode.getMethodCount() & 0xFFFF;
-
-                LogUtils.info("insns item count: " + insns.size() + ", method count: " + methodCount);
                 //The number of functions that are written to a single dex
                 randomAccessFile.write(Endian.makeLittleEndian(dexCode.getMethodCount()));
                 for (int i = 0; i < insns.size(); i++) {

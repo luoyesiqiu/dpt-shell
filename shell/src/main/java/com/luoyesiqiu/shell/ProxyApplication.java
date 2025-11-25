@@ -54,13 +54,12 @@ public class ProxyApplication extends Application {
     protected void attachBaseContext(Context base) {
         super.attachBaseContext(base);
         Log.d(TAG,"dpt attachBaseContext classloader = " + base.getClassLoader());
-        realApplicationName = FileUtils.readAppName(this);
         if(!Global.sIsReplacedClassLoader) {
             ApplicationInfo applicationInfo = base.getApplicationInfo();
             if(applicationInfo == null) {
                 throw new NullPointerException("application info is null");
             }
-            FileUtils.unzipLibs(applicationInfo.sourceDir,applicationInfo.dataDir);
+            FileUtils.unzipLibs(applicationInfo.sourceDir, applicationInfo.dataDir);
             JniBridge.loadShellLibs(applicationInfo.dataDir);
             Log.d(TAG,"ProxyApplication init");
             JniBridge.ia();
@@ -68,6 +67,8 @@ public class ProxyApplication extends Application {
             JniBridge.cbde(targetClassLoader);
             Global.sIsReplacedClassLoader = true;
         }
+
+        realApplicationName = JniBridge.rapn();
     }
 
 }

@@ -90,13 +90,13 @@ public class ApkManifestEditor {
 
         /*
          * xmlns:android="http://schemas.android.com/apk/res/android" xmlns:n1="http://schemas.android.com/apk/distribution"
-         * The result parsed by MainifestEditor seems to have an issue, as it recognizes Android as n1 when there are
+         * The result parsed by ManifestEditor seems to have an issue, as it recognizes Android as n1 when there are
          * two namespaces in the manifest file at the same time
          * */
 
         /*
          * xmlns:android="http://schemas.android.com/apk/res/android" xmlns:n1="http://schemas.android.com/apk/distribution"
-         * MainifestEditor 解析的结果似乎是存在问题的，当清单文件中同时存在两个命名空间时它会把 android 识别为 n1
+         * ManifestEditor 解析的结果似乎是存在问题的，当清单文件中同时存在两个命名空间时它会把 android 识别为 n1
          * */
         attributeValue = attributeValue == null ? getAttributeValue(file, "application", null,"name") : attributeValue;
 

@@ -4,19 +4,28 @@
 
 #include "dpt.h"
 
+#include "external/json/json.hpp"
+
 using namespace dpt;
 
 static pthread_mutex_t g_write_dexes_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 static jobject g_realApplicationInstance = nullptr;
 static jclass g_realApplicationClass = nullptr;
-char *appComponentFactoryChs = nullptr;
-char *applicationNameChs = nullptr;
+
 std::optional<std::tuple<uint8_t *,size_t>> g_codeItemFileData;
 
 DPT_DATA_SECTION uint8_t DATA_SECTION_BITCODE[] = ".bitcode";
 DPT_DATA_SECTION uint8_t DATA_SECTION_RO_DATA[] = ".rodata";
 KEEP_SYMBOL DPT_DATA_SECTION uint8_t DPT_UNKNOWN_DATA[] = "1234567890abcdef";
+
+struct ShellConfig {
+    std::string application_name;
+    std::string application_component_factory;
+    std::string jni_class_name;
+};
+
+static ShellConfig g_shell_config;
 
 static JNINativeMethod gMethods[] = {
         {"craoc", "(Ljava/lang/String;)V",                               (void *) callRealApplicationOnCreate},
@@ -172,47 +181,14 @@ DPT_ENCRYPT void removeDexElements(JNIEnv* env,jclass __unused,jobject classLoad
 }
 
 DPT_ENCRYPT jstring readAppComponentFactory(JNIEnv *env, jclass __unused) {
-
-    if(appComponentFactoryChs == nullptr) {
-        void *package_addr = nullptr;
-        size_t package_size = 0;
-        load_package(env,&package_addr,&package_size);
-
-        auto entry = read_zip_file_entry(package_addr, package_size , AY_OBFUSCATE(ACF_NAME_IN_ZIP));
-        if(entry.has_value()) {
-            auto [entry_data, entry_size] = entry.value();
-            if(entry_size > 0) {
-                DLOGD("read acf: %zu", entry_size);
-
-                appComponentFactoryChs = (char *) entry_data;
-            }
-        }
-
-        unload_package(package_addr, package_size);
-    }
-
-    DLOGD("result: %s", appComponentFactoryChs);
-    return env->NewStringUTF((appComponentFactoryChs));
+    DLOGD("result: '%s'", g_shell_config.application_component_factory.c_str());
+    return env->NewStringUTF(g_shell_config.application_component_factory.c_str());
 }
 
 DPT_ENCRYPT jstring readApplicationName(JNIEnv *env, jclass __unused) {
-    if(applicationNameChs == nullptr) {
-        void *package_addr = nullptr;
-        size_t package_size = 0;
-        load_package(env, &package_addr, &package_size);
 
-        auto entry = read_zip_file_entry(package_addr, package_size , AY_OBFUSCATE(APP_NAME_IN_ZIP));
-        if(entry.has_value()) {
-            auto [entry_data, entry_size] = entry.value();
-            if(entry_size > 0) {
-                DLOGD("read application: %zu", entry_size);
-                applicationNameChs = (char *) entry_data;
-            }
-        }
-        unload_package(package_addr, package_size);
-    }
-    DLOGD("result: %s", applicationNameChs);
-    return env->NewStringUTF((applicationNameChs));
+    DLOGD("result: '%s'", g_shell_config.application_name.c_str());
+    return env->NewStringUTF(g_shell_config.application_name.c_str());
 }
 
 DPT_ENCRYPT void createAntiRiskProcess() {
@@ -414,9 +390,9 @@ DPT_ENCRYPT void replaceApplicationOnLoadedApk(JNIEnv *env, jclass __unused,jobj
 
 
 DPT_ENCRYPT static bool registerNativeMethods(JNIEnv *env) {
-    jclass JniBridgeClass = env->FindClass(AY_OBFUSCATE(JNI_BRIDGE_NAME));
+    jclass JniBridgeClass = env->FindClass(g_shell_config.jni_class_name.c_str());
     if(JniBridgeClass == nullptr) {
-        DLOGF("cannot find class: %s!", JNI_BRIDGE_NAME);
+        DLOGF("cannot find class: %s!", g_shell_config.jni_class_name.c_str());
     }
     if (env->RegisterNatives(JniBridgeClass, gMethods, sizeof(gMethods) / sizeof(gMethods[0])) ==
         0) {
@@ -488,6 +464,37 @@ DPT_ENCRYPT void readCodeItem(uint8_t *data,size_t data_len) {
     }
 }
 
+void read_shell_config(JNIEnv *env) {
+    void *package_addr = nullptr;
+    size_t package_size = 0;
+    load_package(env, &package_addr, &package_size);
+
+    auto entry = read_zip_file_entry(package_addr, package_size , AY_OBFUSCATE(SHELL_CONFIG_IN_ZIP));
+    if(entry.has_value()) {
+        auto [entry_data, entry_size] = entry.value();
+        if(entry_size > 0) {
+            u_char *config_data = new u_char[entry_size + 1]();
+            struct rc4_state dec_state;
+            rc4_init(&dec_state, reinterpret_cast<const u_char *>(DPT_UNKNOWN_DATA), 16);
+            rc4_crypt(&dec_state, reinterpret_cast<const u_char *>(entry_data),
+                      reinterpret_cast<u_char *>(config_data),
+                      entry_size);
+            nlohmann::json shell_config = nlohmann::json::parse(config_data);
+            g_shell_config.application_name = shell_config.value("app_name", "");
+            g_shell_config.application_component_factory = shell_config.value("acf_name", "");
+            g_shell_config.jni_class_name = shell_config.value("jni_cls_name", "");
+
+            DLOGD("application_name = %s", g_shell_config.application_name.c_str());
+            DLOGD("application_component_factory = %s", g_shell_config.application_component_factory.c_str());
+            DLOGD("jni_class_name = %s", g_shell_config.jni_class_name.c_str());
+
+            delete[] config_data;
+        }
+    }
+
+    unload_package(package_addr, package_size);
+}
+
 DPT_ENCRYPT JNIEXPORT jint JNI_OnLoad(JavaVM *vm, void *) {
 
     JNIEnv *env = nullptr;
@@ -495,6 +502,8 @@ DPT_ENCRYPT JNIEXPORT jint JNI_OnLoad(JavaVM *vm, void *) {
         DLOGF("GetEnv() fail!");
         return JNI_ERR;
     }
+
+    read_shell_config(env);
 
     if (registerNativeMethods(env) == JNI_FALSE) {
         DLOGF("register native methods fail!");

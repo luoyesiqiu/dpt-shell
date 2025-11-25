@@ -1,5 +1,7 @@
 package com.luoye.dpt.util;
 
+import com.luoye.dpt.config.Const;
+
 import net.lingala.zip4j.ZipFile;
 import net.lingala.zip4j.exception.ZipException;
 import net.lingala.zip4j.model.FileHeader;
@@ -31,14 +33,13 @@ import java.util.zip.ZipOutputStream;
 
 public class ZipUtils {
     private static final List<String> defaultStoreList = Arrays.asList(
-            "assets/app_acf",
-            "assets/app_name",
-            "assets/i11111i111.zip",
-            "assets/OoooooOooo"
+            "assets/" + Const.KEY_SHELL_CONFIG_STORE_NAME,
+            "assets/" + Const.KEY_DEXES_STORE_NAME,
+            "assets/" + Const.KEY_CODE_ITEM_STORE_NAME
     );
 
     private static final List<String> biggerFileList = Arrays.asList(
-            "assets/OoooooOooo"
+            "assets/" + Const.KEY_CODE_ITEM_STORE_NAME
     );
 
 

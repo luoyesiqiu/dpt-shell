@@ -11,7 +11,7 @@ import java.util.concurrent.TimeUnit;
  * @author luoyesiqiu
  */
 public class ThreadPool {
-    private static ThreadPool sInst;
+    private static final ThreadPool sInst = new ThreadPool();
     private static final ThreadPoolExecutor sThreadPoolExecutor = new ThreadPoolExecutor(
             Runtime.getRuntime().availableProcessors(),
             Runtime.getRuntime().availableProcessors() * 2,
@@ -23,9 +23,6 @@ public class ThreadPool {
 
     }
     public static ThreadPool getInstance() {
-        if(sInst == null){
-            sInst = new ThreadPool();
-        }
         return sInst;
     }
 

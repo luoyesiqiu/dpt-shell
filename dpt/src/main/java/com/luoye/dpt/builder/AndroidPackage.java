@@ -3,7 +3,7 @@ package com.luoye.dpt.builder;
 import com.iyxan23.zipalignjava.ZipAlign;
 import com.luoye.dpt.config.Const;
 import com.luoye.dpt.config.ProtectRules;
-import com.luoye.dpt.config.ReadOnlyConfig;
+import com.luoye.dpt.config.ShellConfig;
 import com.luoye.dpt.dex.JunkCodeGenerator;
 import com.luoye.dpt.elf.ReadElf;
 import com.luoye.dpt.model.Instruction;
@@ -16,6 +16,7 @@ import com.luoye.dpt.util.IoUtils;
 import com.luoye.dpt.util.LogUtils;
 import com.luoye.dpt.util.MultiDexCodeUtils;
 import com.luoye.dpt.util.RC4Utils;
+import com.luoye.dpt.util.StringUtils;
 import com.luoye.dpt.util.ZipUtils;
 
 import net.lingala.zip4j.model.enums.CompressionMethod;
@@ -31,6 +32,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
+import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -39,8 +41,6 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 public abstract class AndroidPackage {
 
@@ -296,6 +296,15 @@ public abstract class AndroidPackage {
         return FileUtils.getNewFileName(packageFileName,"signed");
     }
 
+    public void writeConfig(String packageDir, byte[] key) {
+        File configFile = new File(getOutAssetsDir(packageDir).getAbsolutePath() + File.separator + Const.KEY_SHELL_CONFIG_STORE_NAME);
+        ShellConfig shellConfig = ShellConfig.getInstance();
+        String json = shellConfig.toJson();
+        LogUtils.info("Write config: " + json);
+        byte[] secData = RC4Utils.crypt(key, json.getBytes(StandardCharsets.UTF_8));
+        IoUtils.writeFile(configFile.getAbsolutePath(), secData);
+    }
+
     /**
      * Write proxy ApplicationName
      */
@@ -329,13 +338,11 @@ public abstract class AndroidPackage {
     }
 
     public String getProxyApplicationName() {
-        ReadOnlyConfig config = ReadOnlyConfig.getInstance();
-        return String.format(Locale.US, "%s.%s", config.getShellPackageName(), "ProxyApplication");
+        return String.format(Locale.US, "%s.%s", ShellConfig.getInstance().getShellPackageName(), "ProxyApplication");
     }
 
     public String getProxyComponentFactory() {
-        ReadOnlyConfig config = ReadOnlyConfig.getInstance();
-        return String.format(Locale.US, "%s.%s", config.getShellPackageName(), "ProxyComponentFactory");
+        return String.format(Locale.US, "%s.%s", ShellConfig.getInstance().getShellPackageName(), "ProxyComponentFactory");
     }
 
     protected String getProxyDexPath() {
@@ -579,7 +586,7 @@ public abstract class AndroidPackage {
     public void extractDexCode(String packageDir, String dexCodeSavePath) {
         List<File> dexFiles = getDexFiles(getDexDir(packageDir));
         Map<Integer,List<Instruction>> instructionMap = new HashMap<>();
-        String appNameNew = "OoooooOooo";
+        String appNameNew = Const.KEY_CODE_ITEM_STORE_NAME;
         String dataOutputPath = dexCodeSavePath + File.separator + appNameNew;
 
         CountDownLatch countDownLatch = new CountDownLatch(dexFiles.size());
@@ -831,6 +838,9 @@ public abstract class AndroidPackage {
         catch (IOException e) {
             LogUtils.info("Exclude rules file is unavailable: %s", e.getMessage());
         }
+
+        String randomPackageName = StringUtils.generateIdentifier(10);
+        ShellConfig.getInstance().init(randomPackageName);
 
         JunkCodeGenerator.generateJunkCodeDex(new File(getJunkCodeDexPath()));
     }

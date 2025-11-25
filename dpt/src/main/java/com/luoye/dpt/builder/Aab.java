@@ -1,9 +1,8 @@
 package com.luoye.dpt.builder;
 
-import com.luoye.dpt.config.Const;
+import com.luoye.dpt.config.ShellConfig;
 import com.luoye.dpt.res.AabManifestEditor;
 import com.luoye.dpt.util.FileUtils;
-import com.luoye.dpt.util.IoUtils;
 import com.luoye.dpt.util.LogUtils;
 import com.luoye.dpt.util.RC4Utils;
 import com.luoye.dpt.util.ZipUtils;
@@ -101,24 +100,24 @@ public class Aab extends AndroidPackage {
     @Override
     public void saveApplicationName(String packageOutDir) {
         String androidManifestFile = getManifestFilePath(packageOutDir);
-        File appNameOutFile = new File(getOutAssetsDir(packageOutDir),"app_name");
         String appName = AabManifestEditor.getApplicationName(androidManifestFile);
 
         appName = appName == null ? "" : appName;
         appName = appName.startsWith(".") ? appName.substring(1) : appName;
 
-        IoUtils.writeFile(appNameOutFile.getAbsolutePath(),appName.getBytes());
+        ShellConfig shellConfig = ShellConfig.getInstance();
+        shellConfig.setApplicationName(appName);
     }
 
     @Override
     public void saveAppComponentFactory(String packageOutDir) {
         String androidManifestFile = getManifestFilePath(packageOutDir);
-        File acfOutFile = new File(getOutAssetsDir(packageOutDir),"app_acf");
         String acfName = AabManifestEditor.getAppComponentFactory(androidManifestFile);
 
         acfName = acfName == null ? "" : acfName;
 
-        IoUtils.writeFile(acfOutFile.getAbsolutePath(),acfName.getBytes());
+        ShellConfig shellConfig = ShellConfig.getInstance();
+        shellConfig.setAppComponentFactoryName(acfName);
     }
 
     public String getBaseDir(String packageDir) {
@@ -165,6 +164,7 @@ public class Aab extends AndroidPackage {
 
     private static void process(Aab aab) {
         File aabFile = new File(aab.getFilePath());
+        byte[] rc4key = RC4Utils.generateRC4Key();
 
         //aab extract path
         String aabMainProcessPath = aab.getWorkspaceDir().getAbsolutePath();
@@ -198,6 +198,8 @@ public class Aab extends AndroidPackage {
         }
         aab.setExtractNativeLibs(manifestFileDir);
 
+        aab.writeConfig(aabMainProcessPath, rc4key);
+
         /*======================================*
          * Process .dex files
          *======================================*/
@@ -217,7 +219,6 @@ public class Aab extends AndroidPackage {
          *======================================*/
         aab.copyNativeLibs(aabMainProcessPath);
 
-        byte[] rc4key = RC4Utils.generateRC4Key();
         aab.encryptSoFiles(aabMainProcessPath, rc4key);
 
         /*======================================*

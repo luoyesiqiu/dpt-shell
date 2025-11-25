@@ -70,25 +70,27 @@ import java.util.zip.ZipFile;
              while(entries.hasMoreElements()){
                  ZipEntry entry = entries.nextElement();
 
-                 if(entry.getName().equals(entryName)) {
-                     if(localFileCrc != entry.getCrc()) {
-                         byte[] buf = new byte[4096];
-                         int len = -1;
+                 if(!entry.getName().equals(entryName)) {
+                     continue;
+                 }
 
-                         FileOutputStream fileOutputStream = new FileOutputStream(entryFile);
-                         BufferedOutputStream bufferedOutputStream = new BufferedOutputStream(fileOutputStream);
-                         BufferedInputStream bufferedInputStream = new BufferedInputStream(zip.getInputStream(entry));
-                         while ((len = bufferedInputStream.read(buf)) != -1) {
-                             bufferedOutputStream.write(buf, 0, len);
-                         }
-                         Log.d(TAG, "unzip '" + entry.getName() + "' success. local = " + localFileCrc + ", zip = " + entry.getCrc());
+                 if(localFileCrc != entry.getCrc()) {
+                     byte[] buf = new byte[4096];
+                     int len = -1;
 
-                         FileUtils.close(bufferedOutputStream);
-                         break;
+                     FileOutputStream fileOutputStream = new FileOutputStream(entryFile);
+                     BufferedOutputStream bufferedOutputStream = new BufferedOutputStream(fileOutputStream);
+                     BufferedInputStream bufferedInputStream = new BufferedInputStream(zip.getInputStream(entry));
+                     while ((len = bufferedInputStream.read(buf)) != -1) {
+                         bufferedOutputStream.write(buf, 0, len);
                      }
-                     else {
-                         Log.w(TAG, "no need unzip");
-                     }
+                     Log.d(TAG, "unzip '" + entry.getName() + "' success. local = " + localFileCrc + ", zip = " + entry.getCrc());
+
+                     FileUtils.close(bufferedOutputStream);
+                     break;
+                 }
+                 else {
+                     Log.w(TAG, "no need unzip");
                  }
              }
          }
@@ -106,26 +108,6 @@ import java.util.zip.ZipFile;
                 e.printStackTrace();
             }
         }
-    }
-
-    public static String readAppName(Context context){
-        ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
-        InputStream in = null;
-        try {
-            in = context.getAssets().open("app_name");
-            byte[] buf = new byte[1024];
-            int len = -1;
-            while((len = in.read(buf)) != -1){
-                byteArrayOutputStream.write(buf,0,len);
-            }
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        finally {
-            close(byteArrayOutputStream);
-            close(in);
-        }
-        return byteArrayOutputStream.toString();
     }
 
 }

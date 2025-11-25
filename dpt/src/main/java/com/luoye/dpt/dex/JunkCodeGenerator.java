@@ -6,6 +6,7 @@ import com.android.dx.Local;
 import com.android.dx.MethodId;
 import com.android.dx.TypeId;
 import com.luoye.dpt.util.LogUtils;
+import com.luoye.dpt.util.StringUtils;
 
 import java.io.File;
 import java.io.IOException;
@@ -45,21 +46,6 @@ public class JunkCodeGenerator {
         MethodId<NullPointerException, Void> constructor = nullPointerExceptionTypeId.getConstructor();
         code.newInstance(throwableLocal, constructor);
         code.throwValue(throwableLocal);
-    }
-
-    private static String generateIdentifier() {
-        SecureRandom secureRandom = new SecureRandom();
-        final int cnt = secureRandom.nextInt(2) + 3;
-        StringBuilder sb = new StringBuilder();
-        for(int i = 0;i < cnt;i++) {
-            char baseChar = secureRandom.nextBoolean() ? 'A' : 'a';
-
-            int index = secureRandom.nextInt(26);
-            char ch = (char) (baseChar + index);
-            sb.append(ch);
-        }
-
-        return sb.toString();
     }
 
     private static String generateBaseClassName() {
@@ -110,7 +96,7 @@ public class JunkCodeGenerator {
             // generate normal method
             int methodCount = secureRandom.nextInt(2) + 2;
             for (int j = 0; j < methodCount; j++) {
-                String methodName = generateIdentifier();
+                String methodName = StringUtils.generateIdentifier(3);
 
                 MethodId<?, Void> randomMethod = typeId.getMethod(TypeId.VOID, methodName);
                 Code randomMethodCode = dexMaker.declare(randomMethod, Modifier.PUBLIC);

@@ -22,15 +22,10 @@
 #define DEXES_ZIP_NAME "i11111i111.zip"
 #define CACHE_DIR "code_cache"
 
-#define ACF_NAME_IN_ZIP "assets/app_acf"
-#define APP_NAME_IN_ZIP "assets/app_name"
+#define SHELL_CONFIG_IN_ZIP "assets/d_shell_data_001"
 #define CODE_ITEM_NAME_IN_ZIP "assets/OoooooOooo"
-#define DEX_FILES_NAME_IN_ZIP "assets/i11111i111.zip"
 #define COMBINE_DEX_FILES_NAME_IN_ZIP "classes.dex"
 #define JUNK_CLASS_FULL_NAME "com/luoye/dpt/junkcode/JunkClass"
-
-
-#define CODE_ITEM_NAME_IN_ASSETS "OoooooOooo"
 
 #define DPT_PAGE_MASK (~((getpagesize()) - 1))
 

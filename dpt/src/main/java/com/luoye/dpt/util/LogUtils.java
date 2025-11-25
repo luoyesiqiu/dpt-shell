@@ -54,6 +54,8 @@ public class LogUtils {
         SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS", Locale.US);
         String threadName = "[" + Thread.currentThread().getName() + "]";
         String timeOut = simpleDateFormat.format(new Date());
+
+        msg = StringUtils.capitalizeFirstLetter(msg);
         switch (type){
             case DEBUG:
             case INFO:

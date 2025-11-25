@@ -2,6 +2,7 @@ package com.luoye.dpt.builder;
 
 import com.android.apksigner.ApkSignerTool;
 import com.luoye.dpt.config.Const;
+import com.luoye.dpt.config.ShellConfig;
 import com.luoye.dpt.util.FileUtils;
 import com.luoye.dpt.util.IoUtils;
 import com.luoye.dpt.util.LogUtils;
@@ -148,27 +149,30 @@ public class Apk extends AndroidPackage {
     @Override
     public void saveApplicationName(String packageOutDir) {
         String androidManifestFile = getManifestFilePath(packageOutDir);
-        File appNameOutFile = new File(getOutAssetsDir(packageOutDir),"app_name");
+        ShellConfig shellConfig = ShellConfig.getInstance();
         String appName = ApkManifestEditor.getApplicationName(androidManifestFile);
 
         appName = appName == null ? "" : appName;
         appName = appName.startsWith(".") ? appName.substring(1) : appName;
 
-        IoUtils.writeFile(appNameOutFile.getAbsolutePath(),appName.getBytes());
+        shellConfig.setApplicationName(appName);
     }
 
     @Override
     public void saveAppComponentFactory(String packageOutDir) {
         String androidManifestFile = getManifestFilePath(packageOutDir);
-        File acfOutFile = new File(getOutAssetsDir(packageOutDir),"app_acf");
+        ShellConfig shellConfig = ShellConfig.getInstance();
+
         String acfName = ApkManifestEditor.getAppComponentFactory(androidManifestFile);
 
         acfName = acfName == null ? "" : acfName;
 
-        IoUtils.writeFile(acfOutFile.getAbsolutePath(),acfName.getBytes());
+        shellConfig.setAppComponentFactoryName(acfName);
     }
 
     private static void process(Apk apk) {
+        byte[] rc4key = RC4Utils.generateRC4Key();
+
         File apkFile = new File(apk.getFilePath());
         //apk extract path
         String apkMainProcessPath = apk.getWorkspaceDir().getAbsolutePath();
@@ -195,6 +199,7 @@ public class Apk extends AndroidPackage {
         }
         apk.setExtractNativeLibs(apkMainProcessPath);
 
+        apk.writeConfig(apkMainProcessPath, rc4key);
         /*======================================*
          * Process .dex files
          *======================================*/
@@ -213,8 +218,7 @@ public class Apk extends AndroidPackage {
          *======================================*/
         apk.copyNativeLibs(apkMainProcessPath);
 
-        byte[] rc4key = RC4Utils.generateRC4Key();
-        apk.encryptSoFiles(apkMainProcessPath,rc4key);
+        apk.encryptSoFiles(apkMainProcessPath, rc4key);
 
         /*======================================*
          * Build package
