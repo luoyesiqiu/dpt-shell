@@ -27,9 +27,9 @@ android {
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         externalNativeBuild {
             cmake {
-                cppFlags "-std=c++17"
+                cppFlags "-std=c++20"
                 abiFilters "armeabi-v7a","arm64-v8a","x86","x86_64"
-                arguments("-DJNI_BRIDGE_NAME=${shellPackageName}/JniBridge", "-DSO_NAME=${soName}")
+                arguments("-DSO_NAME=${soName}")
             }
         }
 
@@ -160,23 +160,6 @@ def afterNativeBuildCopy(Project project, Map archMap, boolean debug) {
     }
 }
 
-def generateConfig() {
-    def readOnlyFile = file(project.rootDir.absolutePath + File.separator + "executable" + File.separator + "shell-files" + File.separator + "readonly-config.json")
-
-    def map = ["soName": fullSoName,
-            "shellPackageName": shellPackageName
-            ]
-    def json = JsonOutput.prettyPrint(JsonOutput.toJson(map))
-
-    if(!readOnlyFile.getParentFile().exists()) {
-        readOnlyFile.getParentFile().mkdirs()
-    }
-
-    if(!readOnlyFile.exists()) {
-        readOnlyFile.createNewFile()
-    }
-    Files.write(Paths.get(readOnlyFile.getAbsolutePath()), json.toString().getBytes())
-}
 
 afterEvaluate { Project project ->
     if (project.name != "shell") {
@@ -231,7 +214,6 @@ afterEvaluate { Project project ->
 
     nativeBuildTask.doLast {
         afterNativeBuildCopy(project, archMap, debug)
-        generateConfig()
     }
 
 }

@@ -8,6 +8,7 @@ set(DPT_NATIVE_SOURCE
         dpt_jni.cpp
         dpt_util.cpp
         dpt_risk.cpp
+        dpt_crypto.cpp
         rc4/rc4.c
         common/dpt_string.c
         dex/dex_file.cpp
@@ -28,6 +29,11 @@ set(DPT_NATIVE_SOURCE
 set(MZ_LZMA OFF CACHE BOOL "" FORCE)
 set(MZ_ZSTD OFF CACHE BOOL "" FORCE)
 set(MZ_OPENSSL OFF CACHE BOOL "" FORCE)
+
+set(ENABLE_TESTING OFF CACHE BOOL "" FORCE)
+
+add_subdirectory(external/mbedtls)
+include_directories(external/mbedtls/include)
 
 file(GLOB BHOOK_SOURCE external/bhook/bytehook/src/main/cpp/*.c)
 add_library(bytehook STATIC ${BHOOK_SOURCE})
@@ -73,7 +79,7 @@ else()
     message("closed log & stripped so symbols")
 endif()
 
-message("so name: ${SO_NAME}, jni bridge class: ${JNI_BRIDGE_NAME}")
+message("so name: ${SO_NAME}")
 
 add_compile_definitions(JNI_BRIDGE_NAME="${JNI_BRIDGE_NAME}")
 
@@ -98,6 +104,7 @@ target_link_libraries(${SO_NAME}
             dobby
             bytehook
             ${android-lib}
+            MbedTLS::mbedcrypto
         )
 
 ENABLE_LANGUAGE(ASM)

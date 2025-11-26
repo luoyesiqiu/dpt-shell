@@ -7,3 +7,6 @@
 [submodule "shell/src/main/cpp/external/Dobby"]
 	path = shell/src/main/cpp/external/Dobby
 	url = https://github.com/luoyesiqiu/Dobby.git
+[submodule "shell/src/main/cpp/external/mbedtls"]
+	path = shell/src/main/cpp/external/mbedtls
+	url = https://github.com/Mbed-TLS/mbedtls

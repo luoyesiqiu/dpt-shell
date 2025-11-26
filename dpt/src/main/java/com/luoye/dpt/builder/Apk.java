@@ -1,13 +1,11 @@
 package com.luoye.dpt.builder;
 
 import com.android.apksigner.ApkSignerTool;
-import com.luoye.dpt.config.Const;
 import com.luoye.dpt.config.ShellConfig;
 import com.luoye.dpt.util.FileUtils;
-import com.luoye.dpt.util.IoUtils;
+import com.luoye.dpt.util.KeyUtils;
 import com.luoye.dpt.util.LogUtils;
 import com.luoye.dpt.res.ApkManifestEditor;
-import com.luoye.dpt.util.RC4Utils;
 import com.luoye.dpt.util.ZipUtils;
 import com.wind.meditor.core.FileProcesser;
 import com.wind.meditor.property.AttributeItem;
@@ -171,7 +169,7 @@ public class Apk extends AndroidPackage {
     }
 
     private static void process(Apk apk) {
-        byte[] rc4key = RC4Utils.generateRC4Key();
+        byte[] encKey = KeyUtils.generateKey();
 
         File apkFile = new File(apk.getFilePath());
         //apk extract path
@@ -199,7 +197,7 @@ public class Apk extends AndroidPackage {
         }
         apk.setExtractNativeLibs(apkMainProcessPath);
 
-        apk.writeConfig(apkMainProcessPath, rc4key);
+        apk.writeConfig(apkMainProcessPath, encKey);
         /*======================================*
          * Process .dex files
          *======================================*/
@@ -218,7 +216,7 @@ public class Apk extends AndroidPackage {
          *======================================*/
         apk.copyNativeLibs(apkMainProcessPath);
 
-        apk.encryptSoFiles(apkMainProcessPath, rc4key);
+        apk.encryptSoFiles(apkMainProcessPath, encKey);
 
         /*======================================*
          * Build package

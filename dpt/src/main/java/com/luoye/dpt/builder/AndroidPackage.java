@@ -9,13 +9,14 @@ import com.luoye.dpt.elf.ReadElf;
 import com.luoye.dpt.model.Instruction;
 import com.luoye.dpt.model.MultiDexCode;
 import com.luoye.dpt.task.ThreadPool;
+import com.luoye.dpt.util.CryptoUtils;
 import com.luoye.dpt.util.DexUtils;
 import com.luoye.dpt.util.FileUtils;
 import com.luoye.dpt.util.HexUtils;
 import com.luoye.dpt.util.IoUtils;
+import com.luoye.dpt.util.KeyUtils;
 import com.luoye.dpt.util.LogUtils;
 import com.luoye.dpt.util.MultiDexCodeUtils;
-import com.luoye.dpt.util.RC4Utils;
 import com.luoye.dpt.util.StringUtils;
 import com.luoye.dpt.util.ZipUtils;
 
@@ -32,7 +33,6 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
-import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -301,7 +301,8 @@ public abstract class AndroidPackage {
         ShellConfig shellConfig = ShellConfig.getInstance();
         String json = shellConfig.toJson();
         LogUtils.info("Write config: " + json);
-        byte[] secData = RC4Utils.crypt(key, json.getBytes(StandardCharsets.UTF_8));
+        byte[] iv = KeyUtils.generateIV(key);
+        byte[] secData = CryptoUtils.aesEncrypt(key, iv, json.getBytes(StandardCharsets.UTF_8));
         IoUtils.writeFile(configFile.getAbsolutePath(), secData);
     }
 
@@ -510,7 +511,7 @@ public abstract class AndroidPackage {
                             (int)sectionHeader.getSize()
                     );
 
-                    byte[] enc = RC4Utils.crypt(rc4Key, bitcode);
+                    byte[] enc = CryptoUtils.rc4Crypt(rc4Key, bitcode);
                     IoUtils.writeFile(soFile.getAbsolutePath(),enc,sectionHeader.getOffset());
                 }
             }

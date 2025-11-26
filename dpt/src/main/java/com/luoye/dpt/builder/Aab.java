@@ -3,8 +3,8 @@ package com.luoye.dpt.builder;
 import com.luoye.dpt.config.ShellConfig;
 import com.luoye.dpt.res.AabManifestEditor;
 import com.luoye.dpt.util.FileUtils;
+import com.luoye.dpt.util.KeyUtils;
 import com.luoye.dpt.util.LogUtils;
-import com.luoye.dpt.util.RC4Utils;
 import com.luoye.dpt.util.ZipUtils;
 
 import java.io.File;
@@ -164,7 +164,7 @@ public class Aab extends AndroidPackage {
 
     private static void process(Aab aab) {
         File aabFile = new File(aab.getFilePath());
-        byte[] rc4key = RC4Utils.generateRC4Key();
+        byte[] encKey = KeyUtils.generateKey();
 
         //aab extract path
         String aabMainProcessPath = aab.getWorkspaceDir().getAbsolutePath();
@@ -198,7 +198,7 @@ public class Aab extends AndroidPackage {
         }
         aab.setExtractNativeLibs(manifestFileDir);
 
-        aab.writeConfig(aabMainProcessPath, rc4key);
+        aab.writeConfig(aabMainProcessPath, encKey);
 
         /*======================================*
          * Process .dex files
@@ -219,7 +219,7 @@ public class Aab extends AndroidPackage {
          *======================================*/
         aab.copyNativeLibs(aabMainProcessPath);
 
-        aab.encryptSoFiles(aabMainProcessPath, rc4key);
+        aab.encryptSoFiles(aabMainProcessPath, encKey);
 
         /*======================================*
          * Build package

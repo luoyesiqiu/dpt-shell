@@ -3,7 +3,7 @@
 //
 
 #include "dpt.h"
-
+#include "dpt_crypto.h"
 #include "external/json/json.hpp"
 
 using namespace dpt;
@@ -473,13 +473,19 @@ void read_shell_config(JNIEnv *env) {
     if(entry.has_value()) {
         auto [entry_data, entry_size] = entry.value();
         if(entry_size > 0) {
-            u_char *config_data = new u_char[entry_size + 1]();
-            struct rc4_state dec_state;
-            rc4_init(&dec_state, reinterpret_cast<const u_char *>(DPT_UNKNOWN_DATA), 16);
-            rc4_crypt(&dec_state, reinterpret_cast<const u_char *>(entry_data),
-                      reinterpret_cast<u_char *>(config_data),
-                      entry_size);
-            nlohmann::json shell_config = nlohmann::json::parse(config_data);
+
+            std::vector<uint8_t> indata(entry_data, entry_data + entry_size);
+
+            uint8_t iv[16] = {0};
+            memcpy(iv, DPT_UNKNOWN_DATA, 16);
+            iv[3] = 0x2f;
+            iv[9] = 0x76;
+            auto decrypted_data = aes_cbc_decrypt(DPT_UNKNOWN_DATA, iv, indata.data(), entry_size);
+            std::string jsonStr = std::string(decrypted_data.begin(), decrypted_data.end());
+
+            DLOGD("raw config: '%s'", jsonStr.c_str());
+
+            nlohmann::json shell_config = nlohmann::json::parse(jsonStr);
             g_shell_config.application_name = shell_config.value("app_name", "");
             g_shell_config.application_component_factory = shell_config.value("acf_name", "");
             g_shell_config.jni_class_name = shell_config.value("jni_cls_name", "");
@@ -488,7 +494,6 @@ void read_shell_config(JNIEnv *env) {
             DLOGD("application_component_factory = %s", g_shell_config.application_component_factory.c_str());
             DLOGD("jni_class_name = %s", g_shell_config.jni_class_name.c_str());
 
-            delete[] config_data;
         }
     }
 
