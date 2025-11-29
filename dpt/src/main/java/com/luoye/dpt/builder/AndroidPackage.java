@@ -237,7 +237,7 @@ public abstract class AndroidPackage {
 
             DexUtils.renamePackageName(shellDexFile, renameDexFile);
 
-            File originalDexZipFile = new File(getOutAssetsDir(packageMainProcessPath).getAbsolutePath() + File.separator + "i11111i111.zip");
+            File originalDexZipFile = new File(getOutAssetsDir(packageMainProcessPath).getAbsolutePath() + File.separator + Const.KEY_DEXES_STORE_NAME);
             byte[] zipData = com.android.dex.util.FileUtils.readFile(originalDexZipFile);// Read the zip file as binary data
             byte[] unShellDexArray =  com.android.dex.util.FileUtils.readFile(renameDexFile); // Read the dex file as binary data
             int zipDataLen = zipData.length;
@@ -382,8 +382,8 @@ public abstract class AndroidPackage {
     public void compressDexFiles(String packageDir) {
         Map<String, CompressionMethod> rulesMap = new HashMap<>();
         rulesMap.put("classes\\d*.dex", CompressionMethod.STORE);
-        String unalignedFilePath = getOutAssetsDir(packageDir).getAbsolutePath() + File.separator + "i11111i111_unaligned.zip";
-        String alignedFilePath = getOutAssetsDir(packageDir).getAbsolutePath() + File.separator + "i11111i111.zip";
+        String unalignedFilePath = getOutAssetsDir(packageDir).getAbsolutePath() + File.separator + Const.KEY_DEXES_STORE_UNALIGNED_NAME;
+        String alignedFilePath = getOutAssetsDir(packageDir).getAbsolutePath() + File.separator + Const.KEY_DEXES_STORE_NAME;
         ZipUtils.compress(getDexFiles(getDexDir(packageDir))
                 , unalignedFilePath
                 , rulesMap
@@ -421,7 +421,7 @@ public abstract class AndroidPackage {
 
     public void copyNativeLibs(String packageDir) {
         File sourceDirRoot = new File(FileUtils.getExecutablePath(), "shell-files" + File.separator + "libs");
-        File destDirRoot = new File(getOutAssetsDir(packageDir).getAbsolutePath(), "vwwwwwvwww");
+        File destDirRoot = new File(getOutAssetsDir(packageDir).getAbsolutePath(), Const.KEY_LIBS_DIR_NAME);
 
         if (!destDirRoot.exists()) {
             destDirRoot.mkdirs();
@@ -469,7 +469,7 @@ public abstract class AndroidPackage {
     }
 
     public void encryptSoFiles(String packageOutDir, byte[] rc4Key){
-        File obfDir = new File(getOutAssetsDir(packageOutDir).getAbsolutePath() + File.separator, "vwwwwwvwww");
+        File obfDir = new File(getOutAssetsDir(packageOutDir).getAbsolutePath() + File.separator, Const.KEY_LIBS_DIR_NAME);
         File[] soAbiDirs = obfDir.listFiles();
         if(soAbiDirs == null) {
             return;

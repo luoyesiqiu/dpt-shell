@@ -51,7 +51,9 @@ public class Const {
 
     public static final String KEY_SHELL_CONFIG_STORE_NAME = "d_shell_data_001";
     public static final String KEY_DEXES_STORE_NAME = "i11111i111.zip";
+    public static final String KEY_DEXES_STORE_UNALIGNED_NAME = "i11111i111_unaligned.zip";
     public static final String KEY_CODE_ITEM_STORE_NAME = "OoooooOooo";
+    public static final String KEY_LIBS_DIR_NAME = "vwwwwwvwww";
     public static final String KEY_JNI_BASE_CLASS_NAME = "JniBridge";
 
 }

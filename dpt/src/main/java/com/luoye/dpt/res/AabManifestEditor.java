@@ -9,7 +9,7 @@ public class AabManifestEditor {
         try {
             AndroidResourcesEditor.putAttribute(inManifestFile, outManifestFile,
                     "application",
-                    "extractNativeLibs",
+                    AndroidResourcesEditor.EXTRACT_NATIVE_LIBS_ATTRIBUTE_NAME,
                     newExtractNativeLibs);
         }
         catch (Exception e) {
@@ -23,7 +23,7 @@ public class AabManifestEditor {
         try {
             AndroidResourcesEditor.putAttribute(inManifestFile, outManifestFile,
                     "application",
-                    "name",
+                    AndroidResourcesEditor.NAME_ATTRIBUTE_NAME,
                     newApplicationName);
         }
         catch (Exception e) {
@@ -38,7 +38,7 @@ public class AabManifestEditor {
         try {
             AndroidResourcesEditor.putAttribute(inManifestFile, outManifestFile,
                     "application",
-                    "appComponentFactory",
+                    AndroidResourcesEditor.APP_COMPONENT_FACTORY_ATTRIBUTE_NAME,
                     newComponentFactory);
         }
         catch (Exception e) {
@@ -53,7 +53,7 @@ public class AabManifestEditor {
         try {
             AndroidResourcesEditor.putAttribute(inManifestFile, outManifestFile,
                     "application",
-                    "debuggable",
+                    AndroidResourcesEditor.DEBUGGABLE_ATTRIBUTE_NAME,
                     debuggable);
         }
         catch (Exception e) {
@@ -79,17 +79,17 @@ public class AabManifestEditor {
      * Get android:name value from AndroidManifest.xml
      */
     public static String getApplicationName(String file) {
-        return getAttributeValue(file,"application","name");
+        return getAttributeValue(file, "application", AndroidResourcesEditor.NAME_ATTRIBUTE_NAME);
     }
 
     /**
      * Get android:appComponentFactory value from AndroidManifest.xml
      */
     public static String getAppComponentFactory(String file) {
-        return getAttributeValue(file,"application","appComponentFactory");
+        return getAttributeValue(file, "application", AndroidResourcesEditor.APP_COMPONENT_FACTORY_ATTRIBUTE_NAME);
     }
 
     public static String getPackageName(String file) {
-        return getAttributeValue(file,"manifest","package");
+        return getAttributeValue(file,"manifest", "package");
     }
 }

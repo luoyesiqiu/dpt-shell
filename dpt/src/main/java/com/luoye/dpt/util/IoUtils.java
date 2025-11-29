@@ -85,6 +85,27 @@ public class IoUtils {
         }
     }
 
+    public static void copyFile(String src, String dest){
+        FileInputStream fileInputStream = null;
+        FileOutputStream fileOutputStream = null;
+        try {
+            fileInputStream = new FileInputStream(src);
+            fileOutputStream = new FileOutputStream(dest);
+            int len = -1;
+            byte[] buf = new byte[4096];
+            while((len = fileInputStream.read(buf)) != -1){
+                fileOutputStream.write(buf,0,len);
+            }
+        }
+        catch (IOException e){
+            e.printStackTrace();
+        }
+        finally {
+            close(fileInputStream);
+            close(fileOutputStream);
+        }
+    }
+
     public static void close(Closeable closeable){
         if(closeable != null){
             try {
