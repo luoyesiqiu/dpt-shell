@@ -60,44 +60,57 @@ tasks.withType(Jar).configureEach {
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 }
 
-def excludeRules = [
-    "Landroid/.*",
-    "Landroidx/.*",
-    "Lcom/squareup/okhttp/.*",
-    "Lokio/.*", "Lokhttp3/.*",
-    "Lkotlin/.*",
-    "Lkotlinx/.*",
-    "Lcom/google/.*",
-    "Lrx/.*",
-    "Lorg/apache/.*",
-    "Lretrofit2/.*",
-    "Lcom/alibaba/.*",
-    "Lcom/alipay/.*",
-    "Lcom/amap/api/.*",
-    "Lcom/sina/weibo/sdk/.*",
-    "Lcom/xiaomi/.*",
-    "Lcom/huawei/.*",
-    "Lcom/vivo/.*",
-    "Lcom/baytedance/.*",
-    "Lcom/eclipsesource/.*",
-    "Lcom/blankj/utilcode/.*",
-    "Lcom/umeng/.*",
-    "Ljavax/.*",
-    "Lorg/slf4j/.*"
-]
+def excludeRules = """Landroid/.*
+Landroidx/.*
+Lcom/squareup/okhttp/.*
+Lokio/.* 
+Lokhttp3/.*
+Lkotlin/.*
+Lkotlinx/.*
+Lcom/google/.*
+Lrx/.*
+Lorg/apache/.*
+Lretrofit2/.*
+Lcom/alibaba/.*
+Lcom/alipay/.*
+Lcom/amap/api/.*
+Lcom/sina/weibo/sdk/.*
+Lcom/xiaomi/.*
+Lcom/huawei/.*
+Lcom/vivo/.*
+Lcom/baytedance/.*
+Lcom/eclipsesource/.*
+Lcom/blankj/utilcode/.*
+Lcom/umeng/.*
+Ljavax/.*
+Lorg/slf4j/.*
+"""
 
-afterEvaluate {
-    def excludeFile = new File(project.projectDir.getParent() + File.separator + "executable", "dpt-exclude-classes-template.rules")
+def protectConfig = """{
+  "shellPkgName" : "<random>",
+  "signature" : {
+    "keystore" : "/path/to/keystore.jks",
+    "alias" : "key0",
+    "storepass" : "android",
+    "keypass" : "android"
+  }
+}
+"""
 
-    if(!excludeFile.exists()) {
-        for (excludeRule in excludeRules) {
-            FileUtils.write(excludeFile, excludeRule + "\n", Charset.forName("UTF-8"), true)
-        }
+def writeConfig(String fileName, String config) {
+    def filePath = new File(project.projectDir.getParent() + File.separator + "executable", fileName)
+
+    if(!filePath.exists()) {
+        FileUtils.write(filePath, config, Charset.forName("UTF-8"), true)
     }
     else {
-        println("File exists: ${excludeFile}")
+        println("File exists: ${filePath}")
     }
+}
 
+afterEvaluate {
+    writeConfig("dpt-exclude-classes-template.rules", excludeRules)
+    writeConfig("dpt-protect-config-template.json", protectConfig)
 }
 
 dependencies {
@@ -110,6 +123,7 @@ dependencies {
     implementation group: 'com.linkedin.dexmaker', name: 'dexmaker', version: '2.28.5'
     implementation group: 'com.android.tools.smali', name: 'smali-dexlib2', version: '3.0.9'
     implementation("com.google.guava:guava:33.4.8-jre")
+    implementation group: 'com.alibaba.fastjson2', name: 'fastjson2', version: '2.0.60'
 
     testImplementation 'junit:junit:4.+'
 }

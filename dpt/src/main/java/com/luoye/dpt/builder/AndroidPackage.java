@@ -1,5 +1,7 @@
 package com.luoye.dpt.builder;
 
+
+import com.alibaba.fastjson2.JSON;
 import com.iyxan23.zipalignjava.ZipAlign;
 import com.luoye.dpt.config.Const;
 import com.luoye.dpt.config.ProtectRules;
@@ -56,6 +58,7 @@ public abstract class AndroidPackage {
         public String rulesFilePath;
         public boolean keepClasses = false;
         public boolean smaller = false;
+        public String protectConfigFile = null;
 
         public Builder filePath(String path) {
             this.filePath = path;
@@ -79,6 +82,11 @@ public abstract class AndroidPackage {
 
         public Builder smaller(boolean smaller) {
             this.smaller = smaller;
+            return this;
+        }
+
+        public Builder protectConfigFile(String protectConfigFile) {
+            this.protectConfigFile = protectConfigFile;
             return this;
         }
 
@@ -115,19 +123,18 @@ public abstract class AndroidPackage {
         public abstract AndroidPackage build();
     } // Builder
 
-    public String filePath = null;
-    public String packageName = null;
-    public boolean debuggable = false;
-    public boolean sign = true;
-    public boolean appComponentFactory = true;
+    private String filePath = null;
+    private String packageName = null;
+    private boolean debuggable = false;
+    private boolean sign = true;
+    private boolean appComponentFactory = true;
     private boolean dumpCode = false;
     private boolean smaller = false;
     private List<String> excludedAbi;
-
-    public String outputPath = null;
-    public String rulesFilePath = null;
-
-    public boolean keepClasses = false;
+    private String outputPath = null;
+    private String rulesFilePath = null;
+    private boolean keepClasses = false;
+    private String protectConfigFile;
 
     public AndroidPackage(Builder builder) {
         setFilePath(builder.filePath);
@@ -141,6 +148,15 @@ public abstract class AndroidPackage {
         setRulesFilePath(builder.rulesFilePath);
         setKeepClasses(builder.keepClasses);
         setSmaller(builder.smaller);
+        setProtectConfigFile(builder.protectConfigFile);
+    }
+
+    public void setProtectConfigFile(String protectConfigFile) {
+        this.protectConfigFile = protectConfigFile;
+    }
+
+    public String getProtectConfigFile() {
+        return protectConfigFile;
     }
 
     public boolean isSmaller() {
@@ -235,11 +251,18 @@ public abstract class AndroidPackage {
             File shellDexFile = new File(getProxyDexPath());
             File renameDexFile = new File(getRenameDexPath());
 
-            DexUtils.renamePackageName(shellDexFile, renameDexFile);
+            ShellConfig shellConfig = ShellConfig.getInstance();
+
+            boolean needRename = !org.apache.commons.lang3.StringUtils.isBlank(shellConfig.getShellPackageName())
+                    && !Const.DEFAULT_SHELL_PACKAGE_NAME.equals(shellConfig.getShellPackageName());
+
+            if(needRename) {
+                DexUtils.renamePackageName(shellDexFile, renameDexFile, shellConfig.getShellPackageName());
+            }
 
             File originalDexZipFile = new File(getOutAssetsDir(packageMainProcessPath).getAbsolutePath() + File.separator + Const.KEY_DEXES_STORE_NAME);
             byte[] zipData = com.android.dex.util.FileUtils.readFile(originalDexZipFile);// Read the zip file as binary data
-            byte[] unShellDexArray =  com.android.dex.util.FileUtils.readFile(renameDexFile); // Read the dex file as binary data
+            byte[] unShellDexArray =  com.android.dex.util.FileUtils.readFile(!needRename ? shellDexFile : renameDexFile); // Read the dex file as binary data
             int zipDataLen = zipData.length;
             int unShellDexLen = unShellDexArray.length;
             LogUtils.info("Dexes zip file size: %s", zipDataLen);
@@ -673,6 +696,7 @@ public abstract class AndroidPackage {
         File outputPathFile;
         String outputDir;
         String resultFileName = null;
+        ShellConfig shellConfig = ShellConfig.getInstance();
 
         if (outputPath != null) {
             outputPathFile = new File(outputPath);
@@ -705,12 +729,10 @@ public abstract class AndroidPackage {
         }
         ZipUtils.zip(unpackFilePath, unzipalignPackagePath, isSmaller());
 
-        String keyStoreFilePath = packageLastProcessDir + File.separator + "dpt.jks";
-
-        String keyStoreAssetPath = "assets/dpt.jks";
+        String keyStoreFilePath = packageLastProcessDir + File.separator + Const.KEY_STORE_ASSET_NAME;
 
         try {
-            ZipUtils.readResourceFromRuntime(keyStoreAssetPath, keyStoreFilePath);
+            ZipUtils.readResourceFromRuntime(Const.KEY_STORE_ASSET_PATH, keyStoreFilePath);
         }
         catch (IOException e){
             e.printStackTrace();
@@ -739,7 +761,20 @@ public abstract class AndroidPackage {
                 + (resultFileName != null ? resultFileName : getSignedPackageName(originPackageName));
 
         if(isSign()) {
-            signResult = signPackageDebug(willSignPackagePath, keyStoreFilePath, signedPackagePath);
+            if(shellConfig.getSignatureConfig() == null || !new File(shellConfig.getSignatureConfig().getKeystore()).exists()) {
+                LogUtils.info("Use default key store");
+                signResult = signPackageDebug(willSignPackagePath, keyStoreFilePath, signedPackagePath);
+            }
+            else {
+                LogUtils.info("Use custom key store");
+                signResult = sign(willSignPackagePath,
+                        shellConfig.getSignatureConfig().getKeystore(),
+                        signedPackagePath,
+                        shellConfig.getSignatureConfig().getAlias(),
+                        shellConfig.getSignatureConfig().getStorePassword(),
+                        shellConfig.getSignatureConfig().getKeyPassword()
+                        );
+            }
         }
         else {
             try {
@@ -805,25 +840,9 @@ public abstract class AndroidPackage {
         IoUtils.close(out);
     }
 
-    public void protect() throws IOException {
-
-        String path = "shell-files";
-        File shellFiles = new File(FileUtils.getExecutablePath() + File.separator + path);
-        if(!shellFiles.exists()) {
-            String msg = "Cannot find directory: shell-files!" + shellFiles;
-            LogUtils.error(msg);
-            throw new FileNotFoundException(msg);
-        }
-
-        File willProtectFile = new File(getFilePath());
-
-        if(!willProtectFile.exists()){
-            String msg = String.format(Locale.US, "File not exists: %s", getFilePath());
-            throw new FileNotFoundException(msg);
-        }
-
+    private void processRuleFile() {
         try {
-            if(getRulesFilePath() != null) {
+            if(!org.apache.commons.lang3.StringUtils.isBlank(getRulesFilePath())) {
                 File file = new File(getRulesFilePath());
                 LogUtils.debug("Exclude rules file: %s", file);
                 List<String> strings = com.google.common.io.Files.readLines(file, StandardCharsets.UTF_8);
@@ -839,9 +858,60 @@ public abstract class AndroidPackage {
         catch (IOException e) {
             LogUtils.info("Exclude rules file is unavailable: %s", e.getMessage());
         }
+    }
 
+    private void processProtectConfigFile() {
+        // init config
         String randomPackageName = StringUtils.generateIdentifier(10);
-        ShellConfig.getInstance().init(randomPackageName);
+        if(org.apache.commons.lang3.StringUtils.isBlank(getProtectConfigFile())) {
+            ShellConfig.getInstance().init(randomPackageName);
+            return;
+        }
+
+        try {
+            LogUtils.info("Read config file: %s", getProtectConfigFile());
+            byte[] bytes = IoUtils.readFile(getProtectConfigFile());
+            String configData = new String(bytes, StandardCharsets.UTF_8);
+            ShellConfig shellConfigFromFile = JSON.parseObject(configData, ShellConfig.class);
+
+            if(shellConfigFromFile != null) {
+                ShellConfig shellConfig = ShellConfig.getInstance();
+                if("<random>".equals(shellConfigFromFile.getShellPackageName())) {
+                    shellConfigFromFile.setShellPackageName(randomPackageName);
+                }
+
+                LogUtils.info("Use config: %s", shellConfigFromFile);
+                shellConfig.init(shellConfigFromFile);
+
+            }
+            else {
+                ShellConfig.getInstance().init(randomPackageName);
+            }
+
+        } catch (Exception e) {
+            LogUtils.error("Read config file error");
+            ShellConfig.getInstance().init(randomPackageName);
+        }
+    }
+
+    public void protect() throws IOException {
+        String path = "shell-files";
+        File shellFiles = new File(FileUtils.getExecutablePath() + File.separator + path);
+        if(!shellFiles.exists()) {
+            String msg = "Cannot find directory: shell-files!" + shellFiles;
+            LogUtils.error(msg);
+            throw new FileNotFoundException(msg);
+        }
+
+        File willProtectFile = new File(getFilePath());
+
+        if(!willProtectFile.exists()){
+            String msg = String.format(Locale.US, "File not exists: %s", getFilePath());
+            throw new FileNotFoundException(msg);
+        }
+
+        processRuleFile();
+        processProtectConfigFile();
 
         JunkCodeGenerator.generateJunkCodeDex(new File(getJunkCodeDexPath()));
     }

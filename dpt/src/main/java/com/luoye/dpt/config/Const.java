@@ -38,6 +38,11 @@ public class Const {
     public static final String OPTION_SMALLER = "S";
     public static final String OPTION_SMALLER_LONG = "smaller";
 
+    public static final String OPTION_PROTECT_CONFIG = "c";
+    public static final String OPTION_PROTECT_CONFIG_LONG = "protect-config";
+
+    public static final String KEY_STORE_ASSET_NAME = "dpt.jks";
+    public static final String KEY_STORE_ASSET_PATH = "assets/" + KEY_STORE_ASSET_NAME;
     public static final String STORE_PASSWORD = "android";
     public static final String KEY_PASSWORD = "android";
     public static final String KEY_ALIAS = "key0";
@@ -55,5 +60,6 @@ public class Const {
     public static final String KEY_CODE_ITEM_STORE_NAME = "OoooooOooo";
     public static final String KEY_LIBS_DIR_NAME = "vwwwwwvwww";
     public static final String KEY_JNI_BASE_CLASS_NAME = "JniBridge";
+    public static final String DEFAULT_SHELL_PACKAGE_NAME = "com/luoyesiqiu/shell";
 
 }
