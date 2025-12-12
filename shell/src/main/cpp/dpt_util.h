@@ -41,12 +41,12 @@ static jclass g_ContextClass = nullptr;
 
 std::string find_so_path(const char* so_name);
 bool checkWebViewInFilename(const std::string& path);
-int parse_dex_number(std::string *location);
+int parse_dex_number(std::string& location);
 jclass getContextClass(JNIEnv *env);
 AAssetManager *getAssetMgr(JNIEnv *env, jobject assetManager);
 AAsset *getAsset(JNIEnv *env, jobject context, const char *filename);
-void getSourceDir(JNIEnv *env, char *sourceDirOut, size_t max_out_len);
-void getDataDir(JNIEnv *env,char *dataDirOut,size_t max_out_len);
+std::string getSourceDir(JNIEnv *env);
+std::string getDataDir(JNIEnv *env);
 jstring getSourceDirExport(JNIEnv *env,jclass __unused);
 void getCompressedDexesPath(JNIEnv *env,char *outDexZipPath,size_t max_len);
 void getCodeCachePath(JNIEnv *env,char *outCodeCachePath,size_t max_len);

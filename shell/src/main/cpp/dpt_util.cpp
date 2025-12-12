@@ -88,7 +88,7 @@ size_t dpt_readlink(int fd, char *result_path,size_t path_max_len) {
     return readlink(link_path,result_path,path_max_len);
 }
 
-int dpt_mprotect(void *start,void *end,int prot) {
+int dpt_mprotect(void *start, void *end, int prot) {
     uintptr_t start_addr = DPT_PAGE_START((uintptr_t)start);
     uintptr_t end_addr = DPT_PAGE_START((uintptr_t)end - 1) + getpagesize();
     size_t size = end_addr - start_addr;
@@ -102,10 +102,10 @@ int dpt_mprotect(void *start,void *end,int prot) {
     return 0;
 }
 
-static int separate_dex_number(std::string *str) {
+static int separate_dex_number(std::string& str) {
     int sum = 0;
     int mul = 1;
-    for(auto it = str->cend();it >= str->cbegin();it--){
+    for(auto it = str.cend();it >= str.cbegin();it--){
         if(isdigit(*it)){
             int number = *it - '0';
             sum += (number * mul);
@@ -121,15 +121,15 @@ static int separate_dex_number(std::string *str) {
  * Get dex index from dex location
  * e.g. base.apk!classes2.dex will get 1
  */
-int parse_dex_number(std::string *location) {
+int parse_dex_number(std::string& location) {
     int raw_dex_index = 1;
-    if (location->rfind(".dex") != std::string::npos) {
-        size_t sep = location->rfind('!');
+    if (location.rfind(".dex") != std::string::npos) {
+        size_t sep = location.rfind('!');
         if(sep != std::string::npos){
             raw_dex_index = separate_dex_number(location);
         }
         else{
-            sep = location->rfind(':');
+            sep = location.rfind(':');
             if(sep != std::string::npos){
                 raw_dex_index = separate_dex_number(location);
             }
@@ -195,7 +195,7 @@ AAsset *getAsset(JNIEnv *env, jobject context, const char *filename) {
     return nullptr;
 }
 
-void getSourceDir(JNIEnv *env, char *sourceDirOut, size_t max_out_len) {
+std::string getSourceDir(JNIEnv *env) {
     reflect::android_app_ActivityThread activityThread(env);
     jobject mBoundApplicationObj = activityThread.getBoundApplication();
 
@@ -206,12 +206,17 @@ void getSourceDir(JNIEnv *env, char *sourceDirOut, size_t max_out_len) {
     auto sourceDir = applicationInfo.getSourceDir();
 
     const char *sourceDirChs = env->GetStringUTFChars(sourceDir,nullptr);
-    snprintf(sourceDirOut, max_out_len, "%s", sourceDirChs);
 
-    DLOGD("source dir: %s", sourceDirOut);
+    DLOGD("source dir: %s", sourceDirChs);
+
+    auto sourceDirStr = std::string{sourceDirChs};
+
+    env->ReleaseStringUTFChars(sourceDir, sourceDirChs);
+
+    return sourceDirStr;
 }
 
-void getDataDir(JNIEnv *env,char *dataDirOut,size_t max_out_len) {
+std::string getDataDir(JNIEnv *env) {
     reflect::android_app_ActivityThread activityThread(env);
     jobject mBoundApplicationObj = activityThread.getBoundApplication();
 
@@ -222,28 +227,29 @@ void getDataDir(JNIEnv *env,char *dataDirOut,size_t max_out_len) {
     auto dataDir = applicationInfo.getDataDir();
 
     const char *dataDirChs = env->GetStringUTFChars(dataDir,nullptr);
-    snprintf(dataDirOut, max_out_len , "%s",dataDirChs);
 
-    DLOGD("data dir: %s",dataDirOut);
+    DLOGD("data dir: %s", dataDirChs);
+
+    auto dataDirStr = std::string{dataDirChs};
+
+    env->ReleaseStringUTFChars(dataDir, dataDirChs);
+
+    return dataDirStr;
 }
 
 jstring getSourceDirExport(JNIEnv *env,jclass __unused) {
-    char sourceDirChs[512] = {0};
-    getSourceDir(env, sourceDirChs, ARRAY_LENGTH(sourceDirChs));
-
-    return env->NewStringUTF(sourceDirChs);
+    std::string sourceDir = getSourceDir(env);
+    return env->NewStringUTF(sourceDir.c_str());
 }
 
-void getCompressedDexesPath(JNIEnv *env,char *outDexZipPath,size_t max_len) {
-    char dataDir[256] = {0};
-    getDataDir(env,dataDir, ARRAY_LENGTH(dataDir));
-    snprintf(outDexZipPath,max_len,"%s/%s/%s",dataDir,CACHE_DIR,DEXES_ZIP_NAME);
+void getCompressedDexesPath(JNIEnv *env, char *outDexZipPath, size_t max_len) {
+    std::string dataDir = getDataDir(env);
+    snprintf(outDexZipPath,max_len, "%s/%s/%s", dataDir.c_str(), CACHE_DIR, DEXES_ZIP_NAME);
 }
 
 void getCodeCachePath(JNIEnv *env,char *outCodeCachePath,size_t max_len) {
-    char dataDir[256] = {0};
-    getDataDir(env,dataDir, ARRAY_LENGTH(dataDir));
-    snprintf(outCodeCachePath,max_len,"%s/%s/",dataDir,CACHE_DIR);
+    std::string dataDir = getDataDir(env);
+    snprintf(outCodeCachePath, max_len, "%s/%s/", dataDir.c_str(), CACHE_DIR);
 }
 
 jstring getCompressedDexesPathExport(JNIEnv *env,jclass __unused) {
@@ -355,9 +361,8 @@ static void load_zip(const char* zip_file_path,void **zip_addr,size_t *zip_size)
 }
 
 void load_package(JNIEnv *env, void **package_addr, size_t *package_size) {
-    char sourceDirChs[512] = {0};
-    getSourceDir(env, sourceDirChs, ARRAY_LENGTH(sourceDirChs));
-    load_zip(sourceDirChs, package_addr, package_size);
+    std::string sourceDir = getSourceDir(env);
+    load_zip(sourceDir.c_str(), package_addr, package_size);
 
 }
 

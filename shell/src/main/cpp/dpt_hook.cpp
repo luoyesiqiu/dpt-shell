@@ -165,7 +165,7 @@ DPT_ENCRYPT void patchClass(__unused const char* descriptor,
         }
 
         if(location.rfind(DEXES_ZIP_NAME) != std::string::npos && dex_class_def){
-            int dexIndex = parse_dex_number(&location);
+            int dexIndex = parse_dex_number(location);
 
             auto* class_def = (dex::ClassDef *)dex_class_def;
             NLOG("class_desc = '%s', class_idx_ = 0x%x, class data off = 0x%x",descriptor,class_def->class_idx_,class_def->class_data_off_);
