@@ -91,6 +91,10 @@ public class ShellConfig {
         this.signatureConfig = shellConfig.getSignatureConfig();
     }
 
+    public String getSlashShellPackageName() {
+        return getShellPackageName().replaceAll("\\.", "/");
+    }
+
     public String getAppComponentFactoryName() {
         return appComponentFactoryName;
     }
@@ -120,7 +124,7 @@ public class ShellConfig {
         jsonObject.put("app_name", getApplicationName());
         jsonObject.put("acf_name", getAppComponentFactoryName());
         String jniClassName = String.format(Locale.US, "%s/%s",
-                getShellPackageName(),
+                getSlashShellPackageName(),
                 Const.KEY_JNI_BASE_CLASS_NAME
         );
         jsonObject.put("jni_cls_name", jniClassName);

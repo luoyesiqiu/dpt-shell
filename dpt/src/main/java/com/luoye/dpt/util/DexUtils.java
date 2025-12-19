@@ -118,11 +118,11 @@ public class DexUtils {
 
     }
 
-    public static void renamePackageName(File dexFilePath, File newDexFilePath, String shellPackageName) throws IOException {
+    public static void renamePackageName(File dexFilePath, File newDexFilePath, String slashShellPackageName) throws IOException {
 
         DexBackedDexFile dexBackedDexFile = DexFileFactory.loadDexFile(dexFilePath, Opcodes.getDefault());
 
-        LogUtils.debug("Rename shell package name to: " + shellPackageName);
+        LogUtils.debug("Rename shell package name to: " + slashShellPackageName);
         DexRewriter dexMethodRewriter = new DexRewriter(new RewriterModule() {
             @Override
             public Rewriter<String> getTypeRewriter(Rewriters rewriters) {
@@ -131,13 +131,8 @@ public class DexUtils {
                     public String rewrite(String value) {
                         int index = value.lastIndexOf("/");
                         String className = value.substring(index + 1, value.length() - 1);
-                        if(value.startsWith("Lcom/luoyesiqiu")) {
-                            return String.format(Locale.US, "L%s/%s;", shellPackageName, className);
-                        }
-                        else if(value.startsWith("Lcom/luoye")) {
-                            StringBuilder stringBuilder = new StringBuilder(shellPackageName);
-                            StringBuilder reverse = stringBuilder.reverse();
-                            return String.format(Locale.US, "L%s/%s;", reverse, className);
+                        if(value.startsWith("Lcom/luoyesiqiu") || value.startsWith("Lcom/luoye")) {
+                            return String.format(Locale.US, "L%s/%s;", slashShellPackageName, className);
                         }
                         return value;
                     }

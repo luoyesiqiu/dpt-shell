@@ -257,7 +257,7 @@ public abstract class AndroidPackage {
                     && !Const.DEFAULT_SHELL_PACKAGE_NAME.equals(shellConfig.getShellPackageName());
 
             if(needRename) {
-                DexUtils.renamePackageName(shellDexFile, renameDexFile, shellConfig.getShellPackageName());
+                DexUtils.renamePackageName(shellDexFile, renameDexFile, shellConfig.getSlashShellPackageName());
             }
 
             File originalDexZipFile = new File(getOutAssetsDir(packageMainProcessPath).getAbsolutePath() + File.separator + Const.KEY_DEXES_STORE_NAME);
