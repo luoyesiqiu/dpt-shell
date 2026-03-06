@@ -55,7 +55,7 @@ const char *GetClassLinkerDefineClassLibPath(){
 void change_dex_protective(uint8_t * begin,int dexSize,int dexIndex){
     uintptr_t start = DPT_PAGE_START((uintptr_t) (begin));
     uint32_t pageSize = sysconf(_SC_PAGE_SIZE);
-    size_t n = (dexSize / pageSize) + (dexSize % pageSize != 0);
+    size_t n = (dexSize / pageSize) + (dexSize % pageSize != 0) + 1;
 
     for(int i = 0;i < 10;) {
         DLOGD("mprotect dex[%d] start = " FMT_POINTER ",end = " FMT_POINTER ", page_size = %d, dexSize = %d, block_cnt = %zu",
