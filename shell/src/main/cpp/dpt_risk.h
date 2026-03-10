@@ -22,7 +22,6 @@
 #include "linux_syscall_support.h"
 #include "common/obfuscate.h"
 
-void dpt_crash();
 void detectFrida();
 void doPtrace();
 void protectChildProcess(pid_t pid);
