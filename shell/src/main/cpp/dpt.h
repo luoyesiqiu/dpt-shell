@@ -17,6 +17,8 @@
 #include <pthread.h>
 #include <android/asset_manager.h>
 #include <android/asset_manager_jni.h>
+#include <random>
+
 #include "dpt_jni.h"
 #include "dpt_util.h"
 #include "dpt_risk.h"
@@ -56,6 +58,8 @@ void removeDexElements(JNIEnv* env,jclass __unused,jobject classLoader,jstring e
 jobject replaceApplication(JNIEnv *env, jclass __unused, jstring originApplication);
 void replaceApplicationOnActivityThread(JNIEnv *env,jclass __unused, jobject realApplication);
 void replaceApplicationOnLoadedApk(JNIEnv *env, jclass __unused, jobject realApplication);
+
+void veritySignature(JNIEnv *env);
 
 void clinit(__unused JNIEnv *env, __unused jclass);
 

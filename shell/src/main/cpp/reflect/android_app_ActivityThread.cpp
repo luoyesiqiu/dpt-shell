@@ -6,15 +6,16 @@
 
 using namespace dpt::reflect;
 
-jobject android_app_ActivityThread::currentActivityThread() {
-    if(m_obj == nullptr) {
-        jclass cls = getClass();
+jobject android_app_ActivityThread::currentActivityThread(JNIEnv *env) {
 
-        m_obj = jni::CallStaticObjectMethod(m_env, cls,
-                                            "currentActivityThread",
-                                            "()Landroid/app/ActivityThread;");
-    }
-    return m_obj;
+    jclass cls = jni::FindClass(env, "android/app/ActivityThread");
+
+    jobject obj = jni::CallStaticObjectMethod(env, cls,
+                                        "currentActivityThread",
+                                        "()Landroid/app/ActivityThread;");
+
+    jni::DeleteLocalRef(env, cls);
+    return obj;
 }
 
 jobject android_app_ActivityThread::getBoundApplication() {
@@ -29,6 +30,17 @@ jobject android_app_ActivityThread::getAllApplication() {
 
 void android_app_ActivityThread::setInitialApplication(jobject application) {
     jni::SetObjectField(m_env,m_obj,&m_initial_application_field,application);
+}
+
+jobject android_app_ActivityThread::currentApplication(JNIEnv *env) {
+    jclass cls = jni::FindClass(env, "android/app/ActivityThread");
+
+    jobject obj = jni::CallStaticObjectMethod(env, cls,
+                                              "currentApplication",
+                                              "()Landroid/app/Application;");
+
+    jni::DeleteLocalRef(env, cls);
+    return obj;
 }
 
 jobject android_app_ActivityThread::AppBindData::getAppInfo() {

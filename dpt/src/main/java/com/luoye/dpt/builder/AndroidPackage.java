@@ -26,15 +26,22 @@ import net.lingala.zip4j.model.enums.CompressionMethod;
 
 import org.apache.commons.lang3.tuple.Pair;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.RandomAccessFile;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
+import java.security.KeyStore;
+import java.security.MessageDigest;
+import java.security.cert.Certificate;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -59,6 +66,7 @@ public abstract class AndroidPackage {
         public boolean keepClasses = false;
         public boolean smaller = false;
         public String protectConfigFile = null;
+        public boolean verifySign = false;
 
         public Builder filePath(String path) {
             this.filePath = path;
@@ -87,6 +95,11 @@ public abstract class AndroidPackage {
 
         public Builder protectConfigFile(String protectConfigFile) {
             this.protectConfigFile = protectConfigFile;
+            return this;
+        }
+
+        public Builder verifySign(boolean verifySign) {
+            this.verifySign = verifySign;
             return this;
         }
 
@@ -135,6 +148,7 @@ public abstract class AndroidPackage {
     private String rulesFilePath = null;
     private boolean keepClasses = false;
     private String protectConfigFile;
+    private boolean verifySign = false;
 
     public AndroidPackage(Builder builder) {
         setFilePath(builder.filePath);
@@ -149,6 +163,7 @@ public abstract class AndroidPackage {
         setKeepClasses(builder.keepClasses);
         setSmaller(builder.smaller);
         setProtectConfigFile(builder.protectConfigFile);
+        setVerifySign(builder.verifySign);
     }
 
     public void setProtectConfigFile(String protectConfigFile) {
@@ -157,6 +172,14 @@ public abstract class AndroidPackage {
 
     public String getProtectConfigFile() {
         return protectConfigFile;
+    }
+
+    public void setVerifySign(boolean verifySign) {
+        this.verifySign = verifySign;
+    }
+
+    public boolean isVerifySign() {
+        return verifySign;
     }
 
     public boolean isSmaller() {
@@ -482,7 +505,7 @@ public abstract class AndroidPackage {
                     File destFile = new File(destAbiDir, libFile.getName());
                     try {
                         Files.copy(libFile.toPath(), destFile.toPath(),
-                                java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+                                StandardCopyOption.REPLACE_EXISTING);
                     } catch (IOException e) {
                         LogUtils.error("Failed to copy library: " + e.getMessage());
                     }
@@ -915,6 +938,89 @@ public abstract class AndroidPackage {
         }
     }
 
+    private KeyStore loadKeyStore(InputStream inputStream, char[] password) {
+        byte[] data;
+        try {
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            byte[] buf = new byte[4096];
+            int n;
+            while ((n = inputStream.read(buf)) != -1) {
+                baos.write(buf, 0, n);
+            }
+            data = baos.toByteArray();
+        } catch (IOException e) {
+            return null;
+        }
+        for (String type : new String[]{"JKS", "PKCS12", "BKS"}) {
+            try {
+                KeyStore ks = KeyStore.getInstance(type);
+                ks.load(new ByteArrayInputStream(data), password);
+                LogUtils.info("Loaded keystore as " + type);
+                return ks;
+            } catch (Exception ignored) {
+            }
+        }
+        return null;
+    }
+
+    private String computeSignatureSha256() {
+        ShellConfig shellConfig = ShellConfig.getInstance();
+        ShellConfig.SignatureConfig sigConfig = shellConfig.getSignatureConfig();
+
+        String keystorePath = null;
+        String storePassword = Const.STORE_PASSWORD;
+        String alias = Const.KEY_ALIAS;
+
+        if (sigConfig != null
+                && !org.apache.commons.lang3.StringUtils.isBlank(sigConfig.getKeystore())
+                && new File(sigConfig.getKeystore()).exists()) {
+            keystorePath = sigConfig.getKeystore();
+            if (!org.apache.commons.lang3.StringUtils.isBlank(sigConfig.getStorePassword())) {
+                storePassword = sigConfig.getStorePassword();
+            }
+            if (!org.apache.commons.lang3.StringUtils.isBlank(sigConfig.getAlias())) {
+                alias = sigConfig.getAlias();
+            }
+            LogUtils.info("Computing SHA-256 from signing keystore: " + keystorePath);
+        } else {
+            LogUtils.info("Computing SHA-256 from default keystore");
+        }
+
+        try {
+            KeyStore ks = null;
+            char[] pwdChars = storePassword.toCharArray();
+            if (keystorePath != null) {
+                try (FileInputStream fis = new FileInputStream(keystorePath)) {
+                    ks = loadKeyStore(fis, pwdChars);
+                }
+            }
+
+            if (ks == null) {
+                LogUtils.error("Failed to load keystore");
+                return null;
+            }
+
+            Certificate cert = ks.getCertificate(alias);
+            if (cert == null) {
+                LogUtils.error("Certificate not found for alias: " + alias);
+                return null;
+            }
+
+            MessageDigest md = MessageDigest.getInstance("SHA-256");
+            byte[] hash = md.digest(cert.getEncoded());
+
+            StringBuilder sb = new StringBuilder();
+            for (byte b : hash) {
+                sb.append(String.format(Locale.US, "%02x", b));
+            }
+            return sb.toString();
+
+        } catch (Exception e) {
+            LogUtils.error("Failed to compute certificate SHA-256: " + e.getMessage());
+            return null;
+        }
+    }
+
     public void protect() throws IOException {
         String path = "shell-files";
         File shellFiles = new File(FileUtils.getExecutablePath() + File.separator + path);
@@ -933,6 +1039,16 @@ public abstract class AndroidPackage {
 
         processRuleFile();
         processProtectConfigFile();
+
+        if (isVerifySign()) {
+            String sha256 = computeSignatureSha256();
+            if (sha256 != null) {
+                ShellConfig.getInstance().setAppSignSha256(sha256);
+                LogUtils.info("Signature verification enabled, SHA-256: " + sha256);
+            } else {
+                LogUtils.error("Failed to compute certificate SHA-256, signature verification disabled.");
+            }
+        }
 
         JunkCodeGenerator.generateJunkCodeDex(new File(getJunkCodeDexPath()));
     }

@@ -12,6 +12,7 @@ extern "C" {
 int dpt_memcmp(const void *cs, const void *ct, size_t count);
 size_t dpt_strlen(const char *s);
 char *dpt_strstr(const char *s1, const char *s2);
+int dpt_strncasecmp(const char *s1, const char *s2, size_t n);
 #ifdef __cplusplus
 };
 #endif

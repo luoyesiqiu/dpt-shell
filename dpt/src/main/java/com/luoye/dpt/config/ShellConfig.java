@@ -18,6 +18,9 @@ public class ShellConfig {
     @JSONField(name = "shellPkgName")
     private String shellPackageName;
 
+    @JSONField(name = "app_sign_sha256")
+    private String appSignSha256;
+
     private ShellConfig() {
     }
 
@@ -89,6 +92,7 @@ public class ShellConfig {
     public void init(ShellConfig shellConfig) {
         this.shellPackageName = StringUtils.isBlank(shellConfig.getShellPackageName()) ? Const.DEFAULT_SHELL_PACKAGE_NAME : shellConfig.getShellPackageName();
         this.signatureConfig = shellConfig.getSignatureConfig();
+        this.appSignSha256 = shellConfig.getAppSignSha256();
     }
 
     public String getSlashShellPackageName() {
@@ -119,6 +123,14 @@ public class ShellConfig {
         this.signatureConfig = signatureConfig;
     }
 
+    public String getAppSignSha256() {
+        return appSignSha256;
+    }
+
+    public void setAppSignSha256(String appSignSha256) {
+        this.appSignSha256 = appSignSha256;
+    }
+
     public String getJniSlashClassName() {
         return String.format(Locale.US, "%s/%s",
                 getSlashShellPackageName(),
@@ -136,6 +148,9 @@ public class ShellConfig {
         jsonObject.put("acf_name", getAppComponentFactoryName());
         String jniClassName = getJniSlashClassName();
         jsonObject.put("jni_cls_name", jniClassName);
+        if (!StringUtils.isBlank(getAppSignSha256())) {
+            jsonObject.put("app_sign_sha256", getAppSignSha256());
+        }
         return jsonObject.toString();
     }
 

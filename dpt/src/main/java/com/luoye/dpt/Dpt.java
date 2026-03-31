@@ -61,6 +61,7 @@ public class Dpt {
                 + "- arm64     (arm64-v8a)\n"
                 + "- x86\n"
                 + "- x86_64"));
+        options.addOption(new Option(Const.OPTION_VERIFY_SIGN, Const.OPTION_VERIFY_SIGN_LONG, false, "Enable runtime app signature verification. The certificate SHA-256 is computed automatically from the signing keystore.\n"));
 
         CommandLineParser commandLineParser = new DefaultParser();
         try {
@@ -105,6 +106,7 @@ public class Dpt {
                         .keepClasses(commandLine.hasOption(Const.OPTION_KEEP_CLASSES))
                         .smaller(commandLine.hasOption(Const.OPTION_SMALLER))
                         .protectConfigFile(commandLine.getOptionValue(Const.OPTION_PROTECT_CONFIG))
+                        .verifySign(commandLine.hasOption(Const.OPTION_VERIFY_SIGN))
                         .build();
             }
             else if(filePath.endsWith(".aab")) {
@@ -120,6 +122,7 @@ public class Dpt {
                         .keepClasses(commandLine.hasOption(Const.OPTION_KEEP_CLASSES))
                         .smaller(commandLine.hasOption(Const.OPTION_SMALLER))
                         .protectConfigFile(commandLine.getOptionValue(Const.OPTION_PROTECT_CONFIG))
+                        .verifySign(commandLine.hasOption(Const.OPTION_VERIFY_SIGN))
                         .build();
             }
             else {

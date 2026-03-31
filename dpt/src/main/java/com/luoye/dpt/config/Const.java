@@ -41,6 +41,9 @@ public class Const {
     public static final String OPTION_PROTECT_CONFIG = "c";
     public static final String OPTION_PROTECT_CONFIG_LONG = "protect-config";
 
+    public static final String OPTION_VERIFY_SIGN = "vs";
+    public static final String OPTION_VERIFY_SIGN_LONG = "verify-sign";
+
     public static final String KEY_STORE_ASSET_NAME = "dpt.jks";
     public static final String KEY_STORE_ASSET_PATH = "assets/" + KEY_STORE_ASSET_NAME;
     public static final String STORE_PASSWORD = "android";

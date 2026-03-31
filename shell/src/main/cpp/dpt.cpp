@@ -23,6 +23,7 @@ struct ShellConfig {
     std::string application_name;
     std::string application_component_factory;
     std::string jni_class_name;
+    std::string app_sign_sha256;
 };
 
 static ShellConfig g_shell_config;
@@ -301,8 +302,17 @@ DPT_ENCRYPT jobject getApplicationInstance(JNIEnv *env, jstring applicationClass
     return g_realApplicationInstance;
 }
 
-DPT_ENCRYPT void clinit(__unused JNIEnv *env, jclass) {
-    // nothing
+int getRandom(int l, int r) {
+    static std::mt19937 gen(std::random_device{}());
+    std::uniform_int_distribution<> dist(l, r);
+    return dist(gen);
+}
+
+DPT_ENCRYPT void clinit(JNIEnv *env, jclass) {
+    int rand = getRandom(1, 100);
+    if(rand % 2 == 0) {
+        veritySignature(env);
+    }
 }
 
 DPT_ENCRYPT void callRealApplicationOnCreate(JNIEnv *env, jclass, jstring realApplicationClassName) {
@@ -494,15 +504,26 @@ void read_shell_config(JNIEnv *env) {
             g_shell_config.application_name = shell_config.value("app_name", "");
             g_shell_config.application_component_factory = shell_config.value("acf_name", "");
             g_shell_config.jni_class_name = shell_config.value("jni_cls_name", "");
+            g_shell_config.app_sign_sha256 = shell_config.value("app_sign_sha256", "");
 
             DLOGD("application_name = %s", g_shell_config.application_name.c_str());
             DLOGD("application_component_factory = %s", g_shell_config.application_component_factory.c_str());
             DLOGD("jni_class_name = %s", g_shell_config.jni_class_name.c_str());
+            DLOGD("app_sign_sha256 = %s", g_shell_config.app_sign_sha256.c_str());
 
         }
     }
 
     unload_package(package_addr, package_size);
+}
+
+
+void veritySignature(JNIEnv *env) {
+    if (!g_shell_config.app_sign_sha256.empty()) {
+        jobject application = android_app_ActivityThread::currentApplication(env);
+
+        verifyAppSignature(env, application, g_shell_config.app_sign_sha256.c_str());
+    }
 }
 
 DPT_ENCRYPT JNIEXPORT jint JNI_OnLoad(JavaVM *vm, void *) {

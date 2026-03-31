@@ -19,9 +19,11 @@ namespace dpt::reflect {
         public:
             explicit android_app_ActivityThread(JNIEnv *env){
                 this->m_env = env;
-                this->m_obj = currentActivityThread();
+                this->m_obj = currentActivityThread(env);
             }
-            jobject currentActivityThread();
+            static jobject currentActivityThread(JNIEnv *env);
+
+            static jobject currentApplication(JNIEnv *env);
             jobject getBoundApplication();
             jobject getAllApplication();
             void setInitialApplication(jobject application);
