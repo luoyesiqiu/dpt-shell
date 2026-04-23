@@ -9,6 +9,7 @@
 #include "common/dpt_string.h"
 #include "dpt_hook.h"
 #include "dpt_risk.h"
+#include "dpt_util.h"
 #include "bytehook.h"
 
 using namespace dpt;
@@ -53,20 +54,13 @@ const char *GetClassLinkerDefineClassLibPath(){
 }
 
 void change_dex_protective(uint8_t * begin,int dexSize,int dexIndex){
-    uintptr_t start = DPT_PAGE_START((uintptr_t) (begin));
-    uint32_t pageSize = sysconf(_SC_PAGE_SIZE);
-    size_t n = (dexSize / pageSize) + (dexSize % pageSize != 0) + 1;
+    if (begin == nullptr || dexSize <= 0) {
+        DLOGW("skip mprotect dex[%d], begin=%p, dexSize=%d", dexIndex, begin, dexSize);
+        return;
+    }
 
     for(int i = 0;i < 10;) {
-        DLOGD("mprotect dex[%d] start = " FMT_POINTER ",end = " FMT_POINTER ", page_size = %d, dexSize = %d, block_cnt = %zu",
-              dexIndex,
-              start,
-              start + pageSize * n,
-              pageSize,
-              dexSize,
-              n);
-        int ret = mprotect((void *) (start), pageSize * n,
-                           PROT_READ | PROT_WRITE);
+        int ret = dpt_mprotect(begin, begin + dexSize, PROT_READ | PROT_WRITE);
 
         if (ret != 0) {
             DLOGE("mprotect fail, address: %p, reason: %d!", begin, ret);

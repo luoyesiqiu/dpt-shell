@@ -7,6 +7,11 @@
 
 #include "banned.h"
 
+inline int get_cache_page_size() {
+    static int pagesize = getpagesize();
+    return pagesize;
+}
+
 #define SECTION_NAME_BITCODE ".bitcode"
 #define SECTION_NAME_DATA ".data"
 
@@ -27,7 +32,7 @@
 #define COMBINE_DEX_FILES_NAME_IN_ZIP "classes.dex"
 #define JUNK_CLASS_FULL_NAME "com/luoye/dpt/junkcode/JunkClass"
 
-#define DPT_PAGE_MASK (~((getpagesize()) - 1))
+#define DPT_PAGE_MASK (~((get_cache_page_size()) - 1))
 
 #define DPT_PAGE_START(addr) ((addr) & (uintptr_t)DPT_PAGE_MASK)
 

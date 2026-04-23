@@ -90,12 +90,12 @@ size_t dpt_readlink(int fd, char *result_path,size_t path_max_len) {
 
 int dpt_mprotect(void *start, void *end, int prot) {
     uintptr_t start_addr = DPT_PAGE_START((uintptr_t)start);
-    uintptr_t end_addr = DPT_PAGE_START((uintptr_t)end - 1) + getpagesize();
+    uintptr_t end_addr = DPT_PAGE_START((uintptr_t)end - 1) + get_cache_page_size();
     size_t size = end_addr - start_addr;
 
     if (0 != mprotect((void *)start_addr, size, prot)) {
         DLOGW("mprotect 0x%" PRIxPTR  "-0x%" PRIxPTR  " fail, pagesize: %d, err: %s", start_addr, end_addr,
-              getpagesize(),
+              get_cache_page_size(),
               strerror(errno));
         return -1;
     }
