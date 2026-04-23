@@ -364,14 +364,14 @@ public abstract class AndroidPackage {
     public abstract void setDebuggable(String manifestDir,boolean debuggable);
 
     public File getWorkspaceDir() {
-        return FileUtils.getDir(Const.ROOT_OF_OUT_DIR,"dptOut");
+        return FileUtils.getDir(Const.ROOT_OF_OUT_DIR, "dptOut-" + Const.RANDOM_DIR_NAME);
     }
 
     /**
      * Get last process（zipalign，sign）dir
      */
     public File getLastProcessDir() {
-        return FileUtils.getDir(Const.ROOT_OF_OUT_DIR,"dptLastProcess");
+        return FileUtils.getDir(Const.ROOT_OF_OUT_DIR, "dptLastProcess-" + Const.RANDOM_DIR_NAME);
     }
 
     protected abstract File getOutAssetsDir(String packageDir);

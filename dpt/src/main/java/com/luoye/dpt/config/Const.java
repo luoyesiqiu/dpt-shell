@@ -1,5 +1,7 @@
 package com.luoye.dpt.config;
 
+import com.luoye.dpt.util.StringUtils;
+
 /**
  * @author luoyesiqiu
  */
@@ -64,5 +66,6 @@ public class Const {
     public static final String KEY_LIBS_DIR_NAME = "vwwwwwvwww";
     public static final String KEY_JNI_BASE_CLASS_NAME = "JniBridge";
     public static final String DEFAULT_SHELL_PACKAGE_NAME = "com/luoyesiqiu/shell";
+    public static final String RANDOM_DIR_NAME = StringUtils.generateIdentifier(16);
 
 }
