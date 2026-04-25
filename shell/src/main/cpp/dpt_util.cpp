@@ -659,3 +659,16 @@ void printTime(__unused const char* msg,__unused clock_t start){
     __unused clock_t end = clock();
     DLOGD("%s %lf",msg,(double)(end - start) / CLOCKS_PER_SEC);
 }
+
+
+std::string to_hex(const uint8_t* data, size_t length) {
+    std::stringstream ss;
+
+    ss << std::hex << std::setfill('0');
+
+    for (size_t i = 0; i < length; ++i) {
+        ss << std::setw(2) << static_cast<int>(data[i]);
+    }
+
+    return ss.str();
+}

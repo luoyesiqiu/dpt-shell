@@ -21,6 +21,10 @@
 #include <jni.h>
 #include <android/asset_manager.h>
 #include <android/asset_manager_jni.h>
+#include <iostream>
+#include <sstream>
+#include <iomanip>
+
 
 #include <mz_zip.h>
 #include <mz_strm_mem.h>
@@ -70,4 +74,7 @@ void getClassName(JNIEnv *env,jobject obj,char *destClassName,size_t max_len);
 void parseClassName(const char *src, char *dest);
 void printTime(const char* msg,clock_t start);
 const char* getThreadName();
+
+std::string to_hex(const uint8_t* data, size_t length);
+
 #endif //DPT_DPT_UTIL_H

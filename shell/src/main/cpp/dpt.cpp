@@ -14,19 +14,13 @@ static jobject g_realApplicationInstance = nullptr;
 static jclass g_realApplicationClass = nullptr;
 
 std::optional<std::tuple<uint8_t *,size_t>> g_codeItemFileData;
+std::unordered_map<int,std::vector<data::CodeItem *> *> dexMap;
 
 DPT_DATA_SECTION uint8_t DATA_SECTION_BITCODE[] = ".bitcode";
 DPT_DATA_SECTION uint8_t DATA_SECTION_RO_DATA[] = ".rodata";
 KEEP_SYMBOL DPT_DATA_SECTION uint8_t DPT_UNKNOWN_DATA[] = "1234567890abcdef";
 
-struct ShellConfig {
-    std::string application_name;
-    std::string application_component_factory;
-    std::string jni_class_name;
-    std::string app_sign_sha256;
-};
-
-static ShellConfig g_shell_config;
+ShellConfig g_shell_config;
 
 static JNINativeMethod gMethods[] = {
         {"craoc", "(Ljava/lang/String;)V",                               (void *) callRealApplicationOnCreate},
@@ -505,11 +499,13 @@ void read_shell_config(JNIEnv *env) {
             g_shell_config.application_component_factory = shell_config.value("acf_name", "");
             g_shell_config.jni_class_name = shell_config.value("jni_cls_name", "");
             g_shell_config.app_sign_sha256 = shell_config.value("app_sign_sha256", "");
+            g_shell_config.dex_sign = shell_config.value("dex_sign", "");
 
             DLOGD("application_name = %s", g_shell_config.application_name.c_str());
             DLOGD("application_component_factory = %s", g_shell_config.application_component_factory.c_str());
             DLOGD("jni_class_name = %s", g_shell_config.jni_class_name.c_str());
             DLOGD("app_sign_sha256 = %s", g_shell_config.app_sign_sha256.c_str());
+            DLOGD("dex_sign = %s", g_shell_config.dex_sign.c_str());
 
         }
     }

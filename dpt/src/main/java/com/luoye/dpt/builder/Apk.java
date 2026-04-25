@@ -197,7 +197,6 @@ public class Apk extends AndroidPackage {
         }
         apk.setExtractNativeLibs(apkMainProcessPath);
 
-        apk.writeConfig(apkMainProcessPath, encKey);
         /*======================================*
          * Process .dex files
          *======================================*/
@@ -221,6 +220,8 @@ public class Apk extends AndroidPackage {
         /*======================================*
          * Build package
          *======================================*/
+        apk.writeConfig(apkMainProcessPath, encKey);
+
         apk.buildPackage(apkFile.getAbsolutePath(), apkMainProcessPath, FileUtils.getUserDir());
 
         File apkMainProcessFile = new File(apkMainProcessPath);

@@ -21,6 +21,9 @@ public class ShellConfig {
     @JSONField(name = "app_sign_sha256")
     private String appSignSha256;
 
+    @JSONField(name = "dex_sign")
+    private String dexSign;
+
     private ShellConfig() {
     }
 
@@ -131,6 +134,15 @@ public class ShellConfig {
         this.appSignSha256 = appSignSha256;
     }
 
+
+    public String getDexSign() {
+        return dexSign;
+    }
+
+    public void setDexSign(String dexSign) {
+        this.dexSign = dexSign;
+    }
+
     public String getJniSlashClassName() {
         return String.format(Locale.US, "%s/%s",
                 getSlashShellPackageName(),
@@ -151,6 +163,7 @@ public class ShellConfig {
         if (!StringUtils.isBlank(getAppSignSha256())) {
             jsonObject.put("app_sign_sha256", getAppSignSha256());
         }
+        jsonObject.put("dex_sign", getDexSign());
         return jsonObject.toString();
     }
 

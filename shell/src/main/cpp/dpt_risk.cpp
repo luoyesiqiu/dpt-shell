@@ -105,8 +105,6 @@ DPT_ENCRYPT void verifyAppSignature(JNIEnv *env, jobject context, const char *ex
         if (dpt_strncasecmp(actual.c_str(), expectedSha256, 64) != 0) {
             DLOGW("signature cache verification failed, expected: %s actual: %s", expectedSha256, actual.c_str());
             dpt_crash();
-        } else {
-            DLOGD("signature cache verification passed!");
         }
         return;
     }
@@ -202,7 +200,5 @@ DPT_ENCRYPT void verifyAppSignature(JNIEnv *env, jobject context, const char *ex
     if (dpt_strncasecmp(sha256Hex, expectedSha256, 64) != 0) {
         DLOGW("signature verification failed, expected: %s actual: %s", expectedSha256, sha256Hex);
         dpt_crash();
-    } else {
-        DLOGD("signature verification passed!");
     }
 }

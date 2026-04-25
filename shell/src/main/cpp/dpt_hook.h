@@ -10,6 +10,7 @@
 #include <android/api-level.h>
 #include <cstdint>
 #include "dpt_util.h"
+#include "dpt.h"
 #include "dex/dex_file.h"
 #include "common/dpt_log.h"
 #include "common/dpt_macro.h"
@@ -43,4 +44,5 @@ bool hook_LoadClass();
 bool hook_DefineClass();
 void hook_mmap();
 void hook_execve();
+void hook_write();
 #endif //DPT_DPT_HOOK_H

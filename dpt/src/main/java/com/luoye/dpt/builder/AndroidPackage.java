@@ -693,7 +693,7 @@ public abstract class AndroidPackage {
 
                 boolean obfuscate = !isSmaller();
                 List<Instruction> ret = DexUtils.extractAllMethods(dexFile, extractedDexFile, getPackageName(), isDumpCode(), obfuscate);
-                instructionMap.put(dexNo,ret);
+                instructionMap.put(dexNo, ret);
 
                 File dexFileRightHashes = new File(dexFile.getParent(), FileUtils.getNewFileSuffix(dexFile.getName(),"dat"));
                 DexUtils.writeHashes(extractedDexFile,dexFileRightHashes);
@@ -701,6 +701,11 @@ public abstract class AndroidPackage {
 
                 extractedDexFile.delete();
                 dexFileRightHashes.renameTo(dexFile);
+
+                if("classes.dex".equals(dexFile.getName())) {
+                    String dexSignature = DexUtils.getDexSignature(dexFile);
+                    ShellConfig.getInstance().setDexSign(dexSignature);
+                }
                 countDownLatch.countDown();
             });
 

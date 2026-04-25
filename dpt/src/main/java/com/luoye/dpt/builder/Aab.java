@@ -198,7 +198,6 @@ public class Aab extends AndroidPackage {
         }
         aab.setExtractNativeLibs(manifestFileDir);
 
-        aab.writeConfig(aabMainProcessPath, encKey);
 
         /*======================================*
          * Process .dex files
@@ -224,6 +223,9 @@ public class Aab extends AndroidPackage {
         /*======================================*
          * Build package
          *======================================*/
+
+        aab.writeConfig(aabMainProcessPath, encKey);
+
         aab.buildPackage(aabFile.getAbsolutePath(), aabMainProcessPath, FileUtils.getUserDir());
 
         File apkMainProcessFile = new File(aabMainProcessPath);

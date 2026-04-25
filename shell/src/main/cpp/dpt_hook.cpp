@@ -17,12 +17,14 @@ using namespace dpt;
 extern std::unordered_map<int, std::vector<data::CodeItem*>*> dexMap;
 std::map<int,uint8_t *> dexMemMap;
 int g_sdkLevel = 0;
+extern ShellConfig g_shell_config;
 
 void dpt_hook() {
     bytehook_init(BYTEHOOK_MODE_AUTOMATIC,false);
     g_sdkLevel = android_get_device_api_level();
     hook_execve();
     hook_mmap();
+    hook_write();
     bool hookSuccess = hook_DefineClass();
     if(!hookSuccess) {
         hook_LoadClass();
@@ -376,6 +378,26 @@ DPT_ENCRYPT int fake_execve(const char *pathname, char *const argv[], char *cons
     return BYTEHOOK_CALL_PREV(fake_execve, pathname, argv, envp);
 }
 
+DPT_ENCRYPT ssize_t fake_write(int fd, const void *const buf, size_t count) {
+    BYTEHOOK_STACK_SCOPE();
+
+    if(buf != nullptr && count > 0x70) {
+        uint8_t dex_magic[] = {0x64, 0x65, 0x78, 0x0a};
+
+        if (UNLIKELY(dpt_memcmp(buf, dex_magic, 4) == 0)) {
+
+            std::string hex = to_hex((uint8_t *) buf + 9, 20);
+            DLOGD("dex sign: %s", hex.c_str());
+            if (dpt_strncasecmp(hex.c_str(), g_shell_config.dex_sign.c_str(), 40) == 0) {
+                dpt_crash();
+            }
+        }
+    }
+
+    return BYTEHOOK_CALL_PREV(fake_write, fd, buf, count);
+}
+
+
 DPT_ENCRYPT void hook_execve(){
     bytehook_stub_t stub = bytehook_hook_single(
             getArtLibName(),
@@ -389,5 +411,21 @@ DPT_ENCRYPT void hook_execve(){
     }
     else {
         DLOGE("execve hook fail!");
+    }
+}
+
+
+DPT_ENCRYPT void hook_write(){
+    bytehook_stub_t stub = bytehook_hook_all(
+            "libc.so",
+            "write",
+            (void *) fake_write,
+            nullptr,
+            nullptr);
+    if (stub != nullptr) {
+        DLOGD("write hook success!");
+    }
+    else {
+        DLOGE("write hook fail!");
     }
 }

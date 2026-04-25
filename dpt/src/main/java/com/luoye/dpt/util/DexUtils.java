@@ -31,6 +31,7 @@ import org.json.JSONObject;
 import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
+import java.nio.ByteBuffer;
 import java.security.SecureRandom;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -497,7 +498,7 @@ public class DexUtils {
     /**
      * Write dex hashes
      */
-    public static void writeHashes(File oldDexFile,File newDexFile){
+    public static void writeHashes(File oldDexFile, File newDexFile){
         byte[] dexData = IoUtils.readFile(oldDexFile.getAbsolutePath());
 
         Dex dex = null;
@@ -509,6 +510,13 @@ public class DexUtils {
         catch (Exception e){
             e.printStackTrace();
         }
+    }
+
+    public static String getDexSignature(File dexFile) {
+        byte[] dexData = IoUtils.readFile(dexFile.getAbsolutePath());
+        byte[] signature = new byte[20];
+        ByteBuffer.wrap(dexData).position(9).get(signature);
+        return HexUtils.toHexString(signature);
     }
 
     /**

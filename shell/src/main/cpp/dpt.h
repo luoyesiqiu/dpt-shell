@@ -39,7 +39,14 @@
 
 using namespace dpt;
 
-std::unordered_map<int,std::vector<data::CodeItem *> *> dexMap;
+
+struct ShellConfig {
+    std::string application_name;
+    std::string application_component_factory;
+    std::string jni_class_name;
+    std::string app_sign_sha256;
+    std::string dex_sign;
+};
 
 void callRealApplicationOnCreate(JNIEnv *env, jclass, jstring realApplicationClassName);
 
