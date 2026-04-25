@@ -13,4 +13,21 @@ ext {
     soName = generateHexString()
     fullSoName = "lib${soName}.so"
     shellPackageName = generateHexString()
+
+    // Android SDK versions
+    compileSdkVersion = 36
+    minSdkVersion = 21
+    targetSdkVersion = 36
+
+    // App version
+    appVersionCode = 1
+    appVersionName = "2.10.0"
+
+    // Java compatibility
+    shellJavaVersion = JavaVersion.VERSION_1_8
+    dptJavaVersion = JavaVersion.VERSION_11
+
+    // CMake
+    cmakeVersion = "3.31.1"
+
 }

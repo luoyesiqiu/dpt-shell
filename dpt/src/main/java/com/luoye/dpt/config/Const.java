@@ -6,7 +6,6 @@ import com.luoye.dpt.util.StringUtils;
  * @author luoyesiqiu
  */
 public class Const {
-    public static final String PROGRAM_VERSION = "2.9.0";
 
     public static final String OPTION_OPEN_NOISY_LOG_LONG = "noisy-log";
 

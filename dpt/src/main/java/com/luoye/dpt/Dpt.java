@@ -1,5 +1,6 @@
 package com.luoye.dpt;
 
+import com.android.dx.command.dexer.Main;
 import com.luoye.dpt.builder.Aab;
 import com.luoye.dpt.builder.AndroidPackage;
 import com.luoye.dpt.builder.Apk;
@@ -38,7 +39,12 @@ public class Dpt {
     }
 
     private static void printVersion() {
-        System.out.println(Const.PROGRAM_VERSION);
+        Package pkg = Dpt.class.getPackage();
+        String version = (pkg != null) ? pkg.getImplementationVersion() : null;
+        if (version == null) {
+            version = "unknown";
+        }
+        System.out.println(version);
     }
 
     private static AndroidPackage parseOptions(String[] args) {

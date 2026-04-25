@@ -9,7 +9,7 @@ plugins {
 
 android {
     namespace 'com.luoye.dpt'
-    compileSdk 36
+    compileSdk rootProject.ext.compileSdkVersion
 
     buildFeatures {
         buildConfig = true
@@ -17,10 +17,10 @@ android {
 
     defaultConfig {
         applicationId "com.luoye.dpt"
-        minSdkVersion 21
-        targetSdkVersion 36
-        versionCode 1
-        versionName "1.0"
+        minSdkVersion rootProject.ext.minSdkVersion
+        targetSdkVersion rootProject.ext.targetSdkVersion
+        versionCode rootProject.ext.appVersionCode
+        versionName rootProject.ext.appVersionName
 
         multiDexEnabled false
 
@@ -50,12 +50,12 @@ android {
     externalNativeBuild {
         cmake {
             path "src/main/cpp/CMakeLists.txt"
-            version "3.31.1"
+            version rootProject.ext.cmakeVersion
         }
     }
     compileOptions {
-        sourceCompatibility JavaVersion.VERSION_1_8
-        targetCompatibility JavaVersion.VERSION_1_8
+        sourceCompatibility rootProject.ext.shellJavaVersion
+        targetCompatibility rootProject.ext.shellJavaVersion
     }
 }
 
