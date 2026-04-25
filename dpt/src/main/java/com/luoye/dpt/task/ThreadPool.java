@@ -13,8 +13,8 @@ import java.util.concurrent.TimeUnit;
 public class ThreadPool {
     private static final ThreadPool sInst = new ThreadPool();
     private static final ThreadPoolExecutor sThreadPoolExecutor = new ThreadPoolExecutor(
+            2,
             Runtime.getRuntime().availableProcessors(),
-            Runtime.getRuntime().availableProcessors() * 2,
             0L,
             TimeUnit.MILLISECONDS,
             new LinkedBlockingQueue<>(),
