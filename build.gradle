@@ -9,10 +9,29 @@ static def generateHexString() {
     return Long.toHexString(secureRandom.nextLong())
 }
 
+// Persist soName/dptBuildKey across Gradle invocations so dpt.jar and shell SO stay in sync.
+// Stored under the root build/ directory; clean deletes it so the next build regenerates.
+def dptBuildIdsFile = file("${rootDir}/build/dpt-build-ids.properties")
+def dptBuildIds = new Properties()
+if (dptBuildIdsFile.exists()) {
+    dptBuildIdsFile.withInputStream { dptBuildIds.load(it) }
+}
+def resolvedSoName = dptBuildIds.getProperty("soName")
+def resolvedBuildKey = dptBuildIds.getProperty("dptBuildKey")
+if (!resolvedSoName || resolvedSoName.isEmpty() || !resolvedBuildKey || resolvedBuildKey.isEmpty()) {
+    resolvedSoName = generateHexString()
+    resolvedBuildKey = generateHexString()
+    dptBuildIds.setProperty("soName", resolvedSoName)
+    dptBuildIds.setProperty("dptBuildKey", resolvedBuildKey)
+    dptBuildIdsFile.parentFile.mkdirs()
+    dptBuildIdsFile.withOutputStream { dptBuildIds.store(it, "dpt-shell build ids. Delete to regenerate.") }
+}
+
 ext {
-    soName = generateHexString()
+    soName = resolvedSoName
     fullSoName = "lib${soName}.so"
     shellPackageName = generateHexString()
+    dptBuildKey = resolvedBuildKey
 
     // Android SDK versions
     compileSdkVersion = 36
@@ -30,4 +49,17 @@ ext {
     // CMake
     cmakeVersion = "3.31.1"
 
+}
+
+subprojects { sub ->
+    sub.afterEvaluate {
+        sub.tasks.matching { it.name == 'clean' }.configureEach { task ->
+            task.doFirst {
+                if (dptBuildIdsFile.exists()) {
+                    dptBuildIdsFile.delete()
+                    println("Deleted ${dptBuildIdsFile}")
+                }
+            }
+        }
+    }
 }

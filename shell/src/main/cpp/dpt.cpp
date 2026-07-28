@@ -518,8 +518,9 @@ DPT_ENCRYPT void read_shell_config(JNIEnv *env) {
 
             std::string packageName(packageNameChs);
             env->ReleaseStringUTFChars(packageNameJstr, packageNameChs);
-            const char *version = AY_OBFUSCATE(DPT_VERSION_NAME);
-            std::string key_material = packageName + "_" + version;
+            const char *buildKey = AY_OBFUSCATE(DPT_BUILD_KEY);
+            const char *keySep = AY_OBFUSCATE("_");
+            std::string key_material = packageName + keySep + buildKey;
             DLOGD("key material for config key: %s", key_material.c_str());
 
             auto aes_key = hmac_sha256(DPT_UNKNOWN_DATA,
@@ -550,13 +551,20 @@ DPT_ENCRYPT void read_shell_config(JNIEnv *env) {
                 DLOGD("raw config: '%s'", jsonStr.c_str());
 
                 nlohmann::json shell_config = nlohmann::json::parse(jsonStr);
-                g_shell_config.application_name = shell_config.value("app_name", "");
-                g_shell_config.application_component_factory = shell_config.value("acf_name", "");
-                g_shell_config.jni_class_name = shell_config.value("jni_cls_name", "");
-                g_shell_config.app_sign_sha256 = shell_config.value("app_sign_sha256", "");
-                g_shell_config.dex_sign = shell_config.value("dex_sign", "");
-                g_shell_config.insns_xor_key = shell_config.value("insns_xor_key", 0);
-                g_shell_config.risk_check_flags = shell_config.value("risk_check_flags", 0);
+                const char *keyAppName = AY_OBFUSCATE("app_name");
+                const char *keyAcfName = AY_OBFUSCATE("acf_name");
+                const char *keyJniClsName = AY_OBFUSCATE("jni_cls_name");
+                const char *keyAppSignSha256 = AY_OBFUSCATE("app_sign_sha256");
+                const char *keyDexSign = AY_OBFUSCATE("dex_sign");
+                const char *keyInsnsXorKey = AY_OBFUSCATE("insns_xor_key");
+                const char *keyRiskCheckFlags = AY_OBFUSCATE("risk_check_flags");
+                g_shell_config.application_name = shell_config.value(keyAppName, "");
+                g_shell_config.application_component_factory = shell_config.value(keyAcfName, "");
+                g_shell_config.jni_class_name = shell_config.value(keyJniClsName, "");
+                g_shell_config.app_sign_sha256 = shell_config.value(keyAppSignSha256, "");
+                g_shell_config.dex_sign = shell_config.value(keyDexSign, "");
+                g_shell_config.insns_xor_key = shell_config.value(keyInsnsXorKey, 0);
+                g_shell_config.risk_check_flags = shell_config.value(keyRiskCheckFlags, 0);
 
                 DLOGD("application_name = %s", g_shell_config.application_name.c_str());
                 DLOGD("application_component_factory = %s", g_shell_config.application_component_factory.c_str());

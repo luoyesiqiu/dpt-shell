@@ -33,7 +33,7 @@ public class ConfigKeyDerivationTest {
         randomKey[9] = 0x74;
 
         String packageName = "com.example.app";
-        String keyMaterial = packageName + "2.14.0";
+        String keyMaterial = packageName + "_" + "a1b2c3d4e5f67890";
         byte[] aesKey = CryptoUtils.hmacSha256(randomKey, keyMaterial);
         Assert.assertEquals(32, aesKey.length);
 
@@ -52,6 +52,13 @@ public class ConfigKeyDerivationTest {
     @Test(expected = IllegalArgumentException.class)
     public void testHmacRejectEmptyKeyMaterial() {
         CryptoUtils.hmacSha256(new byte[16], "");
+    }
+
+    @Test
+    public void testGetBuildKeyWithoutJarManifest() {
+        // Without shell-files/build-key, unit tests usually fall back to jar manifest (often absent).
+        String buildKey = Dpt.getBuildKey();
+        Assert.assertTrue(buildKey == null || !buildKey.isEmpty());
     }
 
     private static byte[] hexToBytes(String hex) {
