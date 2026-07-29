@@ -14,6 +14,8 @@
 #include <cctype>
 #include <vector>
 #include <optional>
+#include <sys/syscall.h>
+#include <sys/uio.h>
 
 #include "dpt_util.h"
 #include "common/dpt_log.h"
@@ -102,6 +104,29 @@ int dpt_mprotect(void *start, void *end, int prot) {
         return -1;
     }
     return 0;
+}
+
+// Check whether [addr, addr + len) is readable without risking a SIGSEGV from
+// directly dereferencing it: process_vm_readv fails with EFAULT instead of
+// crashing when the remote range is not mapped/readable.
+bool isMemReadable(const void *addr, size_t len) {
+    struct iovec local_iov{};
+    struct iovec remote_iov{};
+    void *local_buffer = malloc(len);
+    if (local_buffer == nullptr) {
+        return false;
+    }
+
+    local_iov.iov_base = local_buffer;
+    local_iov.iov_len = len;
+
+    remote_iov.iov_base = const_cast<void *>(addr);
+    remote_iov.iov_len = len;
+
+    ssize_t nread = syscall(__NR_process_vm_readv, getpid(), &local_iov, 1, &remote_iov, 1, 0);
+    free(local_buffer);
+
+    return nread == static_cast<ssize_t>(len);
 }
 
 static int separate_dex_number(std::string &str) {

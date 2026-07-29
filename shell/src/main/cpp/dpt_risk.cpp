@@ -96,11 +96,17 @@ DPT_ENCRYPT NO_INLINE void verifyLibcTextCrc() {
         return;
     }
 
+    const auto *mem_base = reinterpret_cast<const uint8_t *>(info.dli_fbase) + shdr.sh_addr;
+    if (!isMemReadable(mem_base, shdr.sh_size)) {
+        DLOGW("libc .text memory not readable, skip text crc");
+        DPT_FREE(file_buf);
+        return;
+    }
+
     uint32_t crc_file = 0;
     uint32_t crc_mem = 0;
     size_t remaining = shdr.sh_size;
     size_t offset = 0;
-    const auto *mem_base = reinterpret_cast<const uint8_t *>(info.dli_fbase) + shdr.sh_addr;
     while (remaining > 0) {
         int32_t chunk = remaining > static_cast<size_t>(INT32_MAX)
                         ? INT32_MAX

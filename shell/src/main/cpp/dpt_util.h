@@ -69,6 +69,7 @@ void get_elf_section(Elf_Shdr *target,const char *elf_path,const char *sh_name);
 
 int dpt_mprotect(void *start,void *end,int prot);
 size_t dpt_readlink(int fd, char *result_path,size_t path_max_len);
+bool isMemReadable(const void *addr, size_t len);
 
 void getClassName(JNIEnv *env,jobject obj,char *destClassName,size_t max_len);
 void parseClassName(const char *src, char *dest);
