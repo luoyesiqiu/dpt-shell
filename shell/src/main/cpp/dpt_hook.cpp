@@ -5,6 +5,7 @@
 #include <map>
 #include <unordered_map>
 #include <vector>
+#include <sys/prctl.h>
 #include <sys/system_properties.h>
 #include "dex/CodeItem.h"
 #include "common/dpt_string.h"
@@ -143,7 +144,17 @@ DPT_ENCRYPT void patchClass(__unused const char* descriptor,
         size_t descriptorLength = dpt_strlen(descriptor);
         char ch = descriptor[descriptorLength - 2];
         DLOGD("Attempt patch junk class %s ,char is '%c'",descriptor,ch);
-        if(isdigit(ch)) {
+        if(isdigit(static_cast<unsigned char>(ch))) {
+            // Android 11+ ART BackgroundVerificationTask will DefineClass every class,
+            // including numbered junk classes. That is not a dump attack — skip abort.
+            char thread_name[16] = {};
+            // prctl works from API 1; pthread_getname_np needs higher API.
+            if (prctl(PR_GET_NAME, thread_name) == 0
+                && dpt_strstr(thread_name, AY_OBFUSCATE("Verification")) != nullptr) {
+                DLOGW("Ignore junk class define from ART verifier thread(%s): %s",
+                      thread_name, descriptor);
+                return;
+            }
             DLOGE("Find illegal call, desc: %s!", descriptor);
             dpt_crash();
             return;
@@ -174,8 +185,43 @@ DPT_ENCRYPT void patchClass(__unused const char* descriptor,
             dexSize = dexFileV21->size_ == 0 ? dexFileV21->header_->file_size_ : dexFileV21->size_;
         }
 
-        if(location.rfind(DEXES_ZIP_NAME) != std::string::npos && dex_class_def){
+        // Disk path: .../i11111i111.zip
+        // InMemoryDexClassLoader:
+        //   older: "InMemoryDexFile" / "InMemoryDexFile0"...
+        //   newer: ".../Anonymous-DexFile@<id>.jar" (no multidex index in location)
+        const bool is_in_memory_dex =
+                location.find("InMemoryDexFile") != std::string::npos
+                || location.find("Anonymous-DexFile") != std::string::npos;
+        const bool is_our_dex =
+                location.rfind(DEXES_ZIP_NAME) != std::string::npos
+                || is_in_memory_dex;
+        if(is_our_dex && dex_class_def){
             int dexIndex = parse_dex_number(location);
+            if (is_in_memory_dex) {
+                const auto &dexFiles = getInMemoryDexFiles();
+                int resolved = -1;
+                // Prefer pointer identity: NewDirectByteBuffer keeps our buffer.
+                for (size_t i = 0; i < dexFiles.size(); i++) {
+                    if (dexFiles[i].first == begin) {
+                        resolved = static_cast<int>(i);
+                        break;
+                    }
+                }
+                // Anonymous-DexFile@... / bare InMemoryDexFile have no reliable index.
+                if (resolved < 0 &&
+                    (location.find("Anonymous-DexFile") != std::string::npos
+                     || location == "InMemoryDexFile")) {
+                    for (size_t i = 0; i < dexFiles.size(); i++) {
+                        if (dexFiles[i].second == static_cast<size_t>(dexSize)) {
+                            resolved = static_cast<int>(i);
+                            break;
+                        }
+                    }
+                }
+                if (resolved >= 0) {
+                    dexIndex = resolved;
+                }
+            }
 
             auto* class_def = (dex::ClassDef *)dex_class_def;
             NLOG("class_desc = '%s', class_idx_ = 0x%x, class data off = 0x%x",descriptor,class_def->class_idx_,class_def->class_data_off_);
