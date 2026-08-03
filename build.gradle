@@ -40,7 +40,7 @@ ext {
 
     // App version
     appVersionCode = 1
-    appVersionName = "2.17.0"
+    appVersionName = "2.18.0"
 
     // Java compatibility
     shellJavaVersion = JavaVersion.VERSION_1_8
