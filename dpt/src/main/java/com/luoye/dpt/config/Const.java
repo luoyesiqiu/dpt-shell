@@ -75,6 +75,8 @@ public class Const {
     public static final String KEY_LIBS_DIR_NAME = "vwwwwwvwww";
     public static final String KEY_JNI_BASE_CLASS_NAME = "JniBridge";
     public static final String DEFAULT_SHELL_PACKAGE_NAME = "com/luoyesiqiu/shell";
+    /** Auto shell package placeholder; resolved to "{appPackage}.shell" after package name is known. */
+    public static final String SHELL_PACKAGE_NAME_AUTO = "<random>";
     public static final String RANDOM_DIR_NAME = StringUtils.generateIdentifier(16);
 
 }

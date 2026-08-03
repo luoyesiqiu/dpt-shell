@@ -181,6 +181,7 @@ public class Apk extends AndroidPackage {
 
         String packageName = ApkManifestEditor.getPackageName(apkMainProcessPath + File.separator + "AndroidManifest.xml");
         apk.setPackageName(packageName);
+        apk.resolveDefaultShellPackageName();
 
         /*======================================*
          * Process AndroidManifest.xml

@@ -184,6 +184,7 @@ public class Aab extends AndroidPackage {
 
         String packageName = AabManifestEditor.getPackageName(manifestFilePath);
         aab.setPackageName(packageName);
+        aab.resolveDefaultShellPackageName();
 
         /*======================================*
          * Process AndroidManifest.xml

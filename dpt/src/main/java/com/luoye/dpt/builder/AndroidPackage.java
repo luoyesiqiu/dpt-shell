@@ -954,10 +954,10 @@ public abstract class AndroidPackage {
     }
 
     private void processProtectConfigFile() {
-        // init config
-        String randomPackageName = StringUtils.generateIdentifier(10);
+        // Default shell package uses placeholder "<random>", resolved later to "{appPackage}.shell"
+        String autoShellPackageName = Const.SHELL_PACKAGE_NAME_AUTO;
         if(org.apache.commons.lang3.StringUtils.isBlank(getProtectConfigFile())) {
-            ShellConfig.getInstance().init(randomPackageName);
+            ShellConfig.getInstance().init(autoShellPackageName);
             return;
         }
 
@@ -969,8 +969,8 @@ public abstract class AndroidPackage {
 
             if(shellConfigFromFile != null) {
                 ShellConfig shellConfig = ShellConfig.getInstance();
-                if("<random>".equals(shellConfigFromFile.getShellPackageName())) {
-                    shellConfigFromFile.setShellPackageName(randomPackageName);
+                if(Const.SHELL_PACKAGE_NAME_AUTO.equals(shellConfigFromFile.getShellPackageName())) {
+                    shellConfigFromFile.setShellPackageName(autoShellPackageName);
                 }
 
                 LogUtils.info("Use config: %s", shellConfigFromFile);
@@ -978,13 +978,35 @@ public abstract class AndroidPackage {
 
             }
             else {
-                ShellConfig.getInstance().init(randomPackageName);
+                ShellConfig.getInstance().init(autoShellPackageName);
             }
 
         } catch (Exception e) {
             LogUtils.error("Read config file error");
-            ShellConfig.getInstance().init(randomPackageName);
+            ShellConfig.getInstance().init(autoShellPackageName);
         }
+    }
+
+    /**
+     * Resolve auto shell package name to "{applicationPackage}.shell" after package name is known.
+     */
+    public void resolveDefaultShellPackageName() {
+        ShellConfig shellConfig = ShellConfig.getInstance();
+        if (!Const.SHELL_PACKAGE_NAME_AUTO.equals(shellConfig.getShellPackageName())) {
+            return;
+        }
+
+        String packageName = getPackageName();
+        if (org.apache.commons.lang3.StringUtils.isBlank(packageName)) {
+            String fallback = StringUtils.generateIdentifier(10);
+            shellConfig.setShellPackageName(fallback);
+            LogUtils.warn("Package name is empty, fallback to random shell package name: %s", fallback);
+            return;
+        }
+
+        String shellPackageName = packageName + ".shell";
+        shellConfig.setShellPackageName(shellPackageName);
+        LogUtils.info("Shell package name: %s", shellPackageName);
     }
 
     private KeyStore loadKeyStore(InputStream inputStream, char[] password) {
