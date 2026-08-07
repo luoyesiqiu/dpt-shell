@@ -7,7 +7,6 @@
 #include "external/json/json.hpp"
 
 #include <memory>
-#include <android/api-level.h>
 
 using namespace dpt;
 
@@ -64,122 +63,6 @@ DPT_ENCRYPT jobjectArray makePathElements(JNIEnv* env,const char *pathChs) {
     return elements;
 }
 
-DPT_ENCRYPT static jobjectArray mergeDexElements(JNIEnv *env,
-                                                   jobjectArray originDexElements,
-                                                   jobjectArray extraDexElements) {
-    jsize extraSize = env->GetArrayLength(extraDexElements);
-    jsize originSize = env->GetArrayLength(originDexElements);
-
-    dalvik_system_DexPathList::Element element(env, nullptr);
-    jclass ElementClass = element.getClass();
-    jobjectArray newDexElements = env->NewObjectArray(originSize + extraSize, ElementClass, nullptr);
-
-    for (int i = 0; i < originSize; i++) {
-        jobject elementObj = env->GetObjectArrayElement(originDexElements, i);
-        env->SetObjectArrayElement(newDexElements, i, elementObj);
-    }
-
-    for (int i = 0; i < extraSize; i++) {
-        jobject elementObj = env->GetObjectArrayElement(extraDexElements, i);
-        env->SetObjectArrayElement(newDexElements, originSize + i, elementObj);
-    }
-    return newDexElements;
-}
-
-DPT_ENCRYPT static jobjectArray makeInMemoryDexElements(JNIEnv *env, jobject targetClassLoader) {
-    const auto &dexFiles = getInMemoryDexFiles();
-    if (dexFiles.empty()) {
-        DLOGE("no in-memory dex files");
-        return nullptr;
-    }
-
-    jclass byteBufferClass = env->FindClass("java/nio/ByteBuffer");
-    if (byteBufferClass == nullptr) {
-        DLOGE("FindClass ByteBuffer failed");
-        return nullptr;
-    }
-
-    jclass imclClass = env->FindClass("dalvik/system/InMemoryDexClassLoader");
-    if (imclClass == nullptr) {
-        DLOGE("FindClass InMemoryDexClassLoader failed");
-        return nullptr;
-    }
-
-    const int apiLevel = android_get_device_api_level();
-    jobjectArray allExtraElements = nullptr;
-
-    if (apiLevel >= 27) {
-        // API 27+: InMemoryDexClassLoader(ByteBuffer[], ClassLoader)
-        jobjectArray buffers = env->NewObjectArray(static_cast<jsize>(dexFiles.size()),
-                                                   byteBufferClass, nullptr);
-        for (size_t i = 0; i < dexFiles.size(); i++) {
-            jobject bb = env->NewDirectByteBuffer(dexFiles[i].first,
-                                                  static_cast<jlong>(dexFiles[i].second));
-            if (bb == nullptr) {
-                DLOGE("NewDirectByteBuffer failed at %zu", i);
-                return nullptr;
-            }
-            env->SetObjectArrayElement(buffers, static_cast<jsize>(i), bb);
-        }
-
-        jmethodID ctor = env->GetMethodID(imclClass, "<init>",
-                                          "([Ljava/nio/ByteBuffer;Ljava/lang/ClassLoader;)V");
-        if (ctor == nullptr) {
-            DLOGE("InMemoryDexClassLoader ByteBuffer[] ctor not found");
-            return nullptr;
-        }
-        jobject imcl = env->NewObject(imclClass, ctor, buffers, targetClassLoader);
-        if (imcl == nullptr || env->ExceptionCheck()) {
-            env->ExceptionDescribe();
-            env->ExceptionClear();
-            DLOGE("create InMemoryDexClassLoader failed");
-            return nullptr;
-        }
-
-        dalvik_system_BaseDexClassLoader base(env, imcl);
-        jobject pathListObj = base.getPathList();
-        dalvik_system_DexPathList pathList(env, pathListObj);
-        allExtraElements = pathList.getDexElements();
-    } else {
-        // API 26: only single-buffer ctor is available; merge elements one by one.
-        jmethodID ctor = env->GetMethodID(imclClass, "<init>",
-                                          "(Ljava/nio/ByteBuffer;Ljava/lang/ClassLoader;)V");
-        if (ctor == nullptr) {
-            DLOGE("InMemoryDexClassLoader ByteBuffer ctor not found");
-            return nullptr;
-        }
-
-        for (size_t i = 0; i < dexFiles.size(); i++) {
-            jobject bb = env->NewDirectByteBuffer(dexFiles[i].first,
-                                                  static_cast<jlong>(dexFiles[i].second));
-            if (bb == nullptr) {
-                DLOGE("NewDirectByteBuffer failed at %zu", i);
-                return nullptr;
-            }
-            jobject imcl = env->NewObject(imclClass, ctor, bb, targetClassLoader);
-            if (imcl == nullptr || env->ExceptionCheck()) {
-                env->ExceptionDescribe();
-                env->ExceptionClear();
-                DLOGE("create InMemoryDexClassLoader failed at %zu", i);
-                return nullptr;
-            }
-
-            dalvik_system_BaseDexClassLoader base(env, imcl);
-            jobject pathListObj = base.getPathList();
-            dalvik_system_DexPathList pathList(env, pathListObj);
-            jobjectArray oneElements = pathList.getDexElements();
-            if (allExtraElements == nullptr) {
-                allExtraElements = oneElements;
-            } else {
-                allExtraElements = mergeDexElements(env, allExtraElements, oneElements);
-            }
-        }
-    }
-
-    DLOGD("makeInMemoryDexElements count from %zu dex file(s)", dexFiles.size());
-    return allExtraElements;
-}
-
 DPT_ENCRYPT void combineDexElement(JNIEnv* env, jclass __unused, jobject targetClassLoader, const char* pathChs) {
     jobjectArray extraDexElements = makePathElements(env,pathChs);
 
@@ -191,37 +74,33 @@ DPT_ENCRYPT void combineDexElement(JNIEnv* env, jclass __unused, jobject targetC
 
     jobjectArray originDexElements = targetDexPathList.getDexElements();
 
-    jobjectArray newDexElements = mergeDexElements(env, originDexElements, extraDexElements);
+    jsize extraSize = env->GetArrayLength(extraDexElements);
+    jsize originSize = env->GetArrayLength(originDexElements);
+
+    dalvik_system_DexPathList::Element element(env, nullptr);
+    jclass ElementClass = element.getClass();
+    jobjectArray  newDexElements = env->NewObjectArray(originSize + extraSize,ElementClass, nullptr);
+
+    for(int i = 0;i < originSize;i++) {
+        jobject elementObj = env->GetObjectArrayElement(originDexElements, i);
+        env->SetObjectArrayElement(newDexElements,i,elementObj);
+    }
+
+    for(int i = originSize;i < originSize + extraSize;i++) {
+        jobject elementObj = env->GetObjectArrayElement(extraDexElements, i - originSize);
+        env->SetObjectArrayElement(newDexElements,i,elementObj);
+    }
+
     targetDexPathList.setDexElements(newDexElements);
 
     DLOGD("success");
 }
 
-DPT_ENCRYPT void combineDexElements(JNIEnv *env, jclass klass, jobject targetClassLoader) {
-    clock_t cl = clock();
-    const int apiLevel = android_get_device_api_level();
+DPT_ENCRYPT void combineDexElements(JNIEnv* env, jclass klass, jobject targetClassLoader) {
+    char compressedDexesPathChs[256] = {0};
+    getCompressedDexesPath(env,compressedDexesPathChs, ARRAY_LENGTH(compressedDexesPathChs));
 
-    if (apiLevel >= 26) {
-        jobjectArray extraDexElements = makeInMemoryDexElements(env, targetClassLoader);
-        if (extraDexElements == nullptr) {
-            DLOGE("makeInMemoryDexElements failed");
-            return;
-        }
-
-        dalvik_system_BaseDexClassLoader targetBaseDexClassLoader(env, targetClassLoader);
-        jobject originDexPathListObj = targetBaseDexClassLoader.getPathList();
-        dalvik_system_DexPathList targetDexPathList(env, originDexPathListObj);
-        jobjectArray originDexElements = targetDexPathList.getDexElements();
-
-        jobjectArray newDexElements = mergeDexElements(env, originDexElements, extraDexElements);
-        targetDexPathList.setDexElements(newDexElements);
-        printTime("combineDexElements(in-memory) success, took = ", cl);
-    } else {
-        char compressedDexesPathChs[256] = {0};
-        getCompressedDexesPath(env,compressedDexesPathChs, ARRAY_LENGTH(compressedDexesPathChs));
-        combineDexElement(env, klass, targetClassLoader, compressedDexesPathChs);
-        printTime("combineDexElements(disk) success, took = ", cl);
-    }
+    combineDexElement(env, klass, targetClassLoader, compressedDexesPathChs);
 
 #ifndef DEBUG
     junkCodeDexProtect(env);
@@ -554,11 +433,7 @@ DPT_ENCRYPT void init_app(JNIEnv *env, jclass __unused) {
     readCodeItem((uint8_t *)entry_data, entry_size);
 
     pthread_mutex_lock(&g_write_dexes_mutex);
-    if (android_get_device_api_level() >= 26) {
-        loadDexesToMemory(package_addr, package_size);
-    } else {
-        extractDexesInNeeded(env, package_addr, package_size);
-    }
+    extractDexesInNeeded(env, package_addr, package_size);
     pthread_mutex_unlock(&g_write_dexes_mutex);
 
     unload_package(package_addr, package_size);

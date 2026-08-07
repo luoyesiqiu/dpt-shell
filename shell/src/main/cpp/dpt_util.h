@@ -24,10 +24,6 @@
 #include <iostream>
 #include <sstream>
 #include <iomanip>
-#include <vector>
-#include <utility>
-#include <optional>
-#include <tuple>
 
 
 #include <mz_zip.h>
@@ -62,19 +58,7 @@ jstring getCompressedDexesPathExport(JNIEnv *,jclass __unused);
 void appendLog(const char* log);
 void load_package(JNIEnv *env,void **package_addr,size_t *package_size);
 void unload_package(void *apk_addr,size_t package_size);
-
-/**
- * API < 26: extract protected DEX zip into app code_cache (disk).
- */
-void extractDexesInNeeded(JNIEnv *env, void *package_addr, size_t package_size);
-
-/**
- * API >= 26: load protected DEX files into memory (no disk write).
- * Each item is (dex_bytes, dex_size), ordered as classes.dex / classes2.dex / ...
- */
-void loadDexesToMemory(void *package_addr, size_t package_size);
-const std::vector<std::pair<uint8_t *, size_t>> &getInMemoryDexFiles();
-void clearInMemoryDexFiles();
+void extractDexesInNeeded(JNIEnv *env,void *package_addr,size_t package_size);
 
 std::optional<std::tuple<uint8_t*, size_t>> read_zip_file_entry(void* zip_addr, off_t zip_size, const char* entry_name);
 

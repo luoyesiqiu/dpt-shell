@@ -153,24 +153,6 @@ static int separate_dex_number(std::string &str) {
  * 旧逻辑因为只在出现 ".dex" 时才解析,会把所有 dex 都算成 0,导致只有 dex0 被正确还原。
  */
 int parse_dex_number(std::string &location) {
-    // Newer InMemoryDexClassLoader: ".../Anonymous-DexFile@<id>.jar"
-    // The @id is NOT a multidex index; caller must resolve via buffer pointer/size.
-    if (location.find("Anonymous-DexFile") != std::string::npos) {
-        return 0;
-    }
-
-    // Older InMemoryDexClassLoader: "InMemoryDexFile" / "InMemoryDexFile0" / "InMemoryDexFile1"...
-    const std::string kInMemoryPrefix = "InMemoryDexFile";
-    size_t inmem_pos = location.find(kInMemoryPrefix);
-    if (inmem_pos != std::string::npos) {
-        std::string tail = location.substr(inmem_pos + kInMemoryPrefix.size());
-        // No trailing index (API 26 single-buffer) -> 0; otherwise parse digits.
-        if (tail.empty() || !isdigit(static_cast<unsigned char>(tail[0]))) {
-            return 0;
-        }
-        return separate_dex_number(tail);
-    }
-
     size_t sep = location.rfind('!');
     if (sep == std::string::npos) {
         sep = location.rfind(':');
@@ -320,7 +302,6 @@ static uint32_t readZipLength(const uint8_t *data, size_t size) {
     return length;
 }
 
-
 DPT_ENCRYPT static void
 writeDexAchieve(const char *dexAchievePath, void *package_addr, size_t package_size) {
     DLOGD("zipCode open = %s", dexAchievePath);
@@ -334,6 +315,7 @@ writeDexAchieve(const char *dexAchievePath, void *package_addr, size_t package_s
             DLOGD("Extracted zip data length: %u", (unsigned int) zipDataLen);
 
             if (zipDataLen > 0 && entry_size > zipDataLen + 4) {
+                // Zip file data starts at the end of classes.dex minus the zip length and 4 bytes for the length field
                 uint8_t *zipDataStart = (uint8_t *) entry_data + (entry_size - zipDataLen - 4);
                 fwrite(zipDataStart, 1, zipDataLen, fp);
                 DLOGD("Zip file extracted and written successfully.");
@@ -347,6 +329,7 @@ writeDexAchieve(const char *dexAchievePath, void *package_addr, size_t package_s
             DLOGE("Failed to read classes.dex.");
         }
         fclose(fp);
+
     } else {
         DLOGE("WTF! zipCode write fail: %s", strerror(errno));
     }
@@ -364,6 +347,7 @@ DPT_ENCRYPT void extractDexesInNeeded(JNIEnv *env, void *package_addr, size_t pa
             writeDexAchieve(compressedDexesPathChs, package_addr, package_size);
             chmod(compressedDexesPathChs, 0444);
             DLOGI("%s write finish", compressedDexesPathChs);
+
         } else {
             DLOGI("dex files is achieved!");
         }
@@ -375,181 +359,6 @@ DPT_ENCRYPT void extractDexesInNeeded(JNIEnv *env, void *package_addr, size_t pa
             DLOGE("WTF! extractDexes cannot make code_cache directory!");
         }
     }
-}
-
-// Held for process lifetime: ART may pin direct ByteBuffers on some API levels.
-static std::vector<std::pair<uint8_t *, size_t>> g_inMemoryDexFiles;
-
-const std::vector<std::pair<uint8_t *, size_t>> &getInMemoryDexFiles() {
-    return g_inMemoryDexFiles;
-}
-
-void clearInMemoryDexFiles() {
-    for (auto &item: g_inMemoryDexFiles) {
-        delete[] item.first;
-        item.first = nullptr;
-    }
-    g_inMemoryDexFiles.clear();
-}
-
-static int classes_dex_index(const char *filename) {
-    if (filename == nullptr) {
-        return -1;
-    }
-    // Only accept plain names like classes.dex / classes2.dex (zip entries are flat).
-    if (strchr(filename, '/') != nullptr || strchr(filename, '\\') != nullptr) {
-        return -1;
-    }
-    if (strcmp(filename, "classes.dex") == 0) {
-        return 0;
-    }
-    if (strncmp(filename, "classes", 7) != 0) {
-        return -1;
-    }
-    const char *num_start = filename + 7;
-    if (!isdigit(static_cast<unsigned char>(*num_start))) {
-        return -1;
-    }
-    char *end = nullptr;
-    long n = strtol(num_start, &end, 10);
-    if (end == nullptr || strcmp(end, ".dex") != 0 || n < 2) {
-        return -1;
-    }
-    return static_cast<int>(n - 1);
-}
-
-DPT_ENCRYPT static std::optional<std::tuple<uint8_t *, size_t>>
-readDexZipFromPackage(void *package_addr, size_t package_size) {
-    auto entry = read_zip_file_entry(package_addr, package_size, COMBINE_DEX_FILES_NAME_IN_ZIP);
-    if (!entry.has_value()) {
-        DLOGE("Failed to read classes.dex from package");
-        return std::nullopt;
-    }
-
-    auto [entry_data, entry_size] = entry.value();
-    DLOGD("Read classes.dex of size: %lu", (unsigned long) entry_size);
-    uint32_t zipDataLen = readZipLength(entry_data, entry_size);
-    DLOGD("Extracted zip data length: %u", (unsigned int) zipDataLen);
-
-    if (zipDataLen == 0 || entry_size <= zipDataLen + 4) {
-        DLOGE("Invalid zip data length: %u. dex_files_size: %lu",
-              (unsigned int) zipDataLen, (unsigned long) entry_size);
-        delete[] entry_data;
-        return std::nullopt;
-    }
-
-    uint8_t *zipDataStart = entry_data + (entry_size - zipDataLen - 4);
-    auto *zip_copy = new uint8_t[zipDataLen];
-    memcpy(zip_copy, zipDataStart, zipDataLen);
-    delete[] entry_data;
-    return {{zip_copy, zipDataLen}};
-}
-
-DPT_ENCRYPT static bool
-unzipDexFilesToMemory(uint8_t *zip_addr, size_t zip_size,
-                      std::vector<std::pair<uint8_t *, size_t>> &out_dexes) {
-    struct DexEntry {
-        int index;
-        uint8_t *data;
-        size_t size;
-    };
-    std::vector<DexEntry> entries;
-
-    void *mem_stream = mz_stream_mem_create();
-    mz_stream_mem_set_buffer(mem_stream, zip_addr, zip_size);
-    mz_stream_open(mem_stream, nullptr, MZ_OPEN_MODE_READ);
-
-    void *zip_handle = mz_zip_create();
-    int32_t err = mz_zip_open(zip_handle, mem_stream, MZ_OPEN_MODE_READ);
-    if (err != MZ_OK) {
-        DLOGE("open dex zip fail: %d", err);
-        mz_zip_delete(&zip_handle);
-        mz_stream_mem_delete(&mem_stream);
-        return false;
-    }
-
-    err = mz_zip_goto_first_entry(zip_handle);
-    while (err == MZ_OK) {
-        mz_zip_file *file_info = nullptr;
-        err = mz_zip_entry_get_info(zip_handle, &file_info);
-        if (err != MZ_OK || file_info == nullptr) {
-            break;
-        }
-
-        int dex_index = classes_dex_index(file_info->filename);
-        if (dex_index >= 0 && file_info->uncompressed_size > 0) {
-            err = mz_zip_entry_read_open(zip_handle, 0, nullptr);
-            if (err == MZ_OK) {
-                auto *dex_data = new uint8_t[file_info->uncompressed_size];
-                int32_t bytes_read = mz_zip_entry_read(zip_handle, dex_data,
-                                                      file_info->uncompressed_size);
-                if (bytes_read == file_info->uncompressed_size) {
-                    DLOGD("unzip memory dex[%d] %s size=%d",
-                          dex_index, file_info->filename, bytes_read);
-                    entries.push_back({dex_index, dex_data,
-                                       static_cast<size_t>(file_info->uncompressed_size)});
-                } else {
-                    DLOGE("read dex entry fail: %s, read=%d expect=%d",
-                          file_info->filename, bytes_read,
-                          (int) file_info->uncompressed_size);
-                    delete[] dex_data;
-                }
-                mz_zip_entry_close(zip_handle);
-            }
-        }
-        err = mz_zip_goto_next_entry(zip_handle);
-    }
-
-    mz_zip_close(zip_handle);
-    mz_zip_delete(&zip_handle);
-    mz_stream_mem_delete(&mem_stream);
-
-    if (entries.empty()) {
-        DLOGE("no dex entries found in memory zip");
-        return false;
-    }
-
-    std::sort(entries.begin(), entries.end(),
-              [](const DexEntry &a, const DexEntry &b) { return a.index < b.index; });
-
-    out_dexes.clear();
-    out_dexes.reserve(entries.size());
-    for (auto &e: entries) {
-        if (static_cast<int>(out_dexes.size()) != e.index) {
-            DLOGW("unexpected dex index gap, expect=%zu got=%d", out_dexes.size(), e.index);
-        }
-        out_dexes.emplace_back(e.data, e.size);
-    }
-    return true;
-}
-
-DPT_ENCRYPT void loadDexesToMemory(void *package_addr, size_t package_size) {
-    if (!g_inMemoryDexFiles.empty()) {
-        DLOGI("in-memory dex files already loaded, count=%zu", g_inMemoryDexFiles.size());
-        return;
-    }
-
-    auto zip_opt = readDexZipFromPackage(package_addr, package_size);
-    if (!zip_opt.has_value()) {
-        DLOGE("readDexZipFromPackage failed");
-        return;
-    }
-
-    auto [zip_data, zip_size] = zip_opt.value();
-    std::vector<std::pair<uint8_t *, size_t>> dexes;
-    bool ok = unzipDexFilesToMemory(zip_data, zip_size, dexes);
-    delete[] zip_data;
-
-    if (!ok) {
-        for (auto &item: dexes) {
-            delete[] item.first;
-        }
-        DLOGE("unzipDexFilesToMemory failed");
-        return;
-    }
-
-    g_inMemoryDexFiles = std::move(dexes);
-    DLOGI("loaded %zu dex file(s) into memory", g_inMemoryDexFiles.size());
 }
 
 DPT_ENCRYPT static size_t align_to_page_size(size_t size) {

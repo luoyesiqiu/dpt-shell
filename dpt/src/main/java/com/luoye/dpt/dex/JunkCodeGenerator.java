@@ -55,8 +55,7 @@ public class JunkCodeGenerator {
 
     private static String generateClassName() {
         SecureRandom secureRandom = new SecureRandom();
-        // nextInt() can be negative; keep suffix non-negative for stable class names.
-        int number = Math.floorMod(secureRandom.nextInt(), MAX_GENERATE_COUNT * 10);
+        int number = secureRandom.nextInt() % (MAX_GENERATE_COUNT * 10);
 
         return String.format(Locale.US, "L%s%d;", BASE_CLASS_NAME, number);
     }
