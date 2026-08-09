@@ -5,7 +5,9 @@
 #include <map>
 #include <unordered_map>
 #include <vector>
+#include <string>
 #include <sys/system_properties.h>
+#include <unistd.h>
 #include "dex/CodeItem.h"
 #include "common/dpt_string.h"
 #include "dpt_hook.h"
@@ -20,9 +22,14 @@ std::map<int,uint8_t *> dexMemMap;
 int g_sdkLevel = 0;
 extern ShellConfig g_shell_config;
 
+const char *GetArtLibPath();
+const char *GetClassLinkerDefineClassLibPath();
+
 void dpt_hook() {
     bytehook_init(BYTEHOOK_MODE_AUTOMATIC,false);
     g_sdkLevel = android_get_device_api_level();
+    DLOGI("sdkLevel=%d, artPath=%s", g_sdkLevel, GetArtLibPath());
+
     hook_execve();
     hook_mmap();
     hook_write();
@@ -32,28 +39,78 @@ void dpt_hook() {
     }
 }
 
-const char *GetArtLibPath() {
-    if(g_sdkLevel < 29)
-        return  "/system/" LIB_DIR "/libart.so" ;
-    else if(g_sdkLevel == 29) {
-        return "/apex/com.android.runtime/" LIB_DIR "/libart.so";
+// Fast path: access() known apex/system candidates and cache the result.
+// maps scan is only a last resort when none of the candidates exist.
+static const char *resolveLibPathCached(const char *so_name,
+                                        const char *const *candidates,
+                                        size_t candidate_count,
+                                        std::string &cached,
+                                        bool &resolved) {
+    if (resolved) {
+        return cached.c_str();
     }
-    else {
-        return "/apex/com.android.art/" LIB_DIR "/libart.so";
+
+    for (size_t i = 0; i < candidate_count; i++) {
+        const char *candidate = candidates[i];
+        if (candidate == nullptr) {
+            continue;
+        }
+        if (access(candidate, R_OK) == 0) {
+            cached.assign(candidate);
+            resolved = true;
+            DLOGI("resolve %s: %s", so_name, cached.c_str());
+            return cached.c_str();
+        }
     }
+
+    // Slow fallback only when candidate paths are all missing.
+    std::string from_maps = find_so_path(so_name);
+    if (!from_maps.empty()) {
+        cached = std::move(from_maps);
+        resolved = true;
+        DLOGI("resolve %s from maps: %s", so_name, cached.c_str());
+        return cached.c_str();
+    }
+
+    if (candidate_count > 0 && candidates[0] != nullptr) {
+        cached.assign(candidates[0]);
+    } else if (so_name != nullptr) {
+        cached.assign(so_name);
+    } else {
+        cached.clear();
+    }
+    resolved = true;
+    DLOGW("resolve %s fallback: %s", so_name, cached.c_str());
+    return cached.c_str();
 }
 
-const char *GetArtBaseLibPath() {
-    if(g_sdkLevel == 29) {
-        return "/apex/com.android.runtime/" LIB_DIR "/libartbase.so";
+const char *GetArtLibPath() {
+    // HyperOS/MIUI may ship libart under com.android.art.compatible.
+    // Prefer access() on candidates; cache after first resolve.
+    static std::string art_path;
+    static bool art_resolved = false;
+    if (art_resolved) {
+        return art_path.c_str();
     }
-    else {
-        return "/apex/com.android.art/" LIB_DIR "/libartbase.so";
-    }
+
+    const char *candidates[] = {
+            "/apex/com.android.art.compatible/" LIB_DIR "/libart.so",
+            "/apex/com.android.art/" LIB_DIR "/libart.so",
+            "/apex/com.android.runtime/" LIB_DIR "/libart.so",
+            "/system/" LIB_DIR "/libart.so",
+    };
+    return resolveLibPathCached("libart.so", candidates, ARRAY_LENGTH(candidates),
+                                art_path, art_resolved);
 }
 
 const char *GetClassLinkerDefineClassLibPath(){
     return GetArtLibPath();
+}
+
+// Dobby matches with strstr(module.path, image_name). Prefer basename so
+// com.android.art vs art.compatible path differences do not break resolution.
+static const char *GetArtLibNameForDobby() {
+    return "libart.so";
 }
 
 void change_dex_protective(uint8_t * begin,int dexSize,int dexIndex){
@@ -249,15 +306,27 @@ DPT_ENCRYPT bool hook_LoadClass() {
     }
 
     void* loadClassAddress = nullptr;
+    const char *classLinkerPath = GetClassLinkerDefineClassLibPath();
 
     char sym[256] = {0};
-    find_symbol_in_elf_file(GetClassLinkerDefineClassLibPath(), sym, ARRAY_LENGTH(sym), 2, "ClassLinker", "LoadClass");
+    find_symbol_in_elf_file(classLinkerPath, sym, ARRAY_LENGTH(sym), 2, "ClassLinker", "LoadClass");
 
-    loadClassAddress = DobbySymbolResolver(GetArtLibPath(), sym);
+    if(strlen(sym) == 0) {
+        DLOGW("cannot find symbol: LoadClass");
+        return false;
+    }
+
+    const char *dobbyImage = GetArtLibNameForDobby();
+    DLOGI("DobbySymbolResolver(LoadClass) image=%s sym=%s", dobbyImage, sym);
+    loadClassAddress = DobbySymbolResolver(dobbyImage, sym);
+
+    if(loadClassAddress == nullptr) {
+        DLOGE("LoadClass address is null, sym: %s", sym);
+        return false;
+    }
 
     int hookResult = DobbyHook(loadClassAddress, (dobby_dummy_func_t) LoadClassV23, (dobby_dummy_func_t *) &g_originLoadClassV23);
-
-    DLOGD("hook result: %d", hookResult);
+    DLOGD("hook_LoadClass result: %d", hookResult);
     return hookResult == 0;
 }
 
@@ -293,15 +362,19 @@ DPT_ENCRYPT void *DefineClassV21(void* thiz,
 }
 
 DPT_ENCRYPT bool hook_DefineClass() {
+    const char *classLinkerPath = GetClassLinkerDefineClassLibPath();
+
     char sym[256] = {0};
-    find_symbol_in_elf_file(GetClassLinkerDefineClassLibPath(), sym, ARRAY_LENGTH(sym), 2, "ClassLinker", "DefineClass");
+    find_symbol_in_elf_file(classLinkerPath, sym, ARRAY_LENGTH(sym), 2, "ClassLinker", "DefineClass");
 
     if(strlen(sym) == 0) {
         DLOGW("cannot find symbol: DefineClass");
         return false;
     }
 
-    void* defineClassAddress = DobbySymbolResolver(GetClassLinkerDefineClassLibPath(), sym);
+    const char *dobbyImage = GetArtLibNameForDobby();
+    DLOGI("DobbySymbolResolver(DefineClass) path=%s image=%s", classLinkerPath, dobbyImage);
+    void* defineClassAddress = DobbySymbolResolver(dobbyImage, sym);
 
     if(defineClassAddress == nullptr) {
         DLOGE("defineClass address is null, sym: %s", sym);
