@@ -39,14 +39,23 @@ void dpt_hook() {
     }
 }
 
-// Fast path: access() known apex/system candidates and cache the result.
-// maps scan is only a last resort when none of the candidates exist.
+// Resolve the actually-loaded SO path. maps is preferred so Dobby's
+// strstr(module.path, image_name) hits the same ELF we parse, not another
+// same-named file that merely exists on disk (e.g. art vs art.compatible).
 static const char *resolveLibPathCached(const char *so_name,
                                         const char *const *candidates,
                                         size_t candidate_count,
                                         std::string &cached,
                                         bool &resolved) {
     if (resolved) {
+        return cached.c_str();
+    }
+
+    std::string from_maps = find_so_path(so_name);
+    if (!from_maps.empty()) {
+        cached = std::move(from_maps);
+        resolved = true;
+        DLOGI("resolve %s from maps: %s", so_name, cached.c_str());
         return cached.c_str();
     }
 
@@ -63,15 +72,6 @@ static const char *resolveLibPathCached(const char *so_name,
         }
     }
 
-    // Slow fallback only when candidate paths are all missing.
-    std::string from_maps = find_so_path(so_name);
-    if (!from_maps.empty()) {
-        cached = std::move(from_maps);
-        resolved = true;
-        DLOGI("resolve %s from maps: %s", so_name, cached.c_str());
-        return cached.c_str();
-    }
-
     if (candidate_count > 0 && candidates[0] != nullptr) {
         cached.assign(candidates[0]);
     } else if (so_name != nullptr) {
@@ -86,7 +86,7 @@ static const char *resolveLibPathCached(const char *so_name,
 
 const char *GetArtLibPath() {
     // HyperOS/MIUI may ship libart under com.android.art.compatible.
-    // Prefer access() on candidates; cache after first resolve.
+    // Prefer the in-process mapping; cache after first resolve.
     static std::string art_path;
     static bool art_resolved = false;
     if (art_resolved) {
@@ -105,12 +105,6 @@ const char *GetArtLibPath() {
 
 const char *GetClassLinkerDefineClassLibPath(){
     return GetArtLibPath();
-}
-
-// Dobby matches with strstr(module.path, image_name). Prefer basename so
-// com.android.art vs art.compatible path differences do not break resolution.
-static const char *GetArtLibNameForDobby() {
-    return "libart.so";
 }
 
 void change_dex_protective(uint8_t * begin,int dexSize,int dexIndex){
@@ -316,9 +310,8 @@ DPT_ENCRYPT bool hook_LoadClass() {
         return false;
     }
 
-    const char *dobbyImage = GetArtLibNameForDobby();
-    DLOGI("DobbySymbolResolver(LoadClass) image=%s sym=%s", dobbyImage, sym);
-    loadClassAddress = DobbySymbolResolver(dobbyImage, sym);
+    DLOGI("DobbySymbolResolver(LoadClass) image=%s sym=%s", classLinkerPath, sym);
+    loadClassAddress = DobbySymbolResolver(classLinkerPath, sym);
 
     if(loadClassAddress == nullptr) {
         DLOGE("LoadClass address is null, sym: %s", sym);
@@ -372,9 +365,8 @@ DPT_ENCRYPT bool hook_DefineClass() {
         return false;
     }
 
-    const char *dobbyImage = GetArtLibNameForDobby();
-    DLOGI("DobbySymbolResolver(DefineClass) path=%s image=%s", classLinkerPath, dobbyImage);
-    void* defineClassAddress = DobbySymbolResolver(dobbyImage, sym);
+    DLOGI("DobbySymbolResolver(DefineClass) image=%s", classLinkerPath);
+    void* defineClassAddress = DobbySymbolResolver(classLinkerPath, sym);
 
     if(defineClassAddress == nullptr) {
         DLOGE("defineClass address is null, sym: %s", sym);

@@ -24,6 +24,16 @@ using namespace dpt;
 
 DPT_DATA_SECTION uint8_t DATA_R_FLAG[] = "r";
 
+static const char *path_basename(const char *path) {
+    if (path == nullptr) {
+        return "";
+    }
+    const char *slash = strrchr(path, '/');
+    return slash != nullptr ? slash + 1 : path;
+}
+
+// Match by basename so "libart.so" does not hit libartbase.so / another apex copy
+// whose path merely contains the same substring.
 std::string find_so_path(const char *so_name) {
     const int MAX_READ_LINE = 10 * 1024;
     char maps_path[128] = {0};
@@ -36,6 +46,11 @@ std::string find_so_path(const char *so_name) {
     const char *maps_line_fmt = AY_OBFUSCATE("%*x-%*x %*s %*x %*s %*s %s");
 #endif
 
+    const char *want_base = path_basename(so_name);
+    if (want_base[0] == '\0') {
+        return {};
+    }
+
     std::string so_path_result = {};
     if (fp != nullptr) {
         char line[512] = {0};
@@ -44,7 +59,7 @@ std::string find_so_path(const char *so_name) {
             if (read_line++ >= MAX_READ_LINE) {
                 break;
             }
-            char item_name[128] = {0};
+            char item_name[256] = {0};
 
             int ret = sscanf(line, maps_line_fmt, item_name);
 
@@ -52,7 +67,7 @@ std::string find_so_path(const char *so_name) {
                 continue;
             }
 
-            if (strstr(item_name, so_name) != nullptr) {
+            if (strcmp(path_basename(item_name), want_base) == 0) {
                 so_path_result = item_name;
                 break;
             }
