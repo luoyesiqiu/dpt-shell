@@ -42,7 +42,6 @@ import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.security.KeyStore;
 import java.security.MessageDigest;
-import java.security.SecureRandom;
 import java.security.cert.Certificate;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -360,7 +359,10 @@ public abstract class AndroidPackage {
         return FileUtils.getNewFileName(packageFileName,"signed");
     }
 
-    public void writeConfig(String packageDir, byte[] key) {
+    /**
+     * Same HMAC-SHA256 key as native read_shell_config aes_key.
+     */
+    private byte[] deriveConfigAesKey(byte[] randomKey) {
         String packageName = getPackageName();
         if (packageName == null || packageName.isEmpty()) {
             throw new IllegalStateException("package name is empty, cannot derive config aes key");
@@ -369,12 +371,16 @@ public abstract class AndroidPackage {
         if (buildKey == null || buildKey.isEmpty()) {
             throw new IllegalStateException("dpt build key is missing, cannot derive config aes key");
         }
+        String keyMaterial = packageName + "_" + buildKey;
+        return CryptoUtils.hmacSha256(randomKey, keyMaterial);
+    }
+
+    public void writeConfig(String packageDir, byte[] key) {
         File configFile = new File(getOutAssetsDir(packageDir).getAbsolutePath() + File.separator + Const.KEY_SHELL_CONFIG_STORE_NAME);
         ShellConfig shellConfig = ShellConfig.getInstance();
         String json = shellConfig.toJson();
-        String keyMaterial = packageName + "_" + buildKey;
         LogUtils.info("Write config: " + json);
-        byte[] aesKey = CryptoUtils.hmacSha256(key, keyMaterial);
+        byte[] aesKey = deriveConfigAesKey(key);
         byte[] iv = KeyUtils.generateIV(key);
         byte[] secData = CryptoUtils.aesEncrypt(aesKey, iv, json.getBytes(StandardCharsets.UTF_8));
         if (secData == null) {
@@ -657,7 +663,7 @@ public abstract class AndroidPackage {
                 || f.getAbsolutePath().endsWith(".aab");
     }
 
-    public void extractDexCode(String packageDir, String dexCodeSavePath) {
+    public void extractDexCode(String packageDir, String dexCodeSavePath, byte[] soKey) {
         List<File> dexFiles = getDexFiles(getDexDir(packageDir));
         Map<Integer,List<Instruction>> instructionMap = new HashMap<>();
         String appNameNew = Const.KEY_CODE_ITEM_STORE_NAME;
@@ -668,13 +674,7 @@ public abstract class AndroidPackage {
         AtomicInteger keepClassesCount = new AtomicInteger(0);
 
         ShellConfig shellConfig = ShellConfig.getInstance();
-        if (shellConfig.getInsnsXorKey() == 0) {
-            int key = new SecureRandom().nextInt();
-            if (key == 0) {
-                key = 0x6f3a2c1d;
-            }
-            shellConfig.setInsnsXorKey(key);
-        }
+        shellConfig.setInsnsCryptKey(deriveConfigAesKey(soKey));
         for(File dexFile : dexFiles) {
             ThreadPool.getInstance().execute(() -> {
                 final int dexNo = DexUtils.getDexNumber(dexFile.getName());

@@ -7,6 +7,7 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 
 public class ConfigKeyDerivationTest {
 
@@ -59,6 +60,38 @@ public class ConfigKeyDerivationTest {
         // Without shell-files/build-key, unit tests usually fall back to jar manifest (often absent).
         String buildKey = Dpt.getBuildKey();
         Assert.assertTrue(buildKey == null || !buildKey.isEmpty());
+    }
+
+    @Test
+    public void testInsnsRc4KeyAppendsLittleEndianMethodId() {
+        byte[] aesKey = new byte[32];
+        for (int i = 0; i < aesKey.length; i++) {
+            aesKey[i] = (byte) i;
+        }
+
+        byte[] key = CryptoUtils.buildInsnsRc4Key(aesKey, 0x01020304);
+        Assert.assertEquals(36, key.length);
+        Assert.assertArrayEquals(aesKey, Arrays.copyOf(key, 32));
+        Assert.assertEquals((byte) 0x04, key[32]);
+        Assert.assertEquals((byte) 0x03, key[33]);
+        Assert.assertEquals((byte) 0x02, key[34]);
+        Assert.assertEquals((byte) 0x01, key[35]);
+
+        byte[] otherKey = CryptoUtils.buildInsnsRc4Key(aesKey, 0x01020305);
+        Assert.assertFalse(Arrays.equals(key, otherKey));
+
+        byte[] plain = {1, 2, 3, 4, 5, 6, 7, 8};
+        byte[] enc = CryptoUtils.rc4Crypt(key, plain);
+        byte[] otherEnc = CryptoUtils.rc4Crypt(otherKey, plain);
+        Assert.assertNotNull(enc);
+        Assert.assertNotNull(otherEnc);
+        Assert.assertFalse(Arrays.equals(enc, otherEnc));
+        Assert.assertArrayEquals(plain, CryptoUtils.rc4Crypt(key, enc));
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void testBuildInsnsRc4KeyRejectsEmptyAesKey() {
+        CryptoUtils.buildInsnsRc4Key(new byte[0], 1);
     }
 
     private static byte[] hexToBytes(String hex) {

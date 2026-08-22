@@ -203,7 +203,7 @@ public class Apk extends AndroidPackage {
          *======================================*/
         String assetsPath = apk.getOutAssetsDir(apkMainProcessPath).getAbsolutePath();
 
-        apk.extractDexCode(apkMainProcessPath, assetsPath);
+        apk.extractDexCode(apkMainProcessPath, assetsPath, encKey);
         apk.addJunkCodeDex(apkMainProcessPath);
         apk.compressDexFiles(apkMainProcessPath);
         apk.deleteAllDexFiles(apkMainProcessPath);

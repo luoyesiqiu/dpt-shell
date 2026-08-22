@@ -24,8 +24,9 @@ public class ShellConfig {
     @JSONField(name = "dex_sign")
     private String dexSign;
 
-    @JSONField(name = "insns_xor_key")
-    private int insnsXorKey;
+    // Same 32-byte key as native read_shell_config aes_key. Not written to JSON.
+    @JSONField(serialize = false)
+    private byte[] insnsCryptKey;
 
     // One int, each bit is a switch (1 = disable). See Const.FLAG_DISABLE_*
     @JSONField(name = "risk_check_flags")
@@ -151,12 +152,12 @@ public class ShellConfig {
         this.dexSign = dexSign;
     }
 
-    public int getInsnsXorKey() {
-        return insnsXorKey;
+    public byte[] getInsnsCryptKey() {
+        return insnsCryptKey;
     }
 
-    public void setInsnsXorKey(int insnsXorKey) {
-        this.insnsXorKey = insnsXorKey;
+    public void setInsnsCryptKey(byte[] insnsCryptKey) {
+        this.insnsCryptKey = insnsCryptKey;
     }
 
     public int getRiskCheckFlags() {
@@ -188,7 +189,6 @@ public class ShellConfig {
             jsonObject.put("app_sign_sha256", getAppSignSha256());
         }
         jsonObject.put("dex_sign", getDexSign());
-        jsonObject.put("insns_xor_key", getInsnsXorKey());
         jsonObject.put("risk_check_flags", getRiskCheckFlags());
         return jsonObject.toString();
     }

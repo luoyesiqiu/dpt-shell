@@ -1,5 +1,7 @@
 package com.luoye.dpt.util;
 
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.nio.charset.StandardCharsets;
 import java.security.InvalidKeyException;
 import java.security.Key;
@@ -24,6 +26,19 @@ public class CryptoUtils {
         }
 
         return null;
+    }
+
+    /**
+     * RC4 key for a code item: AES-256 config key followed by little-endian methodIdx.
+     */
+    public static byte[] buildInsnsRc4Key(byte[] aesKey, int methodIndex) {
+        if (aesKey == null || aesKey.length == 0) {
+            throw new IllegalArgumentException("aes key is empty");
+        }
+        ByteBuffer buf = ByteBuffer.allocate(aesKey.length + 4).order(ByteOrder.LITTLE_ENDIAN);
+        buf.put(aesKey);
+        buf.putInt(methodIndex);
+        return buf.array();
     }
 
     /**

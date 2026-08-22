@@ -392,14 +392,13 @@ public class DexUtils {
             }
         }
 
-        int xorKey = ShellConfig.getInstance().getInsnsXorKey();
-        if (xorKey != 0) {
-            for (int i = 0; i < byteCode.length; i++) {
-                int shift = (i & 3) << 3;
-                byteCode[i] = (byte) (byteCode[i] ^ ((xorKey >> shift) & 0xff));
-            }
+        byte[] aesKey = ShellConfig.getInstance().getInsnsCryptKey();
+        byte[] rc4Key = CryptoUtils.buildInsnsRc4Key(aesKey, method.getMethodIndex());
+        byte[] encrypted = CryptoUtils.rc4Crypt(rc4Key, byteCode);
+        if (encrypted == null || encrypted.length != byteCode.length) {
+            throw new IllegalStateException("rc4 encrypt insns failed");
         }
-        instruction.setInstructionsData(byteCode);
+        instruction.setInstructionsData(encrypted);
         outRandomAccessFile.seek(insnsOffset);
 
         return instruction;

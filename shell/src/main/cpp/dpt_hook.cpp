@@ -6,6 +6,7 @@
 #include <unordered_map>
 #include <vector>
 #include <string>
+#include <cstring>
 #include <sys/system_properties.h>
 #include <unistd.h>
 #include "dex/CodeItem.h"
@@ -161,20 +162,17 @@ void patchMethod(uint8_t *begin,
                  realInsnsPtr,
                  (unsigned int)(realInsnsPtr - begin));
 
-            uint32_t xorKey = g_shell_config.insns_xor_key;
-            if (xorKey == 0) {
-                memcpy(realInsnsPtr, codeItem->getInsns(), codeItem->getInsnsSize());
-            } else {
-                thread_local std::vector<uint8_t> tmp;
-                uint32_t sz = codeItem->getInsnsSize();
-                tmp.resize(sz);
-                const uint8_t* enc = codeItem->getInsns();
-                for (uint32_t i = 0; i < sz; i++) {
-                    uint32_t shift = (i & 3u) << 3u;
-                    tmp[i] = (uint8_t)(enc[i] ^ ((xorKey >> shift) & 0xffu));
-                }
-                memcpy(realInsnsPtr, tmp.data(), sz);
-            }
+            const uint8_t *enc = codeItem->getInsns();
+            uint32_t sz = codeItem->getInsnsSize();
+
+            uint8_t rc4_key[sizeof(g_shell_config.aes_key) + sizeof(uint32_t)];
+            memcpy(rc4_key, g_shell_config.aes_key, sizeof(g_shell_config.aes_key));
+            uint32_t methodIndex = codeItem->getMethodIdx();
+            memcpy(rc4_key + sizeof(g_shell_config.aes_key), &methodIndex, sizeof(methodIndex));
+
+            struct rc4_state state;
+            rc4_init(&state, rc4_key, static_cast<int>(sizeof(rc4_key)));
+            rc4_crypt(&state, enc, realInsnsPtr, static_cast<int>(sz));
         }
         else{
             NLOG("cannot find  methodId: %d in codeitem map, dex index: %d(%s)", methodIdx, dexIndex, location);

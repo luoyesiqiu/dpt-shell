@@ -51,7 +51,7 @@ struct ShellConfig {
     std::string jni_class_name;
     std::string app_sign_sha256;
     std::string dex_sign;
-    uint32_t insns_xor_key = 0;
+    uint8_t aes_key[32] = {};
     uint32_t risk_check_flags = 0;
 };
 

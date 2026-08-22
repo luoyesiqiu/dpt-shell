@@ -532,6 +532,7 @@ DPT_ENCRYPT void read_shell_config(JNIEnv *env) {
                 unload_package(package_addr, package_size);
                 return;
             }
+            memcpy(g_shell_config.aes_key, aes_key.data(), sizeof(g_shell_config.aes_key));
 
             std::vector<uint8_t> indata(entry_data, entry_data + entry_size);
 
@@ -556,14 +557,12 @@ DPT_ENCRYPT void read_shell_config(JNIEnv *env) {
                 const char *keyJniClsName = AY_OBFUSCATE("jni_cls_name");
                 const char *keyAppSignSha256 = AY_OBFUSCATE("app_sign_sha256");
                 const char *keyDexSign = AY_OBFUSCATE("dex_sign");
-                const char *keyInsnsXorKey = AY_OBFUSCATE("insns_xor_key");
                 const char *keyRiskCheckFlags = AY_OBFUSCATE("risk_check_flags");
                 g_shell_config.application_name = shell_config.value(keyAppName, "");
                 g_shell_config.application_component_factory = shell_config.value(keyAcfName, "");
                 g_shell_config.jni_class_name = shell_config.value(keyJniClsName, "");
                 g_shell_config.app_sign_sha256 = shell_config.value(keyAppSignSha256, "");
                 g_shell_config.dex_sign = shell_config.value(keyDexSign, "");
-                g_shell_config.insns_xor_key = shell_config.value(keyInsnsXorKey, 0);
                 g_shell_config.risk_check_flags = shell_config.value(keyRiskCheckFlags, 0);
 
                 DLOGD("application_name = %s", g_shell_config.application_name.c_str());
@@ -571,7 +570,6 @@ DPT_ENCRYPT void read_shell_config(JNIEnv *env) {
                 DLOGD("jni_class_name = %s", g_shell_config.jni_class_name.c_str());
                 DLOGD("app_sign_sha256 = %s", g_shell_config.app_sign_sha256.c_str());
                 DLOGD("dex_sign = %s", g_shell_config.dex_sign.c_str());
-                DLOGD("insns_xor_key = 0x%x", g_shell_config.insns_xor_key);
                 DLOGD("risk_check_flags = 0x%x", g_shell_config.risk_check_flags);
             } catch (const std::exception &e) {
                 DLOGE("parse shell config failed: %s", e.what());
