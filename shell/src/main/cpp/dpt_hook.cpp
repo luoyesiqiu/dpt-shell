@@ -187,7 +187,9 @@ DPT_ENCRYPT void patchClass(__unused const char* descriptor,
                  const void* dex_file,
                  const void* dex_class_def) {
 
-    const char *junkClassName = AY_OBFUSCATE(JUNK_CLASS_FULL_NAME);
+    const char *junkClassName = g_shell_config.junk_class_name.empty()
+            ? AY_OBFUSCATE(JUNK_CLASS_FULL_NAME)
+            : g_shell_config.junk_class_name.c_str();
     if(descriptor != nullptr && UNLIKELY(dpt_strstr(descriptor, junkClassName) != nullptr)) {
         size_t descriptorLength = dpt_strlen(descriptor);
         char ch = descriptor[descriptorLength - 2];

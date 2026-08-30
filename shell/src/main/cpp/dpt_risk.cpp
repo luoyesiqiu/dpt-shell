@@ -30,7 +30,9 @@ DPT_ENCRYPT NO_INLINE void dpt_crash() {
 }
 
 DPT_ENCRYPT void junkCodeDexProtect(JNIEnv *env) {
-    const char *className = AY_OBFUSCATE(JUNK_CLASS_FULL_NAME);
+    const char *className = g_shell_config.junk_class_name.empty()
+            ? AY_OBFUSCATE(JUNK_CLASS_FULL_NAME)
+            : g_shell_config.junk_class_name.c_str();
     jclass klass = dpt::jni::FindClass(env, className);
     if(klass == nullptr) {
         dpt_crash();

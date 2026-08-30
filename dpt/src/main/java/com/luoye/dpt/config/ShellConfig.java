@@ -24,6 +24,9 @@ public class ShellConfig {
     @JSONField(name = "dex_sign")
     private String dexSign;
 
+    @JSONField(name = "junk_cls_name")
+    private String junkClassName;
+
     // Same 32-byte key as native read_shell_config aes_key. Not written to JSON.
     @JSONField(serialize = false)
     private byte[] insnsCryptKey;
@@ -152,6 +155,14 @@ public class ShellConfig {
         this.dexSign = dexSign;
     }
 
+    public String getJunkClassName() {
+        return junkClassName;
+    }
+
+    public void setJunkClassName(String junkClassName) {
+        this.junkClassName = junkClassName;
+    }
+
     public byte[] getInsnsCryptKey() {
         return insnsCryptKey;
     }
@@ -189,6 +200,7 @@ public class ShellConfig {
             jsonObject.put("app_sign_sha256", getAppSignSha256());
         }
         jsonObject.put("dex_sign", getDexSign());
+        jsonObject.put("junk_cls_name", getJunkClassName());
         jsonObject.put("risk_check_flags", getRiskCheckFlags());
         return jsonObject.toString();
     }

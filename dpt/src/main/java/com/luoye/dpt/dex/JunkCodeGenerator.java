@@ -5,6 +5,7 @@ import com.android.dx.DexMaker;
 import com.android.dx.Local;
 import com.android.dx.MethodId;
 import com.android.dx.TypeId;
+import com.luoye.dpt.config.ShellConfig;
 import com.luoye.dpt.util.LogUtils;
 import com.luoye.dpt.util.StringUtils;
 
@@ -22,7 +23,6 @@ import java.util.Set;
  * @author luoyesiqiu
  */
 public class JunkCodeGenerator {
-    private static final String BASE_CLASS_NAME = "com/luoye/dpt/junkcode/JunkClass";
     private static final int MAX_GENERATE_COUNT = 100;
     private static final Set<String> classNameSet = new HashSet<>();
 
@@ -48,21 +48,31 @@ public class JunkCodeGenerator {
         code.throwValue(throwableLocal);
     }
 
-    private static String generateBaseClassName() {
-
-        return String.format(Locale.US, "L%s;", BASE_CLASS_NAME);
+    private static String generateJunkClassBaseName() {
+        return String.format(Locale.US, "%s/%s/%s",
+                StringUtils.generateIdentifier(3),
+                StringUtils.generateIdentifier(3),
+                StringUtils.generateIdentifier(3));
     }
 
-    private static String generateClassName() {
+    private static String generateBaseClassName(String baseClassName) {
+
+        return String.format(Locale.US, "L%s;", baseClassName);
+    }
+
+    private static String generateClassName(String baseClassName) {
         SecureRandom secureRandom = new SecureRandom();
         int number = secureRandom.nextInt() % (MAX_GENERATE_COUNT * 10);
 
-        return String.format(Locale.US, "L%s%d;", BASE_CLASS_NAME, number);
+        return String.format(Locale.US, "L%s%d;", baseClassName, number);
     }
 
     public static void generateJunkCodeDex(File file) throws IOException {
         SecureRandom secureRandom = new SecureRandom();
         final int generateClassCount = secureRandom.nextInt(MAX_GENERATE_COUNT / 2) + (MAX_GENERATE_COUNT / 2);
+
+        String baseClassName = generateJunkClassBaseName();
+        ShellConfig.getInstance().setJunkClassName(baseClassName);
 
         DexMaker dexMaker = new DexMaker();
 
@@ -70,11 +80,11 @@ public class JunkCodeGenerator {
 
             String className;
             if(i == 0) {
-                className = generateBaseClassName();
+                className = generateBaseClassName(baseClassName);
             }
             else {
                 do {
-                    className = generateClassName();
+                    className = generateClassName(baseClassName);
                 }
                 while(classNameSet.contains(className));
                 classNameSet.add(className);
