@@ -183,7 +183,51 @@ void patchMethod(uint8_t *begin,
     }
 }
 
-DPT_ENCRYPT void patchClass(__unused const char* descriptor,
+// Resolve the class descriptor string from a DexFile + ClassDef, since
+// ClassLinker::LoadClass does not pass the descriptor as a parameter.
+static const char* getClassDescriptor(const void* dex_file, const void* dex_class_def) {
+    if(dex_file == nullptr || dex_class_def == nullptr) {
+        return nullptr;
+    }
+
+    const uint8_t *begin = nullptr;
+    const dex::TypeId *type_ids = nullptr;
+    const dex::StringId *string_ids = nullptr;
+
+    if(g_sdkLevel >= 35) {
+        auto *dexFileV35 = (V35::DexFile *) dex_file;
+        begin = dexFileV35->begin_;
+        type_ids = dexFileV35->type_ids_;
+        string_ids = dexFileV35->string_ids_;
+    }
+    else if(g_sdkLevel >= __ANDROID_API_P__) {
+        auto *dexFileV28 = (V28::DexFile *) dex_file;
+        begin = dexFileV28->begin_;
+        type_ids = dexFileV28->type_ids_;
+        string_ids = dexFileV28->string_ids_;
+    }
+    else {
+        auto *dexFileV21 = (V21::DexFile *) dex_file;
+        begin = dexFileV21->begin_;
+        type_ids = dexFileV21->type_ids_;
+        string_ids = dexFileV21->string_ids_;
+    }
+
+    if(begin == nullptr || type_ids == nullptr || string_ids == nullptr) {
+        return nullptr;
+    }
+
+    auto *class_def = (dex::ClassDef *) dex_class_def;
+    uint32_t descriptor_idx = type_ids[class_def->class_idx_].descriptor_idx_;
+    const uint8_t *str_data = begin + string_ids[descriptor_idx].string_data_off_;
+
+    // string_data_item is prefixed with a uleb128 utf16 length; skip it.
+    uint64_t utf16_length = 0;
+    str_data += DexFileUtils::readUleb128(str_data, &utf16_length);
+    return (const char *) str_data;
+}
+
+DPT_ENCRYPT void patchClass(const char* descriptor,
                  const void* dex_file,
                  const void* dex_class_def) {
 
@@ -289,7 +333,11 @@ DPT_ENCRYPT void LoadClassV23(void* thiz,
                                const void* dex_class_def,
                                const char* klass) {
     if(LIKELY(g_originLoadClassV23 != nullptr)) {
-        patchClass(nullptr,dex_file,dex_class_def);
+
+        const char *descriptor = getClassDescriptor(dex_file, dex_class_def);
+
+        DLOGD("desc: %s", descriptor);
+        patchClass(descriptor, dex_file, dex_class_def);
         g_originLoadClassV23(thiz, self, dex_file, dex_class_def, klass);
     }
 }
