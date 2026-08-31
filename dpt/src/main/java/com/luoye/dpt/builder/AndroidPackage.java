@@ -446,7 +446,15 @@ public abstract class AndroidPackage {
     }
 
     protected void addJunkCodeDex(String packageDir) {
-        addDex(getJunkCodeDexPath(), getDexDir(packageDir));
+        String dexDir = getDexDir(packageDir);
+        File mainDex = new File(dexDir, "classes.dex");
+        File junkCodeDex = new File(getJunkCodeDexPath());
+        if(mainDex.exists() && DexUtils.mergeDex(mainDex, junkCodeDex)) {
+            LogUtils.info("Merge junk code into classes.dex");
+        }
+        else {
+            addDex(getJunkCodeDexPath(), dexDir);
+        }
     }
 
     protected void addKeepDexes(String packageDir) {

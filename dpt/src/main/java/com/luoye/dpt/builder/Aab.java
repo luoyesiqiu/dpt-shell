@@ -211,8 +211,8 @@ public class Aab extends AndroidPackage {
          *======================================*/
         // Extract dex code
         String assetsPath = aab.getOutAssetsDir(aabMainProcessPath).getAbsolutePath();
-        aab.extractDexCode(aabMainProcessPath, assetsPath, encKey);
         aab.addJunkCodeDex(aabMainProcessPath);
+        aab.extractDexCode(aabMainProcessPath, assetsPath, encKey);
         aab.compressDexFiles(aabMainProcessPath);
         aab.deleteAllDexFiles(aabMainProcessPath);
         aab.combineDexZipWithShellDex(aabMainProcessPath);
