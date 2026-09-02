@@ -26,6 +26,24 @@ extern ShellConfig g_shell_config;
 const char *GetArtLibPath();
 const char *GetClassLinkerDefineClassLibPath();
 
+DPT_ENCRYPT static bool isExactJunkClassDescriptor(const char *descriptor,
+                                                   const char *junkClassName) {
+    if (descriptor == nullptr || junkClassName == nullptr) {
+        return false;
+    }
+
+    const size_t descriptorLength = dpt_strlen(descriptor);
+    const size_t junkClassLength = dpt_strlen(junkClassName);
+    if (descriptorLength >= 2 && junkClassLength > 0
+        && descriptorLength == junkClassLength + 2
+        && descriptor[0] == 'L'
+        && descriptor[descriptorLength - 1] == ';') {
+        return dpt_memcmp(descriptor + 1, junkClassName, junkClassLength) == 0;
+    }
+
+    return false;
+}
+
 void dpt_hook() {
     bytehook_init(BYTEHOOK_MODE_AUTOMATIC,false);
     g_sdkLevel = android_get_device_api_level();
@@ -187,15 +205,18 @@ DPT_ENCRYPT void patchClass(__unused const char* descriptor,
                  const void* dex_file,
                  const void* dex_class_def) {
 
-    const char *junkClassName = AY_OBFUSCATE(JUNK_CLASS_FULL_NAME);
+    const char *junkClassName = getJunkClassName();
     if(descriptor != nullptr && UNLIKELY(dpt_strstr(descriptor, junkClassName) != nullptr)) {
-        size_t descriptorLength = dpt_strlen(descriptor);
-        char ch = descriptor[descriptorLength - 2];
-        DLOGD("Attempt patch junk class %s ,char is '%c'",descriptor,ch);
-        if(isdigit(ch)) {
-            DLOGE("Find illegal call, desc: %s!", descriptor);
-            dpt_crash();
-            return;
+        const size_t descriptorLength = dpt_strlen(descriptor);
+        if(descriptorLength >= 2
+           && !isExactJunkClassDescriptor(descriptor, junkClassName)) {
+            const char ch = descriptor[descriptorLength - 2];
+            DLOGD("Attempt patch junk class %s ,char is '%c'",descriptor,ch);
+            if(isdigit(ch)) {
+                DLOGE("Find illegal call, desc: %s!", descriptor);
+                dpt_crash();
+                return;
+            }
         }
 
     }
@@ -223,7 +244,7 @@ DPT_ENCRYPT void patchClass(__unused const char* descriptor,
             dexSize = dexFileV21->size_ == 0 ? dexFileV21->header_->file_size_ : dexFileV21->size_;
         }
 
-        if(location.rfind(DEXES_ZIP_NAME) != std::string::npos && dex_class_def){
+        if(location.rfind(getDexAssetFileName()) != std::string::npos && dex_class_def){
             int dexIndex = parse_dex_number(location);
 
             auto* class_def = (dex::ClassDef *)dex_class_def;

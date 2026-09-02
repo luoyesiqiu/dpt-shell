@@ -6,9 +6,63 @@
 #include "dpt_crypto.h"
 #include "external/json/json.hpp"
 
+#ifndef DPT_PROFILE_BUILD
+#define DPT_PROFILE_BUILD 0
+#endif
+
+#if DPT_PROFILE_BUILD != 0 && DPT_PROFILE_BUILD != 1
+#error "DPT_PROFILE_BUILD must be 0 or 1"
+#endif
+
+#if DPT_PROFILE_BUILD
+#if !defined(__has_include)
+#error "DPT_PROFILE_BUILD=1 requires compiler __has_include support"
+#elif !__has_include("profile_config.h")
+#error "DPT_PROFILE_BUILD=1 requires generated profile_config.h"
+#else
+#include "profile_config.h"
+#endif
+
+#if !defined(DPT_PROFILE_CONTRACT_ENABLED) || DPT_PROFILE_CONTRACT_ENABLED != 1
+#error "generated Profile contract is incomplete"
+#endif
+#if !defined(DPT_PROFILE_JNI_BRIDGE) \
+        || !defined(DPT_PROFILE_JNI_TABLE_ACCESSOR) \
+        || !defined(DPT_PROFILE_JNI_COUNT_ACCESSOR) \
+        || !defined(DPT_PROFILE_STARTUP_COORDINATOR) \
+        || !defined(DPT_PROFILE_SO_NAME) \
+        || !defined(DPT_PROFILE_RC4_KEY_SYMBOL) \
+        || !defined(DPT_PROFILE_VARIABLE_SECTION) \
+        || !defined(DPT_PROFILE_ABI) \
+        || !defined(DPT_PROFILE_SHELL_CONFIG_ASSET) \
+        || !defined(DPT_PROFILE_BUILD_KEY) \
+        || !defined(DPT_PROFILE_RUNTIME_CONFIG_TYPE) \
+        || !defined(DPT_PROFILE_RUNTIME_CONFIG_ACCESSOR) \
+        || !defined(DPT_PROFILE_RUNTIME_SHELL_CONFIG_FIELD) \
+        || !defined(DPT_PROFILE_RUNTIME_CODE_ITEM_FIELD) \
+        || !defined(DPT_PROFILE_RUNTIME_DEX_ASSET_FIELD) \
+        || !defined(DPT_PROFILE_RUNTIME_DIRECTORY_FIELD) \
+        || !defined(DPT_PROFILE_RUNTIME_BUILD_KEY_FIELD) \
+        || !defined(DPT_PROFILE_JUNK_CLASS)
+#error "generated Profile contract is incomplete"
+#endif
+#endif
+
 #include <memory>
+#include <stdexcept>
+#include <utility>
 
 using namespace dpt;
+
+#if DPT_PROFILE_BUILD
+namespace {
+enum class ProfileStartupStage : uint32_t {
+    READ_PROFILE_CONFIGURATION = 0u,
+    RUN_EXISTING_RISK_CHECKS = 1u,
+    REGISTER_PROFILE_JNI = 2u
+};
+}
+#endif
 
 static pthread_mutex_t g_write_dexes_mutex = PTHREAD_MUTEX_INITIALIZER;
 
@@ -20,10 +74,81 @@ std::unordered_map<int,std::vector<data::CodeItem *> *> dexMap;
 
 DPT_DATA_SECTION uint8_t DATA_SECTION_BITCODE[] = ".bitcode";
 DPT_DATA_SECTION uint8_t DATA_SECTION_RO_DATA[] = ".rodata";
+
+#if DPT_PROFILE_BUILD
+extern "C" uint8_t DPT_PROFILE_RC4_KEY_SYMBOL[16];
+#define DPT_RUNTIME_KEY_SLOT DPT_PROFILE_RC4_KEY_SYMBOL
+#endif
+
+#if !DPT_PROFILE_BUILD
 KEEP_SYMBOL DPT_DATA_SECTION uint8_t DPT_UNKNOWN_DATA[] = "1234567890abcdef";
+#define DPT_RUNTIME_KEY_SLOT DPT_UNKNOWN_DATA
+#endif
 
 ShellConfig g_shell_config;
 
+const char *getShellConfigEntryName() noexcept {
+#if DPT_PROFILE_BUILD
+    const auto &config = DPT_PROFILE_RUNTIME_CONFIG_ACCESSOR();
+    return config.DPT_PROFILE_RUNTIME_SHELL_CONFIG_FIELD;
+#else
+    return AY_OBFUSCATE(SHELL_CONFIG_IN_ZIP);
+#endif
+}
+
+const char *getCodeItemEntryName() noexcept {
+#if DPT_PROFILE_BUILD
+    const auto &config = DPT_PROFILE_RUNTIME_CONFIG_ACCESSOR();
+    return config.DPT_PROFILE_RUNTIME_CODE_ITEM_FIELD;
+#else
+    return AY_OBFUSCATE(CODE_ITEM_NAME_IN_ZIP);
+#endif
+}
+
+const char *getDexAssetFileName() noexcept {
+#if DPT_PROFILE_BUILD
+    const auto &config = DPT_PROFILE_RUNTIME_CONFIG_ACCESSOR();
+    return config.DPT_PROFILE_RUNTIME_DEX_ASSET_FIELD;
+#else
+    return AY_OBFUSCATE(DEXES_ZIP_NAME);
+#endif
+}
+
+const char *getRuntimeDirectoryName() noexcept {
+#if DPT_PROFILE_BUILD
+    const auto &config = DPT_PROFILE_RUNTIME_CONFIG_ACCESSOR();
+    return config.DPT_PROFILE_RUNTIME_DIRECTORY_FIELD;
+#else
+    return AY_OBFUSCATE(CACHE_DIR);
+#endif
+}
+
+const char *getShellBuildKey() noexcept {
+#if DPT_PROFILE_BUILD
+    const auto &config = DPT_PROFILE_RUNTIME_CONFIG_ACCESSOR();
+    return config.DPT_PROFILE_RUNTIME_BUILD_KEY_FIELD;
+#else
+    return AY_OBFUSCATE(DPT_BUILD_KEY);
+#endif
+}
+
+const char *getJunkClassName() noexcept {
+#if DPT_PROFILE_BUILD
+    return DPT_PROFILE_JUNK_CLASS;
+#else
+    return AY_OBFUSCATE(JUNK_CLASS_FULL_NAME);
+#endif
+}
+
+const char *getShellSoName() noexcept {
+#if DPT_PROFILE_BUILD
+    return DPT_PROFILE_SO_NAME;
+#else
+    return AY_OBFUSCATE(SO_NAME);
+#endif
+}
+
+#if !DPT_PROFILE_BUILD
 static JNINativeMethod gMethods[] = {
         {"craoc", "(Ljava/lang/String;)V",                               (void *) callRealApplicationOnCreate},
         {"ia",    "()V", (void *) init_app},
@@ -36,6 +161,7 @@ static JNINativeMethod gMethods[] = {
         {"ra", "(Ljava/lang/String;)Ljava/lang/Object;",                               (void *) replaceApplication},
         {"clinit", "()V",                               (void *) clinit}
 };
+#endif
 
 DPT_ENCRYPT jobjectArray makePathElements(JNIEnv* env,const char *pathChs) {
     jstring path = env->NewStringUTF(pathChs);
@@ -212,7 +338,7 @@ void decrypt_section(const char* section_name, int temp_prot, int target_prot) {
     }
 
     if(so_path.empty()) {
-        auto path = find_so_path(SO_NAME);
+        auto path = find_so_path(getShellSoName());
         so_path.assign(path);
     }
 
@@ -232,7 +358,7 @@ void decrypt_section(const char* section_name, int temp_prot, int target_prot) {
 
     u_char *bitcode = (u_char *)malloc(size);
     struct rc4_state dec_state;
-    rc4_init(&dec_state, reinterpret_cast<const u_char *>(DPT_UNKNOWN_DATA), 16);
+    rc4_init(&dec_state, reinterpret_cast<const u_char *>(DPT_RUNTIME_KEY_SLOT), 16);
     rc4_crypt(&dec_state, reinterpret_cast<const u_char *>(target),
               reinterpret_cast<u_char *>(bitcode),
               size);
@@ -398,12 +524,34 @@ DPT_ENCRYPT jobject replaceApplicationOnLoadedApk(JNIEnv *env, jclass __unused, 
 
 
 DPT_ENCRYPT static bool registerNativeMethods(JNIEnv *env) {
-    jclass JniBridgeClass = env->FindClass(g_shell_config.jni_class_name.c_str());
-    if(JniBridgeClass == nullptr) {
-        DLOGF("cannot find class: %s!", g_shell_config.jni_class_name.c_str());
+    const char *jniBridgeClassName;
+    JNINativeMethod *methods;
+    jint methodCount;
+#if DPT_PROFILE_BUILD
+    if (g_shell_config.jni_class_name != DPT_PROFILE_JNI_BRIDGE) {
+        DLOGF("jni bridge does not match generated Profile contract: config=%s contract=%s",
+              g_shell_config.jni_class_name.c_str(), DPT_PROFILE_JNI_BRIDGE);
+        return JNI_FALSE;
     }
-    if (env->RegisterNatives(JniBridgeClass, gMethods, sizeof(gMethods) / sizeof(gMethods[0])) ==
-        0) {
+    jniBridgeClassName = DPT_PROFILE_JNI_BRIDGE;
+    methods = DPT_PROFILE_JNI_TABLE_ACCESSOR();
+    methodCount = static_cast<jint>(DPT_PROFILE_JNI_COUNT_ACCESSOR());
+#else
+    jniBridgeClassName = g_shell_config.jni_class_name.c_str();
+    methods = gMethods;
+    methodCount = static_cast<jint>(sizeof(gMethods) / sizeof(gMethods[0]));
+#endif
+    if (jniBridgeClassName == nullptr || jniBridgeClassName[0] == '\0'
+            || methods == nullptr || methodCount <= 0) {
+        DLOGF("invalid native registration contract");
+        return JNI_FALSE;
+    }
+    jclass JniBridgeClass = env->FindClass(jniBridgeClassName);
+    if(JniBridgeClass == nullptr) {
+        DLOGF("cannot find class: %s!", jniBridgeClassName);
+        return JNI_FALSE;
+    }
+    if (env->RegisterNatives(JniBridgeClass, methods, methodCount) == 0) {
         return JNI_TRUE;
     }
     return JNI_FALSE;
@@ -419,7 +567,8 @@ DPT_ENCRYPT void init_app(JNIEnv *env, jclass __unused) {
     load_package(env, &package_addr, &package_size);
 
     if(!g_codeItemFileData.has_value()) {
-        auto entry_data = read_zip_file_entry(package_addr, package_size, AY_OBFUSCATE(CODE_ITEM_NAME_IN_ZIP));
+        auto entry_data = read_zip_file_entry(package_addr, package_size,
+                                              getCodeItemEntryName());
         if(entry_data.has_value()) {
             g_codeItemFileData = std::move(entry_data);
         }
@@ -472,12 +621,21 @@ DPT_ENCRYPT void readCodeItem(uint8_t *data,size_t data_len) {
     }
 }
 
-DPT_ENCRYPT void read_shell_config(JNIEnv *env) {
+DPT_ENCRYPT bool read_shell_config(JNIEnv *env) {
+#if DPT_PROFILE_BUILD
+    ShellConfig loaded_config;
+    ShellConfig &config_target = loaded_config;
+#else
+    ShellConfig &config_target = g_shell_config;
+#endif
+    const char *shellConfigEntry = getShellConfigEntryName();
+    const char *buildKey = getShellBuildKey();
+    bool config_loaded = false;
     void *package_addr = nullptr;
     size_t package_size = 0;
     load_package(env, &package_addr, &package_size);
 
-    auto entry = read_zip_file_entry(package_addr, package_size , AY_OBFUSCATE(SHELL_CONFIG_IN_ZIP));
+    auto entry = read_zip_file_entry(package_addr, package_size, shellConfigEntry);
     if(entry.has_value()) {
         auto [entry_data, entry_size] = entry.value();
         std::unique_ptr<uint8_t[]> entry_guard(entry_data);
@@ -487,7 +645,7 @@ DPT_ENCRYPT void read_shell_config(JNIEnv *env) {
             if (mBoundApplicationObj == nullptr) {
                 DLOGE("bound application is null");
                 unload_package(package_addr, package_size);
-                return;
+                return false;
             }
 
             reflect::android_app_ActivityThread::AppBindData appBindData(env, mBoundApplicationObj);
@@ -495,7 +653,7 @@ DPT_ENCRYPT void read_shell_config(JNIEnv *env) {
             if (appInfoObj == nullptr) {
                 DLOGE("app info is null");
                 unload_package(package_addr, package_size);
-                return;
+                return false;
             }
 
             reflect::android_content_pm_ApplicationInfo applicationInfo(env, appInfoObj);
@@ -503,7 +661,7 @@ DPT_ENCRYPT void read_shell_config(JNIEnv *env) {
             if (packageNameJstr == nullptr) {
                 DLOGE("package name is null");
                 unload_package(package_addr, package_size);
-                return;
+                return false;
             }
 
             const char *packageNameChs = env->GetStringUTFChars(packageNameJstr, nullptr);
@@ -513,38 +671,37 @@ DPT_ENCRYPT void read_shell_config(JNIEnv *env) {
                     env->ReleaseStringUTFChars(packageNameJstr, packageNameChs);
                 }
                 unload_package(package_addr, package_size);
-                return;
+                return false;
             }
 
             std::string packageName(packageNameChs);
             env->ReleaseStringUTFChars(packageNameJstr, packageNameChs);
-            const char *buildKey = AY_OBFUSCATE(DPT_BUILD_KEY);
             const char *keySep = AY_OBFUSCATE("_");
             std::string key_material = packageName + keySep + buildKey;
             DLOGD("key material for config key: %s", key_material.c_str());
 
-            auto aes_key = hmac_sha256(DPT_UNKNOWN_DATA,
+            auto aes_key = hmac_sha256(DPT_RUNTIME_KEY_SLOT,
                                        16,
                                        reinterpret_cast<const uint8_t *>(key_material.data()),
                                        key_material.size());
             if (aes_key.size() != 32) {
                 DLOGE("derive config aes key failed");
                 unload_package(package_addr, package_size);
-                return;
+                return false;
             }
-            memcpy(g_shell_config.aes_key, aes_key.data(), sizeof(g_shell_config.aes_key));
+            memcpy(config_target.aes_key, aes_key.data(), sizeof(config_target.aes_key));
 
             std::vector<uint8_t> indata(entry_data, entry_data + entry_size);
 
             uint8_t iv[16] = {0};
-            memcpy(iv, DPT_UNKNOWN_DATA, 16);
+            memcpy(iv, DPT_RUNTIME_KEY_SLOT, 16);
             iv[3] = 0x2f;
             iv[9] = 0x76;
             auto decrypted_data = aes_cbc_decrypt(aes_key.data(), 256, iv, indata.data(), entry_size);
             if (decrypted_data.empty()) {
                 DLOGE("decrypt shell config failed");
                 unload_package(package_addr, package_size);
-                return;
+                return false;
             }
 
             try {
@@ -558,19 +715,53 @@ DPT_ENCRYPT void read_shell_config(JNIEnv *env) {
                 const char *keyAppSignSha256 = AY_OBFUSCATE("app_sign_sha256");
                 const char *keyDexSign = AY_OBFUSCATE("dex_sign");
                 const char *keyRiskCheckFlags = AY_OBFUSCATE("risk_check_flags");
-                g_shell_config.application_name = shell_config.value(keyAppName, "");
-                g_shell_config.application_component_factory = shell_config.value(keyAcfName, "");
-                g_shell_config.jni_class_name = shell_config.value(keyJniClsName, "");
-                g_shell_config.app_sign_sha256 = shell_config.value(keyAppSignSha256, "");
-                g_shell_config.dex_sign = shell_config.value(keyDexSign, "");
-                g_shell_config.risk_check_flags = shell_config.value(keyRiskCheckFlags, 0);
-
-                DLOGD("application_name = %s", g_shell_config.application_name.c_str());
-                DLOGD("application_component_factory = %s", g_shell_config.application_component_factory.c_str());
-                DLOGD("jni_class_name = %s", g_shell_config.jni_class_name.c_str());
-                DLOGD("app_sign_sha256 = %s", g_shell_config.app_sign_sha256.c_str());
-                DLOGD("dex_sign = %s", g_shell_config.dex_sign.c_str());
-                DLOGD("risk_check_flags = 0x%x", g_shell_config.risk_check_flags);
+#if DPT_PROFILE_BUILD
+                if (!shell_config.is_object()
+                        || !shell_config.contains(keyAppName)
+                        || !shell_config.contains(keyAcfName)
+                        || !shell_config.contains(keyJniClsName)
+                        || !shell_config.contains(keyDexSign)
+                        || !shell_config.contains(keyRiskCheckFlags)) {
+                    throw std::runtime_error("required Profile shell config field is missing");
+                }
+                if (!shell_config.at(keyRiskCheckFlags).is_number_integer()) {
+                    throw std::runtime_error("Profile risk check flags must be an integer");
+                }
+                config_target.application_name =
+                        shell_config.at(keyAppName).get<std::string>();
+                config_target.application_component_factory =
+                        shell_config.at(keyAcfName).get<std::string>();
+                config_target.jni_class_name =
+                        shell_config.at(keyJniClsName).get<std::string>();
+                config_target.app_sign_sha256 = shell_config.contains(keyAppSignSha256)
+                        ? shell_config.at(keyAppSignSha256).get<std::string>() : "";
+                config_target.dex_sign = shell_config.at(keyDexSign).get<std::string>();
+                config_target.risk_check_flags =
+                        shell_config.at(keyRiskCheckFlags).get<uint32_t>();
+                if (config_target.jni_class_name != DPT_PROFILE_JNI_BRIDGE) {
+                    throw std::runtime_error("Profile JNI bridge does not match generated contract");
+                }
+                if (config_target.dex_sign.empty()) {
+                    throw std::runtime_error("Profile dex signature is empty");
+                }
+#else
+                config_target.application_name = shell_config.value(keyAppName, "");
+                config_target.application_component_factory = shell_config.value(keyAcfName, "");
+                config_target.jni_class_name = shell_config.value(keyJniClsName, "");
+                config_target.app_sign_sha256 = shell_config.value(keyAppSignSha256, "");
+                config_target.dex_sign = shell_config.value(keyDexSign, "");
+                config_target.risk_check_flags = shell_config.value(keyRiskCheckFlags, 0);
+#endif
+                DLOGD("application_name = %s", config_target.application_name.c_str());
+                DLOGD("application_component_factory = %s", config_target.application_component_factory.c_str());
+                DLOGD("jni_class_name = %s", config_target.jni_class_name.c_str());
+                DLOGD("app_sign_sha256 = %s", config_target.app_sign_sha256.c_str());
+                DLOGD("dex_sign = %s", config_target.dex_sign.c_str());
+                DLOGD("risk_check_flags = 0x%x", config_target.risk_check_flags);
+#if DPT_PROFILE_BUILD
+                g_shell_config = std::move(loaded_config);
+#endif
+                config_loaded = true;
             } catch (const std::exception &e) {
                 DLOGE("parse shell config failed: %s", e.what());
             }
@@ -578,6 +769,7 @@ DPT_ENCRYPT void read_shell_config(JNIEnv *env) {
     }
 
     unload_package(package_addr, package_size);
+    return config_loaded;
 }
 
 
@@ -597,10 +789,31 @@ DPT_ENCRYPT JNIEXPORT jint JNI_OnLoad(JavaVM *vm, void *) {
         return JNI_ERR;
     }
 
-    read_shell_config(env);
+#if DPT_PROFILE_BUILD
+    DPT_PROFILE_STARTUP_COORDINATOR(static_cast<uint32_t>(
+            ProfileStartupStage::READ_PROFILE_CONFIGURATION));
+#endif
+    const bool configLoaded = read_shell_config(env);
 
+#if DPT_PROFILE_BUILD
+    DPT_PROFILE_STARTUP_COORDINATOR(static_cast<uint32_t>(
+            ProfileStartupStage::RUN_EXISTING_RISK_CHECKS));
+#endif
     antiRisk();
 
+#if DPT_PROFILE_BUILD
+    if (!configLoaded) {
+        DLOGF("read Profile shell config fail!");
+        return JNI_ERR;
+    }
+#else
+    (void) configLoaded;
+#endif
+
+#if DPT_PROFILE_BUILD
+    DPT_PROFILE_STARTUP_COORDINATOR(static_cast<uint32_t>(
+            ProfileStartupStage::REGISTER_PROFILE_JNI));
+#endif
     if (registerNativeMethods(env) == JNI_FALSE) {
         DLOGF("register native methods fail!");
         return JNI_ERR;

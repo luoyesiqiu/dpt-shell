@@ -1,0 +1,32 @@
+{
+  "status": "PASSED",
+  "test": "ProfileMigrationLifecycleEvidenceTest",
+  "scenario": "两个 applicationId 独立创建、首版发布、失败升级保护、成功升级和历史回滚",
+  "applications": [
+    {
+      "applicationId": "com.example.migration.alpha",
+      "profileId": "pf_d8d7b650564b92c8",
+      "firstRevision": "r000001",
+      "failedRevision": "r000002",
+      "successfulRevision": "r000003",
+      "activeBeforeFailedUpgrade": "r000001",
+      "rollbackRevision": "r000001",
+      "identitiesAreProfileSpecific": true
+    },
+    {
+      "applicationId": "com.example.migration.beta",
+      "profileId": "pf_d2cf06999138c20e",
+      "firstRevision": "r000001",
+      "activeBeforeFailedUpgrade": "r000001",
+      "identitiesAreProfileSpecific": true
+    }
+  ],
+  "assertions": [
+    "两个 Profile ID 不同",
+    "两个 Profile 的 shell 包名、SO 名和 build-key 不同",
+    "alpha 失败升级后活动指针仍为 r000001",
+    "alpha 成功升级后切换到 r000003",
+    "alpha 可回滚到已验证的 r000001",
+    "beta 活动指针不受 alpha 生命周期影响"
+  ]
+}

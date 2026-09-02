@@ -5,6 +5,7 @@
 #include <libgen.h>
 #include <ctime>
 #include <elf.h>
+#include <inttypes.h>
 #include <pthread.h>
 #include <errno.h>
 #include <dlfcn.h>
@@ -14,6 +15,7 @@
 #include <cctype>
 #include <vector>
 #include <optional>
+#include <limits>
 #include <sys/syscall.h>
 #include <sys/uio.h>
 
@@ -290,12 +292,14 @@ jstring getSourceDirExport(JNIEnv *env, jclass __unused) {
 
 void getCompressedDexesPath(JNIEnv *env, char *outDexZipPath, size_t max_len) {
     std::string dataDir = getDataDir(env);
-    snprintf(outDexZipPath, max_len, "%s/%s/%s", dataDir.c_str(), CACHE_DIR, DEXES_ZIP_NAME);
+    snprintf(outDexZipPath, max_len, "%s/%s/%s", dataDir.c_str(),
+             getRuntimeDirectoryName(), getDexAssetFileName());
 }
 
 void getCodeCachePath(JNIEnv *env, char *outCodeCachePath, size_t max_len) {
     std::string dataDir = getDataDir(env);
-    snprintf(outCodeCachePath, max_len, "%s/%s/", dataDir.c_str(), CACHE_DIR);
+    snprintf(outCodeCachePath, max_len, "%s/%s/", dataDir.c_str(),
+             getRuntimeDirectoryName());
 }
 
 jstring getCompressedDexesPathExport(JNIEnv *env, jclass __unused) {
@@ -317,37 +321,203 @@ static uint32_t readZipLength(const uint8_t *data, size_t size) {
     return length;
 }
 
-DPT_ENCRYPT static void
-writeDexAchieve(const char *dexAchievePath, void *package_addr, size_t package_size) {
+DPT_ENCRYPT
+std::optional<ZipFileEntryInfo> read_zip_file_entry_info(void *zip_addr, off_t zip_size,
+                                                         const char *entry_name) {
+    if (zip_addr == nullptr || zip_size <= 0 || entry_name == nullptr) {
+        return std::nullopt;
+    }
+
+    void *mem_stream = mz_stream_mem_create();
+    if (mem_stream == nullptr) {
+        return std::nullopt;
+    }
+    mz_stream_mem_set_buffer(mem_stream, zip_addr, zip_size);
+    mz_stream_open(mem_stream, nullptr, MZ_OPEN_MODE_READ);
+
+    void *zip_handle = mz_zip_create();
+    if (zip_handle == nullptr) {
+        mz_stream_mem_delete(&mem_stream);
+        return std::nullopt;
+    }
+
+    std::optional<ZipFileEntryInfo> result;
+    int32_t err = mz_zip_open(zip_handle, mem_stream, MZ_OPEN_MODE_READ);
+    if (err == MZ_OK) {
+        err = mz_zip_goto_first_entry(zip_handle);
+        while (err == MZ_OK) {
+            mz_zip_file *file_info = nullptr;
+            err = mz_zip_entry_get_info(zip_handle, &file_info);
+            if (err != MZ_OK || file_info == nullptr) {
+                break;
+            }
+            if (strcmp(file_info->filename, entry_name) == 0) {
+                result = ZipFileEntryInfo{
+                        file_info->crc,
+                        file_info->compressed_size,
+                        file_info->uncompressed_size};
+                break;
+            }
+            err = mz_zip_goto_next_entry(zip_handle);
+        }
+    } else {
+        DLOGW("zip metadata open fail: %d", err);
+    }
+
+    mz_zip_close(zip_handle);
+    mz_zip_delete(&zip_handle);
+    mz_stream_mem_delete(&mem_stream);
+    return result;
+}
+
+DPT_ENCRYPT static bool readDexCacheMetadata(const char *metadataPath,
+                                             const ZipFileEntryInfo &expected,
+                                             size_t cacheSize) {
+    if (metadataPath == nullptr || expected.compressed_size < 0
+            || expected.uncompressed_size < 0) {
+        return false;
+    }
+
+    FILE *fp = fopen(metadataPath, "r");
+    if (fp == nullptr) {
+        return false;
+    }
+
+    bool hasVersion = false;
+    bool hasCrc = false;
+    bool hasCompressedSize = false;
+    bool hasUncompressedSize = false;
+    bool hasPayloadSize = false;
+    unsigned long long version = 0;
+    unsigned long long crc = 0;
+    unsigned long long compressedSize = 0;
+    unsigned long long uncompressedSize = 0;
+    unsigned long long payloadSize = 0;
+    char line[128] = {0};
+    bool valid = true;
+    while (fgets(line, sizeof(line), fp) != nullptr) {
+        char key[64] = {0};
+        unsigned long long value = 0;
+        if (sscanf(line, "%63[^=]=%llu", key, &value) != 2) {
+            valid = false;
+            break;
+        }
+        if (strcmp(key, "version") == 0) {
+            version = value;
+            hasVersion = true;
+        } else if (strcmp(key, "crc") == 0) {
+            crc = value;
+            hasCrc = true;
+        } else if (strcmp(key, "compressed_size") == 0) {
+            compressedSize = value;
+            hasCompressedSize = true;
+        } else if (strcmp(key, "uncompressed_size") == 0) {
+            uncompressedSize = value;
+            hasUncompressedSize = true;
+        } else if (strcmp(key, "payload_size") == 0) {
+            payloadSize = value;
+            hasPayloadSize = true;
+        } else {
+            valid = false;
+            break;
+        }
+    }
+    fclose(fp);
+
+    if (!valid || !hasVersion || !hasCrc || !hasCompressedSize
+            || !hasUncompressedSize || !hasPayloadSize
+            || version != 1 || crc != expected.crc
+            || compressedSize != static_cast<unsigned long long>(expected.compressed_size)
+            || uncompressedSize != static_cast<unsigned long long>(expected.uncompressed_size)
+            || payloadSize != static_cast<unsigned long long>(cacheSize)) {
+        return false;
+    }
+    return true;
+}
+
+DPT_ENCRYPT static bool writeDexCacheMetadata(const char *metadataPath,
+                                              const ZipFileEntryInfo &entryInfo,
+                                              size_t payloadSize) {
+    if (metadataPath == nullptr || entryInfo.compressed_size < 0
+            || entryInfo.uncompressed_size < 0) {
+        return false;
+    }
+
+    const std::string temporaryPath = std::string(metadataPath) + ".tmp."
+            + std::to_string(static_cast<long long>(getpid()));
+    FILE *fp = fopen(temporaryPath.c_str(), "w");
+    if (fp == nullptr) {
+        return false;
+    }
+    const int written = fprintf(fp,
+                                "version=1\n"
+                                "crc=%u\n"
+                                "compressed_size=%" PRId64 "\n"
+                                "uncompressed_size=%" PRId64 "\n"
+                                "payload_size=%zu\n",
+                                entryInfo.crc,
+                                entryInfo.compressed_size,
+                                entryInfo.uncompressed_size,
+                                payloadSize);
+    const bool flushed = written > 0 && fflush(fp) == 0;
+    const bool closed = fclose(fp) == 0;
+    if (!flushed || !closed || rename(temporaryPath.c_str(), metadataPath) != 0) {
+        unlink(temporaryPath.c_str());
+        return false;
+    }
+    chmod(metadataPath, 0444);
+    return true;
+}
+
+DPT_ENCRYPT static bool
+writeDexAchieve(const char *dexAchievePath, void *package_addr, size_t package_size,
+                size_t *payloadSizeOut) {
+    if (payloadSizeOut != nullptr) {
+        *payloadSizeOut = 0;
+    }
     DLOGD("zipCode open = %s", dexAchievePath);
     FILE *fp = fopen(dexAchievePath, "wb");
-    if (fp != nullptr) {
-        auto entry = read_zip_file_entry(package_addr, package_size, COMBINE_DEX_FILES_NAME_IN_ZIP);
-        if (entry.has_value()) {
-            auto [entry_data, entry_size] = entry.value();
-            DLOGD("Read classes.dex of size: %lu", (unsigned long) entry_size);
-            uint32_t zipDataLen = readZipLength((uint8_t *) entry_data, entry_size);
-            DLOGD("Extracted zip data length: %u", (unsigned int) zipDataLen);
-
-            if (zipDataLen > 0 && entry_size > zipDataLen + 4) {
-                // Zip file data starts at the end of classes.dex minus the zip length and 4 bytes for the length field
-                uint8_t *zipDataStart = (uint8_t *) entry_data + (entry_size - zipDataLen - 4);
-                fwrite(zipDataStart, 1, zipDataLen, fp);
-                DLOGD("Zip file extracted and written successfully.");
-            } else {
-                DLOGE("Invalid zip data length: %u. dex_files_size: %lu", (unsigned int) zipDataLen,
-                      (unsigned long) entry_size);
-            }
-
-            delete[] entry_data;
-        } else {
-            DLOGE("Failed to read classes.dex.");
-        }
-        fclose(fp);
-
-    } else {
+    if (fp == nullptr) {
         DLOGE("WTF! zipCode write fail: %s", strerror(errno));
+        return false;
     }
+
+    bool success = false;
+    auto entry = read_zip_file_entry(package_addr, package_size, COMBINE_DEX_FILES_NAME_IN_ZIP);
+    if (entry.has_value()) {
+        auto [entry_data, entry_size] = entry.value();
+        DLOGD("Read classes.dex of size: %lu", (unsigned long) entry_size);
+        uint32_t zipDataLen = readZipLength((uint8_t *) entry_data, entry_size);
+        DLOGD("Extracted zip data length: %u", (unsigned int) zipDataLen);
+
+        if (zipDataLen > 0 && entry_size > static_cast<size_t>(zipDataLen) + 4) {
+            // Zip file data starts at the end of classes.dex minus the zip length and 4 bytes for the length field
+            uint8_t *zipDataStart = (uint8_t *) entry_data + (entry_size - zipDataLen - 4);
+            const size_t bytesWritten = fwrite(zipDataStart, 1, zipDataLen, fp);
+            success = bytesWritten == zipDataLen && fflush(fp) == 0;
+            if (success && payloadSizeOut != nullptr) {
+                *payloadSizeOut = bytesWritten;
+            }
+            if (success) {
+                DLOGD("Zip file extracted and written successfully.");
+            }
+        } else {
+            DLOGE("Invalid zip data length: %u. dex_files_size: %lu", (unsigned int) zipDataLen,
+                  (unsigned long) entry_size);
+        }
+
+        delete[] entry_data;
+    } else {
+        DLOGE("Failed to read classes.dex.");
+    }
+
+    if (fclose(fp) != 0) {
+        success = false;
+    }
+    if (!success) {
+        unlink(dexAchievePath);
+    }
+    return success;
 }
 
 DPT_ENCRYPT void extractDexesInNeeded(JNIEnv *env, void *package_addr, size_t package_size) {
@@ -357,23 +527,48 @@ DPT_ENCRYPT void extractDexesInNeeded(JNIEnv *env, void *package_addr, size_t pa
     char codeCachePathChs[256] = {0};
     getCodeCachePath(env, codeCachePathChs, ARRAY_LENGTH(codeCachePathChs));
 
-    if (access(codeCachePathChs, F_OK) == 0) {
-        if (access(compressedDexesPathChs, F_OK) != 0) {
-            writeDexAchieve(compressedDexesPathChs, package_addr, package_size);
-            chmod(compressedDexesPathChs, 0444);
-            DLOGI("%s write finish", compressedDexesPathChs);
-
-        } else {
-            DLOGI("dex files is achieved!");
-        }
-    } else {
-        if (mkdir(codeCachePathChs, 0775) == 0) {
-            writeDexAchieve(compressedDexesPathChs, package_addr, package_size);
-            chmod(compressedDexesPathChs, 0444);
-        } else {
-            DLOGE("WTF! extractDexes cannot make code_cache directory!");
-        }
+    auto entryInfo = read_zip_file_entry_info(package_addr, package_size,
+                                              COMBINE_DEX_FILES_NAME_IN_ZIP);
+    if (!entryInfo.has_value()) {
+        DLOGE("Cannot read classes.dex metadata; skip dex extraction");
+        return;
     }
+
+    if (access(codeCachePathChs, F_OK) != 0
+            && mkdir(codeCachePathChs, 0775) != 0 && errno != EEXIST) {
+        DLOGE("WTF! extractDexes cannot make code_cache directory: %s", strerror(errno));
+        return;
+    }
+
+    const std::string cachePath(compressedDexesPathChs);
+    const std::string metadataPath = cachePath + ".meta";
+    struct stat cacheStat = {};
+    if (stat(cachePath.c_str(), &cacheStat) == 0 && S_ISREG(cacheStat.st_mode)
+            && readDexCacheMetadata(metadataPath.c_str(), entryInfo.value(),
+                                     static_cast<size_t>(cacheStat.st_size))) {
+        DLOGI("dex cache matches current APK metadata");
+        return;
+    }
+
+    const std::string temporaryPath = cachePath + ".tmp."
+            + std::to_string(static_cast<long long>(getpid()));
+    size_t payloadSize = 0;
+    if (!writeDexAchieve(temporaryPath.c_str(), package_addr, package_size, &payloadSize)) {
+        DLOGE("Failed to extract dex payload");
+        return;
+    }
+    if (chmod(temporaryPath.c_str(), 0444) != 0
+            || rename(temporaryPath.c_str(), cachePath.c_str()) != 0) {
+        DLOGE("Failed to atomically install dex cache: %s", strerror(errno));
+        unlink(temporaryPath.c_str());
+        return;
+    }
+    if (!writeDexCacheMetadata(metadataPath.c_str(), entryInfo.value(), payloadSize)) {
+        DLOGE("Failed to write dex cache metadata");
+        unlink(cachePath.c_str());
+        return;
+    }
+    DLOGI("%s write finish", compressedDexesPathChs);
 }
 
 DPT_ENCRYPT static size_t align_to_page_size(size_t size) {

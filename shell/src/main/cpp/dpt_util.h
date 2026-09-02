@@ -24,6 +24,7 @@
 #include <iostream>
 #include <sstream>
 #include <iomanip>
+#include <optional>
 
 
 #include <mz_zip.h>
@@ -52,6 +53,13 @@ AAsset *getAsset(JNIEnv *env, jobject context, const char *filename);
 std::string getSourceDir(JNIEnv *env);
 std::string getDataDir(JNIEnv *env);
 jstring getSourceDirExport(JNIEnv *env,jclass __unused);
+const char *getShellConfigEntryName() noexcept;
+const char *getCodeItemEntryName() noexcept;
+const char *getDexAssetFileName() noexcept;
+const char *getRuntimeDirectoryName() noexcept;
+const char *getShellBuildKey() noexcept;
+const char *getJunkClassName() noexcept;
+const char *getShellSoName() noexcept;
 void getCompressedDexesPath(JNIEnv *env,char *outDexZipPath,size_t max_len);
 void getCodeCachePath(JNIEnv *env,char *outCodeCachePath,size_t max_len);
 jstring getCompressedDexesPathExport(JNIEnv *,jclass __unused);
@@ -60,6 +68,14 @@ void load_package(JNIEnv *env,void **package_addr,size_t *package_size);
 void unload_package(void *apk_addr,size_t package_size);
 void extractDexesInNeeded(JNIEnv *env,void *package_addr,size_t package_size);
 
+struct ZipFileEntryInfo {
+    uint32_t crc;
+    int64_t compressed_size;
+    int64_t uncompressed_size;
+};
+
+std::optional<ZipFileEntryInfo> read_zip_file_entry_info(void *zip_addr, off_t zip_size,
+                                                         const char *entry_name);
 std::optional<std::tuple<uint8_t*, size_t>> read_zip_file_entry(void* zip_addr, off_t zip_size, const char* entry_name);
 
 int find_in_maps(int count,...);

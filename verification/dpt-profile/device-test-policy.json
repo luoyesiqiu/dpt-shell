@@ -1,0 +1,39 @@
+{
+  "schemaVersion": 1,
+  "scope": "all dpt-profile automated install and launch tasks",
+  "defaultMode": "real-device-first",
+  "singleInstallOrManualAcceptance": {
+    "deviceType": "physical",
+    "required": true,
+    "abi": "arm64-v8a"
+  },
+  "repeatedInstallOrMatrix": {
+    "allowTemporaryAvd": true,
+    "avdName": "dpt-profile-pixel6-api32-arm64",
+    "deviceModel": "Pixel 6",
+    "apiLevel": 32,
+    "abi": "arm64-v8a",
+    "image": "system-images;android-32;google_apis;arm64-v8a",
+    "temporaryRoot": "${TMPDIR}/dpt-profile-avd",
+    "noSnapshot": true,
+    "reuseWithinOneTaskOnly": true
+  },
+  "cleanup": {
+    "requiredBeforeReportingPass": true,
+    "stopEmulator": true,
+    "deleteAvd": true,
+    "deleteSnapshots": true,
+    "deleteUserData": true,
+    "deleteTemporaryRoot": true,
+    "retainEvidenceOutsideTemporaryRoot": true,
+    "targetMustBeTaskScoped": true
+  },
+  "requiredEvidence": [
+    "device model, API level and ABI",
+    "input and output APK SHA-256",
+    "install result",
+    "cold-start and relaunch result",
+    "crash and ANR result",
+    "cleanup result"
+  ]
+}

@@ -1,0 +1,326 @@
+import groovy.json.JsonOutput
+import groovy.json.JsonSlurper
+
+import java.nio.charset.StandardCharsets
+
+class ProfileCommandArguments {
+    final String applicationId
+    final String profileId
+    final String revisionId
+    final String recipeId
+    final File overlayDir
+    final File reportDir
+    final File scanBaseline
+    final File scanCandidate
+    final File profilesRoot
+    final File activeProfilesRoot
+    final String toolchainVersion
+
+    private ProfileCommandArguments(String applicationId, String profileId, String revisionId,
+                                    String recipeId, File overlayDir, File reportDir,
+                                    File scanBaseline, File scanCandidate,
+                                    File profilesRoot, File activeProfilesRoot,
+                                    String toolchainVersion) {
+        this.applicationId = applicationId
+        this.profileId = profileId
+        this.revisionId = revisionId
+        this.recipeId = recipeId
+        this.overlayDir = overlayDir
+        this.reportDir = reportDir
+        this.scanBaseline = scanBaseline
+        this.scanCandidate = scanCandidate
+        this.profilesRoot = profilesRoot
+        this.activeProfilesRoot = activeProfilesRoot
+        this.toolchainVersion = toolchainVersion
+    }
+
+    static ProfileCommandArguments from(Project project) {
+        return new ProfileCommandArguments(
+                value(project, "profileApplicationId"),
+                value(project, "profileId"),
+                value(project, "profileRevisionId"),
+                value(project, "profileRecipe"),
+                path(project, value(project, "profileOverlayDir")),
+                path(project, value(project, "profileReportDir")),
+                path(project, value(project, "profileScanBaseline")),
+                path(project, value(project, "profileScanCandidate")),
+                project.rootProject.ext.profileStateDir,
+                project.rootProject.ext.profileActiveDir,
+                detectToolchainVersion(project)
+        )
+    }
+
+    Map<String, String> asLogMap(String commandName) {
+        return [
+                command: commandName,
+                applicationId: applicationId,
+                profileId: profileId,
+                revisionId: revisionId,
+                recipeId: recipeId,
+                overlayDir: overlayDir?.absolutePath,
+                reportDir: reportDir?.absolutePath,
+                scanBaseline: scanBaseline?.absolutePath,
+                scanCandidate: scanCandidate?.absolutePath,
+                toolchainVersion: toolchainVersion,
+                profilesRoot: profilesRoot.absolutePath,
+                activeProfilesRoot: activeProfilesRoot.absolutePath
+        ]
+    }
+
+    private static String value(Project project, String propertyName) {
+        def value = project.findProperty(propertyName)?.toString()?.trim()
+        return value ? value : null
+    }
+
+    private static File path(Project project, String value) {
+        return value == null ? null : project.file(value).absoluteFile
+    }
+
+    private static String detectToolchainVersion(Project project) {
+        def configured = project.findProperty("profileToolchainVersion")?.toString()?.trim()
+        if (configured) {
+            return configured
+        }
+        return ("gradle-${project.gradle.gradleVersion}|agp-8.10.0"
+                + "|cmake-${project.rootProject.ext.cmakeVersion}"
+                + "|java-${System.getProperty('java.specification.version', 'unknown')}")
+    }
+}
+
+rootProject.ext.profileCommandArguments = { Project project ->
+    ProfileCommandArguments.from(project)
+}
+
+def profileBuildResult = { String output ->
+    def resultLine = output.readLines().reverse().find { line ->
+        line.startsWith("PROFILE_BUILD_RESULT ")
+    }
+    if (resultLine == null) {
+        throw new GradleException("[DPT-PROFILE-1003] 未找到 Profile 候选构建结果")
+    }
+    def result = new JsonSlurper().parseText(
+            resultLine.substring("PROFILE_BUILD_RESULT ".length()))
+    if (!(result instanceof Map) || !result.profileId || !result.revisionId) {
+        throw new GradleException("[DPT-PROFILE-1003] Profile 候选构建结果缺少 profileId 或 revisionId")
+    }
+    return result
+}
+
+def runProfileNativeBuild = { Project project, ProfileCommandArguments arguments, String output ->
+    def result = profileBuildResult(output)
+    def profileId = result.profileId.toString()
+    def revisionId = result.revisionId.toString()
+    def applicationId = result.applicationId?.toString()
+    def generatedRoot = new File(arguments.profilesRoot,
+            "generated/${profileId}/${revisionId}").absoluteFile
+    def profileNativeCmakeDir = new File(generatedRoot, "cmake").absoluteFile
+    def profileJavaSourceDir = new File(generatedRoot, "java").absoluteFile
+    def profileManifestFile = new File(generatedRoot, "manifest/AndroidManifest.xml").absoluteFile
+    def profileR8RulesFile = new File(generatedRoot, "r8/profile-rules.pro").absoluteFile
+    def profileNativeCacheDir = new File(arguments.profilesRoot,
+            "cache/${profileId}/${revisionId}/native").absoluteFile
+    def profileNativeOutputDir = new File(arguments.profilesRoot,
+            "candidates/${profileId}/${revisionId}/shell-files-input").absoluteFile
+    def identityFile = new File(arguments.profilesRoot,
+            "source/${profileId}/identity.lock.json").absoluteFile
+    if (!new File(profileNativeCmakeDir, "profile-parameters.cmake").isFile()
+            || !new File(profileNativeCmakeDir, "profile-sources.cmake").isFile()) {
+        throw new GradleException("[DPT-PROFILE-1003] Profile 候选缺少生成的 CMake 契约："
+                + profileNativeCmakeDir)
+    }
+    if (!profileJavaSourceDir.isDirectory() || !profileManifestFile.isFile()
+            || !profileR8RulesFile.isFile()) {
+        throw new GradleException("[DPT-PROFILE-1003] Profile 候选缺少生成的 Java/Manifest/R8 契约："
+                + generatedRoot)
+    }
+    if (!identityFile.isFile()) {
+        throw new GradleException("[DPT-PROFILE-1003] Profile 候选缺少身份锁："
+                + identityFile)
+    }
+    def identity = new JsonSlurper().parse(identityFile)
+    if (!applicationId || identity.profileId?.toString() != profileId
+            || identity.applicationId?.toString() != applicationId
+            || !identity.buildKey?.toString()) {
+        throw new GradleException("[DPT-PROFILE-1003] Profile 候选身份锁与构建结果不一致："
+                + identityFile)
+    }
+
+    def gradleWrapper = new File(project.rootDir, "gradlew")
+    if (!gradleWrapper.isFile()) {
+        throw new GradleException("[DPT-PROFILE-1003] 找不到 Gradle Wrapper："
+                + gradleWrapper.absolutePath)
+    }
+    project.exec {
+        workingDir project.rootDir
+        commandLine "bash", gradleWrapper.absolutePath, "--no-daemon", ":shell:profileNativeBuild",
+                "-PprofileNativeBuild=true",
+                "-PprofileNativeCmakeDir=${profileNativeCmakeDir.absolutePath}",
+                "-PprofileNativeCacheDir=${profileNativeCacheDir.absolutePath}",
+                "-PprofileNativeOutputDir=${profileNativeOutputDir.absolutePath}",
+                "-PprofileJavaSourceDir=${profileJavaSourceDir.absolutePath}",
+                "-PprofileManifestFile=${profileManifestFile.absolutePath}",
+                "-PprofileR8RulesFile=${profileR8RulesFile.absolutePath}",
+                "-PprofileBuildKey=${identity.buildKey}"
+    }
+    project.javaexec {
+        classpath = project.rootProject.project(":dpt").sourceSets.main.runtimeClasspath
+        mainClass = "com.luoye.dpt.profile.cli.ProfileCommandMain"
+        args "assemble-candidate", "--profiles-root", arguments.profilesRoot.absolutePath,
+                "--application-id", applicationId,
+                "--profile-id", profileId,
+                "--revision-id", revisionId,
+                "--shell-files-root", profileNativeOutputDir.absolutePath
+    }
+}
+
+["profileCreate", "profileShow", "profileBuild", "profilePublish", "profileRollback"].each {
+        commandName ->
+    tasks.register(commandName) {
+        group = "profile"
+        description = "Prepares shared arguments for ${commandName}."
+        doLast {
+            def arguments = ProfileCommandArguments.from(project)
+            logger.quiet("PROFILE_COMMAND_CONTEXT " + JsonOutput.toJson(arguments.asLogMap(commandName)))
+        }
+    }
+}
+
+tasks.named("profileCreate").configure {
+    dependsOn(":dpt:classes")
+    doLast {
+        def arguments = ProfileCommandArguments.from(project)
+        if (arguments.applicationId == null) {
+            throw new GradleException("[DPT-PROFILE-1001] 缺少必填参数：profileApplicationId（profileCreate）")
+        }
+        project.javaexec {
+            classpath = project(":dpt").sourceSets.main.runtimeClasspath
+            mainClass = "com.luoye.dpt.profile.cli.ProfileCommandMain"
+            args "create", "--profiles-root", arguments.profilesRoot.absolutePath,
+                    "--application-id", arguments.applicationId
+        }
+    }
+}
+
+tasks.named("profileShow").configure {
+    dependsOn(":dpt:classes")
+    doLast {
+        def arguments = ProfileCommandArguments.from(project)
+        if (arguments.applicationId == null && arguments.profileId == null) {
+            throw new GradleException("[DPT-PROFILE-1001] 缺少必填参数：profileApplicationId 或 profileId（profileShow）")
+        }
+        project.javaexec {
+            classpath = project(":dpt").sourceSets.main.runtimeClasspath
+            mainClass = "com.luoye.dpt.profile.cli.ProfileCommandMain"
+            args "show", "--profiles-root", arguments.profilesRoot.absolutePath,
+                    "--active-profiles-root", arguments.activeProfilesRoot.absolutePath
+            if (arguments.applicationId != null) {
+                args "--application-id", arguments.applicationId
+            }
+            if (arguments.profileId != null) {
+                args "--profile-id", arguments.profileId
+            }
+        }
+    }
+}
+
+tasks.named("profileBuild").configure {
+    dependsOn(":dpt:classes")
+    doLast {
+        def arguments = ProfileCommandArguments.from(project)
+        if (arguments.applicationId == null && arguments.profileId == null) {
+            throw new GradleException("[DPT-PROFILE-1001] 缺少必填参数：profileApplicationId 或 profileId（profileBuild）")
+        }
+        def commandOutput = new ByteArrayOutputStream()
+        project.javaexec {
+            classpath = project(":dpt").sourceSets.main.runtimeClasspath
+            mainClass = "com.luoye.dpt.profile.cli.ProfileCommandMain"
+            standardOutput = commandOutput
+            errorOutput = System.err
+            args "build", "--profiles-root", arguments.profilesRoot.absolutePath,
+                    "--active-profiles-root", arguments.activeProfilesRoot.absolutePath
+            if (arguments.applicationId != null) {
+                args "--application-id", arguments.applicationId
+            }
+            if (arguments.profileId != null) {
+                args "--profile-id", arguments.profileId
+            }
+            if (arguments.recipeId != null) {
+                args "--recipe-id", arguments.recipeId
+            }
+            if (arguments.overlayDir != null) {
+                args "--overlay-dir", arguments.overlayDir.absolutePath
+            }
+            args "--toolchain-version", arguments.toolchainVersion
+        }
+        def output = commandOutput.toString(StandardCharsets.UTF_8.name())
+        logger.quiet(output.trim())
+        if (project.findProperty("profileBuildNative")?.toString()?.toBoolean() ?: false) {
+            runProfileNativeBuild(project, arguments, output)
+        } else {
+            logger.quiet("PROFILE_NATIVE_BUILD_DEFERRED "
+                    + "传入 -PprofileBuildNative=true 才执行 arm64 Native 构建")
+        }
+    }
+}
+
+tasks.named("profilePublish").configure {
+    dependsOn(":dpt:classes")
+    doLast {
+        def arguments = ProfileCommandArguments.from(project)
+        if (arguments.applicationId == null && arguments.profileId == null) {
+            throw new GradleException("[DPT-PROFILE-1001] 缺少必填参数：profileApplicationId 或 profileId（profilePublish）")
+        }
+        if (arguments.revisionId == null) {
+            throw new GradleException("[DPT-PROFILE-1001] 缺少必填参数：profileRevisionId（profilePublish）")
+        }
+        if (arguments.reportDir == null) {
+            throw new GradleException("[DPT-PROFILE-1001] 缺少必填参数：profileReportDir（profilePublish）")
+        }
+        project.javaexec {
+            classpath = project(":dpt").sourceSets.main.runtimeClasspath
+            mainClass = "com.luoye.dpt.profile.cli.ProfileCommandMain"
+            args "publish", "--profiles-root", arguments.profilesRoot.absolutePath,
+                    "--active-profiles-root", arguments.activeProfilesRoot.absolutePath,
+                    "--revision-id", arguments.revisionId,
+                    "--report-dir", arguments.reportDir.absolutePath
+            if (arguments.applicationId != null) {
+                args "--application-id", arguments.applicationId
+            }
+            if (arguments.profileId != null) {
+                args "--profile-id", arguments.profileId
+            }
+            if (arguments.scanBaseline != null) {
+                args "--scan-baseline", arguments.scanBaseline.absolutePath
+            }
+            if (arguments.scanCandidate != null) {
+                args "--scan-candidate", arguments.scanCandidate.absolutePath
+            }
+        }
+    }
+}
+
+tasks.named("profileRollback").configure {
+    dependsOn(":dpt:classes")
+    doLast {
+        def arguments = ProfileCommandArguments.from(project)
+        if (arguments.applicationId == null && arguments.profileId == null) {
+            throw new GradleException("[DPT-PROFILE-1001] 缺少必填参数：profileApplicationId 或 profileId（profileRollback）")
+        }
+        if (arguments.revisionId == null) {
+            throw new GradleException("[DPT-PROFILE-1001] 缺少必填参数：profileRevisionId（profileRollback）")
+        }
+        project.javaexec {
+            classpath = project(":dpt").sourceSets.main.runtimeClasspath
+            mainClass = "com.luoye.dpt.profile.cli.ProfileCommandMain"
+            args "rollback", "--profiles-root", arguments.profilesRoot.absolutePath,
+                    "--active-profiles-root", arguments.activeProfilesRoot.absolutePath,
+                    "--revision-id", arguments.revisionId
+            if (arguments.applicationId != null) {
+                args "--application-id", arguments.applicationId
+            }
+            if (arguments.profileId != null) {
+                args "--profile-id", arguments.profileId
+            }
+        }
+    }
+}

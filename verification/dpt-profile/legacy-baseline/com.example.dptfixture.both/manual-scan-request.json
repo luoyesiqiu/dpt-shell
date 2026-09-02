@@ -1,0 +1,25 @@
+{
+  "status": "PENDING_MANUAL_SCAN",
+  "applicationId": "com.example.dptfixture.both",
+  "apkFile": "build/dpt-profile-baseline/legacy-fixture-signed.apk",
+  "apkSha256": "da7a8f29bb3f734e2d3c03338c4f43b8dc2c1676235f35270a4eccab1fbfe603",
+  "requiredScannerSet": [
+    "请填写实际扫描器 ID 和版本"
+  ],
+  "requiredWindow": {
+    "windowId": "请填写同一批次窗口 ID",
+    "windowStartEpochMillis": 0,
+    "windowEndEpochMillis": 0
+  },
+  "requiredFields": [
+    "applicationId",
+    "apkSha256",
+    "generatedAtEpochMillis",
+    "windowId",
+    "windowStartEpochMillis",
+    "windowEndEpochMillis",
+    "scannerSet",
+    "detections"
+  ],
+  "instructions": "请对指定 APK 做多引擎手工扫描，将真实导出结果转换为 scan-baseline.json；不得上传或自动发送 APK。完成后还需对候选 APK 生成 scan-candidate.json，二者必须使用同一扫描器集合和可比时间窗口。"
+}

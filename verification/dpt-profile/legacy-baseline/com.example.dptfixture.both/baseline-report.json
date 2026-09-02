@@ -1,0 +1,60 @@
+{
+  "schemaVersion": 1,
+  "generatedAtEpochMillis": 1788179114000,
+  "applicationId": "com.example.dptfixture.both",
+  "abi": "arm64-v8a",
+  "signingMethod": "Android debug keystore via build-tools 35.0.0 apksigner; DPT stage -x",
+  "skipSigning": true,
+  "toolchain": {
+    "dptVersion": "2.20.0",
+    "gradle": "8.14",
+    "androidGradlePlugin": "8.10.0",
+    "java": "17.0.12",
+    "ndk": "27.0.12077973",
+    "cmake": "3.31.1",
+    "buildTools": "35.0.0",
+    "host": "macOS 14.6 arm64"
+  },
+  "deviceEnvironment": {
+    "id": "Codex_DptProfile_API32_Temp",
+    "attributes": {
+      "serial": "emulator-5580",
+      "model": "Pixel 6",
+      "api": "32",
+      "abi": "arm64-v8a",
+      "fingerprint": "google/sdk_gphone64_arm64/emulator64_arm64:12/S2B2.211203.006/8015633:userdebug/dev-keys",
+      "coldStartRuns": "30",
+      "crashCount": "0",
+      "anrCount": "0",
+      "note": "本轮临时 AVD；测试后已停止并删除，不能作为明日人工验收设备。"
+    }
+  },
+  "ciEnvironment": {
+    "id": "macos-arm64-local-20260831",
+    "attributes": {
+      "os": "macOS 14.6",
+      "arch": "arm64",
+      "java": "17.0.12",
+      "repositoryHead": "bd037f70ea3f7fcae1c56d5b0505a353c2eaedfa",
+      "profileBaselineRoot": "build/dpt-profile-baseline"
+    }
+  },
+  "inputApk": {
+    "logicalName": "input-apk",
+    "fileName": "java-shell-fixture-applicationAndFactory-debug.apk",
+    "sha256": "6f79ab7d0ec02a0bb4c0485a5090cce3d4bd3a1888443a0bb73ef15b9f9382b6",
+    "bytes": 13289
+  },
+  "legacyProtectedApk": {
+    "logicalName": "legacy-protected-apk",
+    "fileName": "legacy-fixture-signed.apk",
+    "sha256": "da7a8f29bb3f734e2d3c03338c4f43b8dc2c1676235f35270a4eccab1fbfe603",
+    "bytes": 307930
+  },
+  "legacyArm64So": {
+    "logicalName": "legacy-arm64-so",
+    "fileName": "lib2a80863609dc72ed.so",
+    "sha256": "fe613b21de3f57aaa9f33af112be81dff1340e470f5913fe49af267febcb7f27",
+    "bytes": 719152
+  }
+}

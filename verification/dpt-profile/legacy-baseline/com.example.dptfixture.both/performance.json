@@ -1,0 +1,52 @@
+{
+  "schemaVersion": 1,
+  "applicationId": "com.example.dptfixture.both",
+  "abi": "arm64-v8a",
+  "apkProtection": {
+    "kind": "LEGACY_DPT",
+    "inputApkSha256": "6f79ab7d0ec02a0bb4c0485a5090cce3d4bd3a1888443a0bb73ef15b9f9382b6",
+    "protectedApkSha256": "da7a8f29bb3f734e2d3c03338c4f43b8dc2c1676235f35270a4eccab1fbfe603",
+    "executionEnvironmentId": "macos-arm64-local-20260831",
+    "runCount": 10,
+    "samplesMillis": [1890, 880, 1240, 730, 550, 820, 860, 1020, 1290, 800],
+    "p50Millis": 860,
+    "p95Millis": 1890,
+    "sampleDirectories": [
+      "build/dpt-profile-baseline/fixture-run-02",
+      "build/dpt-profile-baseline/fixture-run-03",
+      "build/dpt-profile-baseline/fixture-run-04",
+      "build/dpt-profile-baseline/fixture-run-05",
+      "build/dpt-profile-baseline/fixture-run-06",
+      "build/dpt-profile-baseline/fixture-run-07",
+      "build/dpt-profile-baseline/fixture-run-08",
+      "build/dpt-profile-baseline/fixture-run-09",
+      "build/dpt-profile-baseline/fixture-run-10",
+      "build/dpt-profile-baseline/fixture-run-11"
+    ],
+    "note": "每次旧 DPT 输出含随机内容，输出 SHA-256 不作为跨次相等条件；性能样本对应各次 real 毫秒。"
+  },
+  "coldStart": {
+    "kind": "LEGACY_DPT",
+    "apkSha256": "da7a8f29bb3f734e2d3c03338c4f43b8dc2c1676235f35270a4eccab1fbfe603",
+    "deviceEnvironmentId": "Codex_DptProfile_API32_Temp",
+    "runCount": 30,
+    "samplesMillis": [5069, 3492, 2777, 2543, 2167, 2602, 1837, 2106, 3481, 3803, 3961, 3046, 5617, 4556, 5763, 8708, 11342, 4973, 4563, 2815, 3462, 1763, 2804, 5349, 4647, 5809, 5014, 5275, 6583, 5048],
+    "p50Millis": 3961,
+    "p95Millis": 8708,
+    "crashCount": 0,
+    "anrCount": 0,
+    "rawDirectory": "build/dpt-profile-baseline/cold-start-raw",
+    "note": "样本来自同一临时 arm64 AVD；期间检测到其他应用 ANR，未归因于测试应用，后续候选必须在相同环境重新采样。"
+  },
+  "arm64Build": {
+    "kind": "LEGACY_SHELL",
+    "ciEnvironmentId": "macos-arm64-local-20260831",
+    "toolchainMatchesBaseline": true,
+    "durationMillis": 126390,
+    "source": "build/dpt-profile-baseline/legacy-build-time.txt",
+    "strippedSoBytes": 719336,
+    "strippedSoSha256": "ea701c4bbdeb5fb930bd9c6f6d63db8904a60107979cce946ea1177b3699f61a",
+    "gitHead": "bd037f70ea3f7fcae1c56d5b0505a353c2eaedfa",
+    "buildArguments": [":shell:assembleRelease", "-Pandroid.injected.build.abi=arm64-v8a"]
+  }
+}

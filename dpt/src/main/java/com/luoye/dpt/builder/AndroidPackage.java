@@ -11,6 +11,8 @@ import com.luoye.dpt.dex.JunkCodeGenerator;
 import com.luoye.dpt.elf.ReadElf;
 import com.luoye.dpt.model.Instruction;
 import com.luoye.dpt.model.MultiDexCode;
+import com.luoye.dpt.profile.contract.ProfileContractCodec;
+import com.luoye.dpt.profile.model.ProfileContract;
 import com.luoye.dpt.task.ThreadPool;
 import com.luoye.dpt.util.CryptoUtils;
 import com.luoye.dpt.util.DexUtils;
@@ -69,6 +71,7 @@ public abstract class AndroidPackage {
         public String protectConfigFile = null;
         public boolean verifySign = false;
         public int riskCheckFlags = 0;
+        public ProfileContract profileContract;
 
         public Builder filePath(String path) {
             this.filePath = path;
@@ -107,6 +110,11 @@ public abstract class AndroidPackage {
 
         public Builder riskCheckFlags(int riskCheckFlags) {
             this.riskCheckFlags = riskCheckFlags;
+            return this;
+        }
+
+        public Builder profileContract(ProfileContract profileContract) {
+            this.profileContract = profileContract;
             return this;
         }
 
@@ -157,6 +165,7 @@ public abstract class AndroidPackage {
     private String protectConfigFile;
     private boolean verifySign = false;
     private int riskCheckFlags = 0;
+    private ProfileContract profileContract;
 
     public AndroidPackage(Builder builder) {
         setFilePath(builder.filePath);
@@ -173,6 +182,7 @@ public abstract class AndroidPackage {
         setProtectConfigFile(builder.protectConfigFile);
         setVerifySign(builder.verifySign);
         setRiskCheckFlags(builder.riskCheckFlags);
+        setProfileContract(builder.profileContract);
     }
 
     public void setProtectConfigFile(String protectConfigFile) {
@@ -197,6 +207,16 @@ public abstract class AndroidPackage {
 
     public void setRiskCheckFlags(int riskCheckFlags) {
         this.riskCheckFlags = riskCheckFlags;
+    }
+
+    public void setProfileContract(ProfileContract profileContract) {
+        this.profileContract = profileContract == null ? null
+                : ProfileContractCodec.deserialize(ProfileContractCodec.serialize(profileContract));
+    }
+
+    protected ProfileContract getProfileContract() {
+        return profileContract == null ? null
+                : ProfileContractCodec.deserialize(ProfileContractCodec.serialize(profileContract));
     }
 
     public boolean isSmaller() {
@@ -289,18 +309,21 @@ public abstract class AndroidPackage {
     protected void combineDexZipWithShellDex(String packageMainProcessPath) {
         try {
             File shellDexFile = new File(getProxyDexPath());
-            File renameDexFile = new File(getRenameDexPath());
+            File renameDexFile = null;
 
             ShellConfig shellConfig = ShellConfig.getInstance();
 
-            boolean needRename = !org.apache.commons.lang3.StringUtils.isBlank(shellConfig.getShellPackageName())
+            boolean needRename = getProfileContract() == null
+                    && !org.apache.commons.lang3.StringUtils.isBlank(shellConfig.getShellPackageName())
                     && !Const.DEFAULT_SHELL_PACKAGE_NAME.equals(shellConfig.getShellPackageName());
 
             if(needRename) {
+                renameDexFile = new File(getRenameDexPath());
                 DexUtils.renamePackageName(shellDexFile, renameDexFile, shellConfig.getSlashShellPackageName());
             }
 
-            File originalDexZipFile = new File(getOutAssetsDir(packageMainProcessPath).getAbsolutePath() + File.separator + Const.KEY_DEXES_STORE_NAME);
+            File originalDexZipFile = new File(getOutAssetsDir(packageMainProcessPath).getAbsolutePath()
+                    + File.separator + getDexAssetName());
             byte[] zipData = com.android.dex.util.FileUtils.readFile(originalDexZipFile);// Read the zip file as binary data
             byte[] unShellDexArray =  com.android.dex.util.FileUtils.readFile(!needRename ? shellDexFile : renameDexFile); // Read the dex file as binary data
             int zipDataLen = zipData.length;
@@ -340,7 +363,9 @@ public abstract class AndroidPackage {
             LogUtils.info("New Dex file generated: " + targetDexFile);
             // Delete the dex zip package
             FileUtils.deleteRecurse(originalDexZipFile);
-            FileUtils.deleteRecurse(renameDexFile);
+            if (renameDexFile != null) {
+                FileUtils.deleteRecurse(renameDexFile);
+            }
         }catch (Exception e){
             e.printStackTrace();
         }
@@ -367,7 +392,7 @@ public abstract class AndroidPackage {
         if (packageName == null || packageName.isEmpty()) {
             throw new IllegalStateException("package name is empty, cannot derive config aes key");
         }
-        String buildKey = Dpt.getBuildKey();
+        String buildKey = getBuildKey();
         if (buildKey == null || buildKey.isEmpty()) {
             throw new IllegalStateException("dpt build key is missing, cannot derive config aes key");
         }
@@ -376,7 +401,8 @@ public abstract class AndroidPackage {
     }
 
     public void writeConfig(String packageDir, byte[] key) {
-        File configFile = new File(getOutAssetsDir(packageDir).getAbsolutePath() + File.separator + Const.KEY_SHELL_CONFIG_STORE_NAME);
+        File configFile = new File(getOutAssetsDir(packageDir).getAbsolutePath() + File.separator
+                + getShellConfigAssetName());
         ShellConfig shellConfig = ShellConfig.getInstance();
         String json = shellConfig.toJson();
         LogUtils.info("Write config: " + json);
@@ -422,15 +448,65 @@ public abstract class AndroidPackage {
     }
 
     public String getProxyApplicationName() {
+        if (profileContract != null) {
+            return profileContract.getProxyApplicationClassName();
+        }
         return String.format(Locale.US, "%s.%s", ShellConfig.getInstance().getShellPackageName(), "ProxyApplication");
     }
 
     public String getProxyComponentFactory() {
+        if (profileContract != null) {
+            return profileContract.getProxyComponentFactoryClassName();
+        }
         return String.format(Locale.US, "%s.%s", ShellConfig.getInstance().getShellPackageName(), "ProxyComponentFactory");
+    }
+
+    protected String getShellConfigAssetName() {
+        return profileContract == null ? Const.KEY_SHELL_CONFIG_STORE_NAME
+                : profileContract.getShellConfigAssetName();
+    }
+
+    protected String getDexAssetName() {
+        return profileContract == null ? Const.KEY_DEXES_STORE_NAME : profileContract.getDexAssetName();
+    }
+
+    protected String getUnalignedDexAssetName() {
+        return profileContract == null ? Const.KEY_DEXES_STORE_UNALIGNED_NAME
+                : profileContract.getDexAssetName() + ".unaligned";
+    }
+
+    protected String getCodeItemAssetName() {
+        return profileContract == null ? Const.KEY_CODE_ITEM_STORE_NAME
+                : profileContract.getCodeItemAssetName();
+    }
+
+    protected String getNativeLibAssetDirName() {
+        return profileContract == null ? Const.KEY_LIBS_DIR_NAME
+                : profileContract.getNativeLibAssetDirName();
+    }
+
+    protected String getRuntimeDirName() {
+        return profileContract == null ? null : profileContract.getRuntimeDirName();
+    }
+
+    protected String getRc4KeySymbol() {
+        return profileContract == null ? Const.RC4_KEY_SYMBOL : profileContract.getRc4KeySymbol();
+    }
+
+    protected String getShellSoName() {
+        return profileContract == null ? null : profileContract.getSoName();
+    }
+
+    protected String getBuildKey() {
+        return profileContract == null ? Dpt.getBuildKey() : profileContract.getBuildKey();
     }
 
     protected String getProxyDexPath() {
         return FileUtils.getExecutablePath() + File.separator + "shell-files" + File.separator + "dex" + File.separator + "classes.dex";
+    }
+
+    protected File getShellNativeLibsRoot() {
+        return new File(FileUtils.getExecutablePath(), "shell-files" + File.separator + "libs");
     }
 
     protected String getRenameDexPath() {
@@ -465,8 +541,10 @@ public abstract class AndroidPackage {
     public void compressDexFiles(String packageDir) {
         Map<String, CompressionMethod> rulesMap = new HashMap<>();
         rulesMap.put("classes\\d*.dex", CompressionMethod.STORE);
-        String unalignedFilePath = getOutAssetsDir(packageDir).getAbsolutePath() + File.separator + Const.KEY_DEXES_STORE_UNALIGNED_NAME;
-        String alignedFilePath = getOutAssetsDir(packageDir).getAbsolutePath() + File.separator + Const.KEY_DEXES_STORE_NAME;
+        String unalignedFilePath = getOutAssetsDir(packageDir).getAbsolutePath() + File.separator
+                + getUnalignedDexAssetName();
+        String alignedFilePath = getOutAssetsDir(packageDir).getAbsolutePath() + File.separator
+                + getDexAssetName();
         ZipUtils.compress(getDexFiles(getDexDir(packageDir))
                 , unalignedFilePath
                 , rulesMap
@@ -503,8 +581,9 @@ public abstract class AndroidPackage {
     }
 
     public void copyNativeLibs(String packageDir) {
-        File sourceDirRoot = new File(FileUtils.getExecutablePath(), "shell-files" + File.separator + "libs");
-        File destDirRoot = new File(getOutAssetsDir(packageDir).getAbsolutePath(), Const.KEY_LIBS_DIR_NAME);
+        File sourceDirRoot = getShellNativeLibsRoot();
+        File destDirRoot = new File(getOutAssetsDir(packageDir).getAbsolutePath(),
+                getNativeLibAssetDirName());
 
         if (!destDirRoot.exists()) {
             destDirRoot.mkdirs();
@@ -539,10 +618,20 @@ public abstract class AndroidPackage {
 
             for (File libFile : libFiles) {
                 if (libFile.isFile() && libFile.getName().endsWith(".so")) {
+                    String shellSoName = getShellSoName();
+                    if (shellSoName != null && !shellSoName.equals(libFile.getName())) {
+                        continue;
+                    }
                     File destFile = new File(destAbiDir, libFile.getName());
                     try {
                         Files.copy(libFile.toPath(), destFile.toPath(),
                                 StandardCopyOption.REPLACE_EXISTING);
+                        // Published Profile Bundles are intentionally read-only. Make the
+                        // per-APK copy writable before encryptSoFiles patches its sections.
+                        if (!destFile.setWritable(true, true) && !destFile.canWrite()) {
+                            throw new IOException("copied native library is not writable: "
+                                    + destFile);
+                        }
                     } catch (IOException e) {
                         LogUtils.error("Failed to copy library: " + e.getMessage());
                     }
@@ -552,7 +641,8 @@ public abstract class AndroidPackage {
     }
 
     public void encryptSoFiles(String packageOutDir, byte[] rc4Key){
-        File obfDir = new File(getOutAssetsDir(packageOutDir).getAbsolutePath() + File.separator, Const.KEY_LIBS_DIR_NAME);
+        File obfDir = new File(getOutAssetsDir(packageOutDir).getAbsolutePath() + File.separator,
+                getNativeLibAssetDirName());
         File[] soAbiDirs = obfDir.listFiles();
         if(soAbiDirs == null) {
             return;
@@ -604,7 +694,7 @@ public abstract class AndroidPackage {
 
     private void writeSoFileCryptKey(File soFile, byte[] rc4key) {
         try (ReadElf readElf = new ReadElf(soFile)) {
-            ReadElf.Symbol symbol = readElf.getDynamicSymbol(Const.RC4_KEY_SYMBOL);
+            ReadElf.Symbol symbol = readElf.getDynamicSymbol(getRc4KeySymbol());
             if(symbol == null) {
                 LogUtils.warn("cannot find symbol in %s, no need write key", soFile.getName());
                 return;
@@ -666,7 +756,7 @@ public abstract class AndroidPackage {
     public void extractDexCode(String packageDir, String dexCodeSavePath, byte[] soKey) {
         List<File> dexFiles = getDexFiles(getDexDir(packageDir));
         Map<Integer,List<Instruction>> instructionMap = new HashMap<>();
-        String appNameNew = Const.KEY_CODE_ITEM_STORE_NAME;
+        String appNameNew = getCodeItemAssetName();
         String dataOutputPath = dexCodeSavePath + File.separator + appNameNew;
 
         CountDownLatch countDownLatch = new CountDownLatch(dexFiles.size());
@@ -675,6 +765,10 @@ public abstract class AndroidPackage {
 
         ShellConfig shellConfig = ShellConfig.getInstance();
         shellConfig.setInsnsCryptKey(deriveConfigAesKey(soKey));
+
+        // Resolve the profile contract before the legacy per-dex recovery boundary.
+        String jniClassNameSig = shellConfig.getJniClassNameSig();
+        String jniStaticInitializeMethodName = shellConfig.getJniStaticInitializeMethodName();
         for(File dexFile : dexFiles) {
             ThreadPool.getInstance().execute(() -> {
                 final int dexNo = DexUtils.getDexNumber(dexFile.getName());
@@ -688,7 +782,8 @@ public abstract class AndroidPackage {
                 try {
                     DexUtils.injectInvokeMethod(dexFile.getAbsolutePath(),
                             injectedDexFile.getAbsolutePath(),
-                            shellConfig.getJniClassNameSig()
+                            jniClassNameSig,
+                            jniStaticInitializeMethodName
                     );
 
                     dexFile.delete();
@@ -931,6 +1026,50 @@ public abstract class AndroidPackage {
              FileOutputStream out = new FileOutputStream(outputPackagePath)) {
             ZipAlign.alignZip(in, out);
         }
+        trimZipTrailingData(outputPackagePath);
+    }
+
+    /**
+     * zipalign-java may copy bytes after the ZIP end-of-central-directory record.
+     * Android's apksig rejects that otherwise harmless trailing data, so trim it
+     * while preserving a legitimate ZIP comment.
+     */
+    private static void trimZipTrailingData(String zipPath) throws IOException {
+        try (RandomAccessFile file = new RandomAccessFile(zipPath, "rw")) {
+            long length = file.length();
+            long searchStart = Math.max(0L, length - 65557L);
+            long eocd = -1L;
+            for (long offset = length - 22L; offset >= searchStart; offset--) {
+                file.seek(offset);
+                if (file.read() != 0x50 || file.read() != 0x4b
+                        || file.read() != 0x05 || file.read() != 0x06) {
+                    continue;
+                }
+                file.seek(offset + 20L);
+                int commentLength = readUnsignedShortLittleEndian(file);
+                long end = offset + 22L + commentLength;
+                if (end <= length) {
+                    eocd = end;
+                    break;
+                }
+            }
+            if (eocd < 0L) {
+                throw new IOException("ZIP end-of-central-directory record not found: " + zipPath);
+            }
+            if (eocd < length) {
+                LogUtils.warn("Trim ZIP trailing data: %s bytes", length - eocd);
+                file.setLength(eocd);
+            }
+        }
+    }
+
+    private static int readUnsignedShortLittleEndian(RandomAccessFile file) throws IOException {
+        int low = file.read();
+        int high = file.read();
+        if (low < 0 || high < 0) {
+            throw new IOException("unexpected end of ZIP end-of-central-directory record");
+        }
+        return low | (high << 8);
     }
 
     private void processRuleFile() {
@@ -1093,12 +1232,14 @@ public abstract class AndroidPackage {
     }
 
     public void protect() throws IOException {
-        String path = "shell-files";
-        File shellFiles = new File(FileUtils.getExecutablePath() + File.separator + path);
-        if(!shellFiles.exists()) {
-            String msg = "Cannot find directory: shell-files!" + shellFiles;
-            LogUtils.error(msg);
-            throw new FileNotFoundException(msg);
+        if (profileContract == null) {
+            String path = "shell-files";
+            File shellFiles = new File(FileUtils.getExecutablePath() + File.separator + path);
+            if(!shellFiles.exists()) {
+                String msg = "Cannot find directory: shell-files!" + shellFiles;
+                LogUtils.error(msg);
+                throw new FileNotFoundException(msg);
+            }
         }
 
         File willProtectFile = new File(getFilePath());
@@ -1112,6 +1253,9 @@ public abstract class AndroidPackage {
         processProtectConfigFile();
 
         ShellConfig shellConfig = ShellConfig.getInstance();
+        if (profileContract != null) {
+            shellConfig.applyProfileContract(profileContract);
+        }
         // Merge CLI flags into config-file flags (each bit = one switch)
         shellConfig.setRiskCheckFlags(shellConfig.getRiskCheckFlags() | getRiskCheckFlags());
 
@@ -1125,7 +1269,14 @@ public abstract class AndroidPackage {
             }
         }
 
-        JunkCodeGenerator.generateJunkCodeDex(new File(getJunkCodeDexPath()));
+        File junkCodeDex = new File(getJunkCodeDexPath());
+        if (profileContract == null) {
+            JunkCodeGenerator.generateJunkCodeDex(junkCodeDex);
+        } else {
+            // The shell DEX already contains junkClassName; keep the extra DEX descriptor distinct.
+            JunkCodeGenerator.generateJunkCodeDex(junkCodeDex,
+                    profileContract.getJunkClassName() + "D");
+        }
     }
 
 }

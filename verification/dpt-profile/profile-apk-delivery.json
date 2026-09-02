@@ -1,0 +1,64 @@
+{
+  "schemaVersion": 1,
+  "status": "PASSED",
+  "evidenceType": "delivery-compatibility",
+  "generatedAt": "2026-08-31T20:46:50+08:00",
+  "applicationId": "com.example.dptfixture.both",
+  "profileId": "pf_0be60c42a623e824",
+  "revisionId": "r000002",
+  "recipeId": "recipe-a",
+  "abi": "arm64-v8a",
+  "channelInputRequired": false,
+  "channelInputProvided": false,
+  "inputApk": {
+    "path": "/Users/admin/AndroidStudioProjects/dpt-shell/test-apks/java-shell-fixture/build/outputs/apk/applicationAndFactory/debug/java-shell-fixture-applicationAndFactory-debug.apk",
+    "sha256": "6f79ab7d0ec02a0bb4c0485a5090cce3d4bd3a1888443a0bb73ef15b9f9382b6",
+    "sizeBytes": 13289
+  },
+  "outputApk": {
+    "path": "/tmp/dpt-profile-delivery.oGUGKt/profile-protected.apk",
+    "sha256": "8ff29f12eb0911af915f3744c54726c3f8df47d178c57af20269c24326a01712",
+    "sizeBytes": 307937
+  },
+  "shellArtifacts": {
+    "classesDex": {
+      "sha256": "c80dcb11c7538628b6a6c46cc14cfb3341f3217ea5768fbf9a4c6fb1ae5425f4",
+      "sizeBytes": 9984
+    },
+    "arm64So": {
+      "name": "lib1ba237f108d89967.so",
+      "sha256": "322fd2a0436948182db6460d129e07757a010badd10fb14ea64aa3e4ee2aa0cc",
+      "sizeBytes": 718344
+    },
+    "buildKeySha256": "84287577c873e20a9881d1736143ba851e538025b3e4d25a50dbba166ae8f536"
+  },
+  "steps": {
+    "profileCreate": "PASSED",
+    "profileBuild": "PASSED",
+    "profilePublish": "LOCAL_TEST_ONLY",
+    "dptProtection": "PASSED",
+    "zipalign": "PASSED",
+    "apksigner": "PASSED",
+    "channelPackaging": "NOT_REQUIRED"
+  },
+  "verification": {
+    "dptLog": "/tmp/dpt-profile-delivery.oGUGKt/protect.log",
+    "zipalignLog": "/tmp/dpt-profile-delivery.oGUGKt/zipalign-verify.log",
+    "apksignerLog": "/tmp/dpt-profile-delivery.oGUGKt/apksigner-verify.log",
+    "zipalignCommand": "zipalign -c -v 4 /tmp/dpt-profile-delivery.oGUGKt/profile-protected.apk",
+    "apksignerCommand": "apksigner verify --verbose /tmp/dpt-profile-delivery.oGUGKt/profile-protected.apk",
+    "verifiedSchemes": {
+      "v1": true,
+      "v2": true,
+      "v3": true
+    },
+    "bundleReadOnlyCheck": "PASSED",
+    "repeatProtectionProducedDifferentApkSha256": true
+  },
+  "limitations": {
+    "productionReleaseGate": "NOT_CLAIMED",
+    "manualMultiEngineScan": "NOT_PROVIDED",
+    "realDeviceInstallAndLaunch": "PENDING",
+    "temporaryPathsMayExpire": true
+  }
+}

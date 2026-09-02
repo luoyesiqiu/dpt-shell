@@ -5,6 +5,7 @@ import com.luoye.dpt.builder.Aab;
 import com.luoye.dpt.builder.AndroidPackage;
 import com.luoye.dpt.builder.Apk;
 import com.luoye.dpt.config.Const;
+import com.luoye.dpt.profile.error.ProfileCommandException;
 import com.luoye.dpt.util.*;
 
 import org.apache.commons.cli.CommandLine;
@@ -30,15 +31,17 @@ public class Dpt {
 
     private static final String MANIFEST_BUILD_KEY_ATTR = "Dpt-Build-Key";
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws Exception {
         try {
             AndroidPackage androidPackage = parseOptions(args);
             if(androidPackage == null) {
                 return;
             }
             androidPackage.protect();
-        } catch (Exception e){
-            e.printStackTrace();
+        } catch (ProfileCommandException e) {
+            System.err.println("PROFILE_ERROR code=" + e.getErrorCode().getCode()
+                    + " message=" + e.getDisplayMessage());
+            throw e;
         }
     }
 

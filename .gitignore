@@ -17,3 +17,10 @@ local.properties
 /shell-files
 /executable
 /.idea
+
+# Profile build outputs are reproducible and must not be committed.
+/profiles/cache/
+/profiles/generated/
+/profiles/candidates/
+/profiles/.locks/
+/profiles/.index.lock

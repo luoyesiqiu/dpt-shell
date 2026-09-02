@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <application android:theme="@android:style/Theme.Material.Light.NoActionBar">
+        <activity
+            android:name=".FixtureActivity"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+        <service
+            android:name=".FixtureService"
+            android:exported="false" />
+        <receiver
+            android:name=".FixtureReceiver"
+            android:exported="false" />
+        <provider
+            android:name=".FixtureProvider"
+            android:authorities="${applicationId}.fixture-provider"
+            android:exported="false" />
+    </application>
+
+</manifest>

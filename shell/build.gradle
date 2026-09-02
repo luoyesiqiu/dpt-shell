@@ -1,10 +1,78 @@
-import groovy.json.JsonOutput
-
-import java.nio.file.Files
-import java.nio.file.Paths
-
 plugins {
     id 'com.android.application'
+}
+
+def profileNativeBuild = project.findProperty("profileNativeBuild")?.toString()?.toBoolean() ?: false
+def profileNativeCmakeDir = null
+def profileNativeCacheDir = null
+def profileNativeOutputDir = null
+def profileJavaSourceDir = null
+def profileManifestFile = null
+def profileR8RulesFile = null
+def profileBuildKey = null
+def profileSoFile = null
+def resolvedShellSoName = fullSoName
+def isWithin = { File parent, File child ->
+    def parentPath = parent.canonicalFile.toPath()
+    def childPath = child.canonicalFile.toPath()
+    childPath == parentPath || childPath.startsWith(parentPath)
+}
+
+if (profileNativeBuild) {
+    def requiredProfileDirectory = { String propertyName ->
+        def value = project.findProperty(propertyName)?.toString()?.trim()
+        if (!value) {
+            throw new GradleException("[DPT-PROFILE-1003] 缺少 Profile Native 构建参数：${propertyName}")
+        }
+        return project.file(value).absoluteFile
+    }
+    def requiredProfileFile = { String propertyName ->
+        def value = project.findProperty(propertyName)?.toString()?.trim()
+        if (!value) {
+            throw new GradleException("[DPT-PROFILE-1003] 缺少 Profile Native 构建参数：${propertyName}")
+        }
+        return project.file(value).absoluteFile
+    }
+    profileNativeCmakeDir = requiredProfileDirectory("profileNativeCmakeDir")
+    profileNativeCacheDir = requiredProfileDirectory("profileNativeCacheDir")
+    profileNativeOutputDir = requiredProfileDirectory("profileNativeOutputDir")
+    profileJavaSourceDir = requiredProfileDirectory("profileJavaSourceDir")
+    profileManifestFile = requiredProfileFile("profileManifestFile")
+    profileR8RulesFile = project.file(project.findProperty("profileR8RulesFile")?.toString())
+            .absoluteFile
+    profileBuildKey = project.findProperty("profileBuildKey")?.toString()?.trim()
+    if (!new File(profileNativeCmakeDir, "profile-parameters.cmake").isFile()
+            || !new File(profileNativeCmakeDir, "profile-sources.cmake").isFile()) {
+        throw new GradleException("[DPT-PROFILE-1003] Profile Native 构建缺少生成的 CMake 契约："
+                + profileNativeCmakeDir.absolutePath)
+    }
+    if (!profileJavaSourceDir.isDirectory() || !profileManifestFile.isFile()
+            || !profileR8RulesFile.isFile()
+            || !profileBuildKey) {
+        throw new GradleException("[DPT-PROFILE-1003] Profile Java/Manifest/R8/build-key 构建参数无效")
+    }
+    def profileParametersFile = new File(profileNativeCmakeDir, "profile-parameters.cmake")
+    def profileParameters = profileParametersFile.getText("UTF-8")
+    def profileSoMatcher = profileParameters =~ /(?m)^\s*set\(DPT_PROFILE_SO_FILE\s+"([^"]+)"\)\s*$/
+    if (!profileSoMatcher.find()) {
+        throw new GradleException("[DPT-PROFILE-1003] Profile Native 契约缺少 DPT_PROFILE_SO_FILE："
+                + profileParametersFile.absolutePath)
+    }
+    profileSoFile = profileSoMatcher.group(1)
+    if (!(profileSoFile ==~ /lib[A-Za-z0-9_]+\.so/)) {
+        throw new GradleException("[DPT-PROFILE-1003] Profile Native SO 文件名无效："
+                + profileSoFile)
+    }
+    resolvedShellSoName = profileSoFile
+    def legacyShellFiles = project.rootProject.file("executable/shell-files").absoluteFile
+    [profileNativeCmakeDir, profileNativeCacheDir, profileNativeOutputDir,
+     profileJavaSourceDir, profileManifestFile, profileR8RulesFile].each { directory ->
+        if (isWithin(legacyShellFiles, directory)) {
+            throw new GradleException("[DPT-PROFILE-1003] Profile Native 路径不得位于旧 shell-files 目录："
+                    + directory.absolutePath)
+        }
+    }
+    layout.buildDirectory.set(profileNativeCacheDir)
 }
 
 android {
@@ -24,22 +92,32 @@ android {
 
         multiDexEnabled false
 
-        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         externalNativeBuild {
             cmake {
                 cppFlags "-std=c++20"
-                abiFilters "armeabi-v7a","arm64-v8a","x86","x86_64"
-                arguments("-DSO_NAME=${soName}", "-DDPT_BUILD_KEY=${dptBuildKey}")
+                if (profileNativeBuild) {
+                    abiFilters "arm64-v8a"
+                    arguments("-DDPT_PROFILE_BUILD=1",
+                            "-DDPT_PROFILE_CMAKE_DIR=${profileNativeCmakeDir.absolutePath}")
+                } else {
+                    abiFilters "armeabi-v7a","arm64-v8a","x86","x86_64"
+                    arguments("-DSO_NAME=${soName}", "-DDPT_BUILD_KEY=${dptBuildKey}")
+                }
             }
         }
 
-        buildConfigField "String", "SO_NAME", "\"${fullSoName}\""
+        buildConfigField "String", "SO_NAME", /"${resolvedShellSoName}"/
     }
 
     buildTypes {
         release {
             minifyEnabled true
-            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            if (profileNativeBuild) {
+                proguardFiles profileR8RulesFile
+            } else {
+                proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'),
+                        'proguard-rules.pro'
+            }
         }
 
         debug {
@@ -56,6 +134,62 @@ android {
     compileOptions {
         sourceCompatibility rootProject.ext.shellJavaVersion
         targetCompatibility rootProject.ext.shellJavaVersion
+    }
+    if (profileNativeBuild) {
+        sourceSets.main.java.setSrcDirs([profileJavaSourceDir])
+        sourceSets.main.manifest.srcFile(profileManifestFile)
+    }
+}
+
+tasks.register("profileNativeBuild") {
+    group = "profile"
+    description = "Builds one arm64-v8a Profile native candidate into its isolated output directory."
+    doFirst {
+        if (!profileNativeBuild) {
+            throw new GradleException("[DPT-PROFILE-1003] profileNativeBuild 必须由 Profile 候选构建传入隔离参数")
+        }
+    }
+    if (profileNativeBuild) {
+        dependsOn("minifyReleaseWithR8", "stripReleaseDebugSymbols")
+        doLast {
+            def sourceDir = new File(project.buildDir,
+                    "intermediates/stripped_native_libs/release/stripReleaseDebugSymbols/out/lib/arm64-v8a")
+            def nativeLibraries = fileTree(sourceDir) {
+                include "**/*.so"
+            }.files.findAll { file -> file.isFile() }.sort { first, second ->
+                first.name <=> second.name
+            }
+            if (nativeLibraries.size() != 1) {
+                throw new GradleException("[DPT-PROFILE-1003] Profile Native 候选必须且只能产出一个 arm64-v8a SO，实际数量="
+                        + nativeLibraries.size() + "，目录=" + sourceDir.absolutePath)
+            }
+            def nativeLibrary = nativeLibraries.get(0)
+            if (nativeLibrary.name != profileSoFile) {
+                throw new GradleException("[DPT-PROFILE-1003] Profile Native SO 文件名与契约不一致：期望="
+                        + profileSoFile + "，实际=" + nativeLibrary.name)
+            }
+            def shellDex = new File(project.buildDir,
+                    "intermediates/dex/release/minifyReleaseWithR8/classes.dex")
+            if (!shellDex.isFile() || shellDex.length() == 0L) {
+                throw new GradleException("[DPT-PROFILE-1003] Profile Java 候选缺少单一 classes.dex："
+                        + shellDex.absolutePath)
+            }
+            if (profileNativeOutputDir.exists()) {
+                throw new GradleException("[DPT-PROFILE-1003] Profile Native 候选输出已存在，拒绝覆盖："
+                        + profileNativeOutputDir.absolutePath)
+            }
+            copy {
+                from nativeLibrary
+                into new File(profileNativeOutputDir, "libs/arm64")
+            }
+            copy {
+                from shellDex
+                into new File(profileNativeOutputDir, "dex")
+            }
+            new File(profileNativeOutputDir, "build-key").text = profileBuildKey + "\n"
+            println("[${project.name}] profile shell-files -> "
+                    + profileNativeOutputDir.absolutePath)
+        }
     }
 }
 
@@ -129,60 +263,19 @@ def afterAssembleCopy(Project project, Map archMap, boolean debug) {
     idsFile.text = "# dpt-shell build ids\nsoName=${soName}\ndptBuildKey=${dptBuildKey}\n"
 }
 
-def afterNativeBuildCopy(Project project, Map archMap, boolean debug) {
-    def buildTypeName = "release"
-    def subBuildTypeName = "mergeReleaseNativeLibs"
-    if(debug) {
-        buildTypeName = "debug"
-        subBuildTypeName = "mergeDebugNativeLibs"
-    }
-    def sourceDir = file(project.buildDir.absolutePath + File.separator
-            + "intermediates" + File.separator
-            + "merged_native_libs" + File.separator
-            + buildTypeName + File.separator
-            + subBuildTypeName + File.separator
-            + "out" + File.separator
-            + "lib" + File.separator
-    )
-
-    def targetDir = file(project.projectDir.absolutePath + File.separator
-            + "src" + File.separator
-            + "main" + File.separator
-            + "assets" + File.separator
-            + "vwwwwwvwww")
-
-    println("[" + project.name + "] " + sourceDir.absolutePath + " -> " + targetDir.absolutePath)
-
-    def status = delete(fileTree(targetDir.absolutePath) {
-        include "/**/*.so"
-    })
-
-    println("afterNativeBuildCopy demo libs delete status: " + status)
-
-    for(e in archMap) {
-        copy {
-            include "**/${fullSoName}"
-            from file(sourceDir.getAbsolutePath() + File.separator
-                    + e.key)
-            into file(targetDir.getAbsolutePath() + File.separator
-                    + e.value)
-        }
-    }
-}
-
-
 afterEvaluate { Project project ->
     if (project.name != "shell") {
         printf("project %s skip\n", project.name)
+        return
+    }
+    if (profileNativeBuild) {
+        println("Profile Native mode: skip legacy afterAssembleCopy hook")
         return
     }
 
     def assembleTask = project.tasks.getByName("assemble")
     def assembleDebugTask = project.tasks.getByName("assembleDebug")
     def assembleReleaseTask = project.tasks.getByName("assembleRelease")
-    def nativeDebugBuildTask = project.tasks.getByName("mergeDebugNativeLibs")
-    def nativeReleaseBuildTask = project.tasks.getByName("mergeReleaseNativeLibs")
-
     def archMap = [
             "armeabi-v7a":"arm",
             "arm64-v8a":"arm64",
@@ -200,21 +293,17 @@ afterEvaluate { Project project ->
     println("first task: " + firstTaskName)
 
     def buildTask = assembleTask
-    def nativeBuildTask = nativeReleaseBuildTask
     def debug = false
     if(firstTaskName == "shell:assemble" || firstTaskName == "assemble") {
         buildTask = assembleTask
-        nativeBuildTask = nativeReleaseBuildTask
         debug = false
     }
     else if(firstTaskName == "shell:assembleRelease" || firstTaskName == "assembleRelease") {
         buildTask = assembleReleaseTask
-        nativeBuildTask = nativeReleaseBuildTask
         debug = false
     }
     else if(firstTaskName == "shell:assembleDebug" || firstTaskName == "assembleDebug") {
         buildTask = assembleDebugTask
-        nativeBuildTask = nativeDebugBuildTask
         debug = true
     }
 
@@ -222,16 +311,8 @@ afterEvaluate { Project project ->
         afterAssembleCopy(project, archMap, debug)
     }
 
-    nativeBuildTask.doLast {
-        afterNativeBuildCopy(project, archMap, debug)
-    }
-
 }
 
 dependencies {
-
-    testImplementation 'junit:junit:4.+'
-    androidTestImplementation 'androidx.test.ext:junit:1.1.5'
-    androidTestImplementation 'androidx.test.espresso:espresso-core:3.3.0'
     implementation 'androidx.annotation:annotation:1.0.0'
 }

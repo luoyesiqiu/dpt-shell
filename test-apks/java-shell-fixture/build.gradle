@@ -1,0 +1,42 @@
+plugins {
+    id 'com.android.application'
+}
+
+android {
+    namespace 'com.example.dptfixture'
+    compileSdk rootProject.ext.compileSdkVersion
+
+    flavorDimensions += "applicationDeclaration"
+
+    defaultConfig {
+        applicationId "com.example.dptfixture"
+        minSdkVersion rootProject.ext.minSdkVersion
+        targetSdkVersion rootProject.ext.targetSdkVersion
+        versionCode 1
+        versionName "1.0"
+    }
+
+    productFlavors {
+        noCustom {
+            dimension "applicationDeclaration"
+            applicationIdSuffix ".none"
+        }
+        applicationOnly {
+            dimension "applicationDeclaration"
+            applicationIdSuffix ".application"
+        }
+        componentFactoryOnly {
+            dimension "applicationDeclaration"
+            applicationIdSuffix ".factory"
+        }
+        applicationAndFactory {
+            dimension "applicationDeclaration"
+            applicationIdSuffix ".both"
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility rootProject.ext.shellJavaVersion
+        targetCompatibility rootProject.ext.shellJavaVersion
+    }
+}

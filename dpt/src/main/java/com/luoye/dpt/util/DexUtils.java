@@ -88,11 +88,17 @@ public class DexUtils {
     }
 
     /**
-     * Inject reflection-based JniBridge.clinit calls into eligible static initializers.
+     * Inject reflection-based JNI bridge calls into eligible static initializers.
      * Helper methods are generated via dexlib2 and spread across different classes.
      */
     public static void injectInvokeMethod(String inputDex, String outputDex, String jniClass) throws IOException {
         ReflectionClinitInjector.inject(inputDex, outputDex, jniClass);
+    }
+
+    public static void injectInvokeMethod(String inputDex, String outputDex, String jniClass,
+                                          String jniStaticInitializeMethodName) throws IOException {
+        ReflectionClinitInjector.inject(inputDex, outputDex, jniClass,
+                jniStaticInitializeMethodName);
     }
 
     /**

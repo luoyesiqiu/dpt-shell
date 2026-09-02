@@ -2,6 +2,9 @@ package com.luoye.dpt.config;
 
 import com.alibaba.fastjson2.JSON;
 import com.alibaba.fastjson2.annotation.JSONField;
+import com.luoye.dpt.profile.contract.ProfileContractCodec;
+import com.luoye.dpt.profile.contract.ProfileJniSemantic;
+import com.luoye.dpt.profile.model.ProfileContract;
 import org.apache.commons.lang3.StringUtils;
 import org.json.JSONObject;
 
@@ -9,6 +12,7 @@ import java.util.Locale;
 
 public class ShellConfig {
     private static final ShellConfig INSTANCE = new ShellConfig();
+    private static final String LEGACY_STATIC_INITIALIZE_METHOD_NAME = "clinit";
     private String applicationName;
     private String appComponentFactoryName;
 
@@ -31,6 +35,9 @@ public class ShellConfig {
     // One int, each bit is a switch (1 = disable). See Const.FLAG_DISABLE_*
     @JSONField(name = "risk_check_flags")
     private int riskCheckFlags;
+
+    @JSONField(serialize = false, deserialize = false)
+    private ProfileContract profileContract;
 
     private ShellConfig() {
     }
@@ -101,6 +108,7 @@ public class ShellConfig {
     }
 
     public void init(ShellConfig shellConfig) {
+        this.profileContract = null;
         this.shellPackageName = StringUtils.isBlank(shellConfig.getShellPackageName()) ? Const.DEFAULT_SHELL_PACKAGE_NAME : shellConfig.getShellPackageName();
         this.signatureConfig = shellConfig.getSignatureConfig();
         this.appSignSha256 = shellConfig.getAppSignSha256();
@@ -169,6 +177,9 @@ public class ShellConfig {
     }
 
     public String getJniSlashClassName() {
+        if (profileContract != null) {
+            return profileContract.getJniBridgeClassName().replace('.', '/');
+        }
         return String.format(Locale.US, "%s/%s",
                 getSlashShellPackageName(),
                 Const.KEY_JNI_BASE_CLASS_NAME
@@ -177,6 +188,55 @@ public class ShellConfig {
 
     public String getJniClassNameSig() {
         return String.format(Locale.US, "L%s;", getJniSlashClassName());
+    }
+
+    public String getJniStaticInitializeMethodName() {
+        if (profileContract == null) {
+            return LEGACY_STATIC_INITIALIZE_METHOD_NAME;
+        }
+        return ProfileJniSemantic.STATIC_INITIALIZE
+                .requireMethodName(profileContract.getJniMethods());
+    }
+
+    public void applyProfileContract(ProfileContract contract) {
+        if (contract == null) {
+            throw new IllegalArgumentException("profile contract must not be null");
+        }
+        profileContract = ProfileContractCodec.deserialize(ProfileContractCodec.serialize(contract));
+        shellPackageName = packageNameOf(profileContract.getProxyApplicationClassName());
+    }
+
+    public String getProxyApplicationClassName() {
+        return profileContract == null ? null : profileContract.getProxyApplicationClassName();
+    }
+
+    public String getProxyComponentFactoryClassName() {
+        return profileContract == null ? null : profileContract.getProxyComponentFactoryClassName();
+    }
+
+    public String getNativeLibAssetDirName() {
+        return profileContract == null ? Const.KEY_LIBS_DIR_NAME
+                : profileContract.getNativeLibAssetDirName();
+    }
+
+    public String getRuntimeDirName() {
+        return profileContract == null ? null : profileContract.getRuntimeDirName();
+    }
+
+    public String getRc4KeySymbol() {
+        return profileContract == null ? Const.RC4_KEY_SYMBOL : profileContract.getRc4KeySymbol();
+    }
+
+    public String getBuildKey() {
+        return profileContract == null ? null : profileContract.getBuildKey();
+    }
+
+    private static String packageNameOf(String className) {
+        int separator = className.lastIndexOf('.');
+        if (separator <= 0) {
+            throw new IllegalArgumentException("profile proxy application class is invalid");
+        }
+        return className.substring(0, separator);
     }
 
     public String toJson() {

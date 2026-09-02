@@ -51,9 +51,29 @@ ext {
 
 }
 
+def profileStateDir = file(findProperty("profileStateDir") ?: "${rootDir}/profiles")
+ext.profileStateDir = profileStateDir
+ext.profileActiveDir = file(findProperty("profileActiveDir") ?: "${rootDir}/executable/profiles")
+def profileClean = tasks.register("profileClean") {
+    group = "build"
+    description = "Deletes only regenerable Profile build directories."
+    doLast {
+        ["generated", "cache", "candidates"].each { directoryName ->
+            def directory = new File(profileStateDir, directoryName)
+            if (directory.exists()) {
+                delete(directory)
+                println("Deleted ${directory}")
+            }
+        }
+    }
+}
+
+apply from: "${rootDir}/gradle/profile.gradle"
+
 subprojects { sub ->
     sub.afterEvaluate {
         sub.tasks.matching { it.name == 'clean' }.configureEach { task ->
+            task.finalizedBy(profileClean)
             task.doFirst {
                 if (dptBuildIdsFile.exists()) {
                     dptBuildIdsFile.delete()

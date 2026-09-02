@@ -1,0 +1,11 @@
+{
+  "apkSha256": "da7a8f29bb3f734e2d3c03338c4f43b8dc2c1676235f35270a4eccab1fbfe603",
+  "applicationId": "com.example.dptfixture.both",
+  "permissions": [],
+  "exportedComponents": [],
+  "dependencies": [
+    "dex:com.example.dptfixture.both.shell"
+  ],
+  "networkCapabilities": [],
+  "dynamicCodeCapabilities": []
+}

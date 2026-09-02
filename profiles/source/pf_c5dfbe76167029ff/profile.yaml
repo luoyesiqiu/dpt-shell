@@ -1,0 +1,4 @@
+schemaVersion: 1
+applicationId: com.tangyu.momogirl
+abis:
+  - arm64-v8a

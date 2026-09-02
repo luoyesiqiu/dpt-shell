@@ -48,19 +48,26 @@ public class JunkCodeGenerator {
         code.throwValue(throwableLocal);
     }
 
-    private static String generateBaseClassName() {
-
-        return String.format(Locale.US, "L%s;", BASE_CLASS_NAME);
+    private static String generateBaseClassName(String baseClassName) {
+        return String.format(Locale.US, "L%s;", baseClassName);
     }
 
-    private static String generateClassName() {
+    private static String generateClassName(String baseClassName) {
         SecureRandom secureRandom = new SecureRandom();
         int number = secureRandom.nextInt() % (MAX_GENERATE_COUNT * 10);
 
-        return String.format(Locale.US, "L%s%d;", BASE_CLASS_NAME, number);
+        return String.format(Locale.US, "L%s%d;", baseClassName, number);
     }
 
     public static void generateJunkCodeDex(File file) throws IOException {
+        generateJunkCodeDex(file, BASE_CLASS_NAME);
+    }
+
+    public static void generateJunkCodeDex(File file, String baseClassName) throws IOException {
+        if (baseClassName == null || baseClassName.trim().isEmpty()) {
+            throw new IllegalArgumentException("baseClassName must not be blank");
+        }
+        String normalizedBaseClassName = baseClassName.trim().replace('.', '/');
         SecureRandom secureRandom = new SecureRandom();
         final int generateClassCount = secureRandom.nextInt(MAX_GENERATE_COUNT / 2) + (MAX_GENERATE_COUNT / 2);
 
@@ -70,11 +77,11 @@ public class JunkCodeGenerator {
 
             String className;
             if(i == 0) {
-                className = generateBaseClassName();
+                className = generateBaseClassName(normalizedBaseClassName);
             }
             else {
                 do {
-                    className = generateClassName();
+                    className = generateClassName(normalizedBaseClassName);
                 }
                 while(classNameSet.contains(className));
                 classNameSet.add(className);

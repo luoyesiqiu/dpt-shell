@@ -15,13 +15,7 @@ public class ThreadPool {
     private static final int MAX_POOL_SIZE = Math.max(CORE_POOL_SIZE, Runtime.getRuntime().availableProcessors());
 
     private static final ThreadPool sInst = new ThreadPool();
-    private static final ThreadPoolExecutor sThreadPoolExecutor = new ThreadPoolExecutor(
-            CORE_POOL_SIZE,
-            MAX_POOL_SIZE,
-            0L,
-            TimeUnit.MILLISECONDS,
-            new LinkedBlockingQueue<>(),
-            new CustomThreadFactory());
+    private static ThreadPoolExecutor sThreadPoolExecutor = newExecutor();
     private ThreadPool(){
 
     }
@@ -38,11 +32,24 @@ public class ThreadPool {
         }
     }
 
-    public void execute(Runnable task){
+    private static ThreadPoolExecutor newExecutor() {
+        return new ThreadPoolExecutor(
+                CORE_POOL_SIZE,
+                MAX_POOL_SIZE,
+                0L,
+                TimeUnit.MILLISECONDS,
+                new LinkedBlockingQueue<>(),
+                new CustomThreadFactory());
+    }
+
+    public synchronized void execute(Runnable task){
+        if (sThreadPoolExecutor.isShutdown()) {
+            sThreadPoolExecutor = newExecutor();
+        }
         sThreadPoolExecutor.execute(task);
     }
 
-    public void shutdown(){
+    public synchronized void shutdown(){
         sThreadPoolExecutor.shutdown();
     }
 }

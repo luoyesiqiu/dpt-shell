@@ -37,7 +37,7 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * Inject reflection-based JniBridge.clinit calls into static initializers.
+ * Inject reflection-based JNI bridge static-initialization calls into static initializers.
  * Helper methods are generated in the caller's own class; when a dex reaches
  * the 65535 method limit, a same-class helper is reused if one already exists.
  */
@@ -50,7 +50,7 @@ public class ReflectionClinitInjector {
     private static final String ACCESSIBLE_OBJECT = "Ljava/lang/reflect/AccessibleObject;";
     private static final String CLASS_ARRAY = "[Ljava/lang/Class;";
     private static final String OBJECT_ARRAY = "[Ljava/lang/Object;";
-    private static final String CLINIT_METHOD_NAME = "clinit";
+    private static final String LEGACY_STATIC_INITIALIZE_METHOD_NAME = "clinit";
 
     private static final int REG_CLASS_NAME = 0;
     private static final int REG_METHOD_NAME = 1;
@@ -69,6 +69,14 @@ public class ReflectionClinitInjector {
     }
 
     public static void inject(String inputDex, String outputDex, String jniClassSig) throws IOException {
+        inject(inputDex, outputDex, jniClassSig, LEGACY_STATIC_INITIALIZE_METHOD_NAME);
+    }
+
+    public static void inject(String inputDex, String outputDex, String jniClassSig,
+                              String jniStaticInitializeMethodName) throws IOException {
+        if (jniStaticInitializeMethodName == null || jniStaticInitializeMethodName.isEmpty()) {
+            throw new IllegalArgumentException("jni static initialize method name must not be empty");
+        }
         File inputFile = new File(inputDex);
         DexBackedDexFile dexFile = DexFileFactory.loadDexFile(inputFile, Opcodes.getDefault());
 
@@ -98,7 +106,8 @@ public class ReflectionClinitInjector {
             for (Method method : classDef.getMethods()) {
                 if (isEligibleClinit(method)) {
                     ImmutableMethodReference helperRef = state.resolveHelper(
-                            classDef.getType(), jniDotClassName, helpersByHostClass);
+                            classDef.getType(), jniDotClassName, jniStaticInitializeMethodName,
+                            helpersByHostClass);
                     if (helperRef != null) {
                         clinitClassToHelperRef.put(classDef.getType(), helperRef);
                         state.clinitIndex++;
@@ -217,10 +226,11 @@ public class ReflectionClinitInjector {
         );
     }
 
-    private static MethodImplementation buildReflectionImplementation(String jniDotClassName) {
+    private static MethodImplementation buildReflectionImplementation(String jniDotClassName,
+                                                                       String jniMethodName) {
         int key = StringXorCipher.randomKey();
         String encryptedClassName = StringXorCipher.encrypt(jniDotClassName, key);
-        String encryptedMethodName = StringXorCipher.encrypt(CLINIT_METHOD_NAME, key);
+        String encryptedMethodName = StringXorCipher.encrypt(jniMethodName, key);
 
         MutableMethodImplementation impl = new MutableMethodImplementation(7);
 
@@ -273,7 +283,8 @@ public class ReflectionClinitInjector {
         return impl;
     }
 
-    private static Method createHelperMethod(String hostClassType, String methodName, String jniDotClassName) {
+    private static Method createHelperMethod(String hostClassType, String methodName,
+                                             String jniDotClassName, String jniMethodName) {
         return new ImmutableMethod(
                 hostClassType,
                 methodName,
@@ -282,7 +293,7 @@ public class ReflectionClinitInjector {
                 AccessFlags.PRIVATE.getValue() | AccessFlags.STATIC.getValue() | AccessFlags.SYNTHETIC.getValue(),
                 null,
                 null,
-                buildReflectionImplementation(jniDotClassName)
+                buildReflectionImplementation(jniDotClassName, jniMethodName)
         );
     }
 
@@ -305,6 +316,7 @@ public class ReflectionClinitInjector {
 
         ImmutableMethodReference resolveHelper(String clinitClassType,
                                                String jniDotClassName,
+                                               String jniMethodName,
                                                Map<String, List<Method>> helpersByHostClass) {
             if (totalMethodCount >= MAX_METHODS_PER_DEX) {
                 for (ImmutableMethodReference ref : helperRefs) {
@@ -318,7 +330,8 @@ public class ReflectionClinitInjector {
             String hostClass = clinitClassType;
             String methodName = generateUniqueMethodName(hostClass);
 
-            Method helper = createHelperMethod(hostClass, methodName, jniDotClassName);
+            Method helper = createHelperMethod(hostClass, methodName, jniDotClassName,
+                    jniMethodName);
             helpersByHostClass.computeIfAbsent(hostClass, k -> new ArrayList<>()).add(helper);
 
             ImmutableMethodReference ref = new ImmutableMethodReference(
