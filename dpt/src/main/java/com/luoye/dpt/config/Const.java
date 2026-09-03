@@ -17,6 +17,9 @@ public class Const {
     public static final String OPTION_INPUT_FILE = "f";
     public static final String OPTION_INPUT_FILE_LONG = "package-file";
 
+    public static final String OPTION_PROFILE_LONG = "profile";
+    public static final String OPTION_PROFILE_FILE_LONG = "profile-file";
+
     public static final String OPTION_DEBUGGABLE_LONG = "debug";
 
     public static final String OPTION_DISABLE_APP_COMPONENT_FACTORY_LONG = "disable-acf";

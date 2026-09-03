@@ -1,200 +1,133 @@
-# dpt-profile MVP 打包指南
+# dpt-profile MVP（方案 B）
 
-这是一份日常使用的简易版说明。目标是：不同 `applicationId` 使用不同壳，同一应用复用同一个 Profile，最后得到一个已经加固、对齐、签名并可安装的 APK。
+目标：为每个 `applicationId` 生成一套独立壳代码，并把可消费的壳封装成一个可复制的 `.dptprofile` 文件。同一应用复用同一个 `profileId`，需要换壳时只生成新的 Revision。
 
-## 一句话流程
+## 最短流程
 
 ```text
-确认 Profile-aware dpt.jar
-  -> profileCreate（新应用仅执行一次）
-  -> profileBuild（生成候选壳）
-  -> profilePublish（通过硬门槛后激活）
-  -> tools/protect_apk.sh（加固、对齐、签名）
-  -> 真机安装验收
+profileCreate -> profileBuild -> profilePack
+                              -> 门禁/扫描报告
+                              -> profilePromote -> verified.dptprofile
+                              -> dpt --profile -> APK
 ```
 
-Profile 与渠道包无关；不传渠道参数时不会生成渠道包。
+Profile 只包含壳输入，不包含签名私钥、密码、渠道配置或 APK。首版只保证 `arm64-v8a` 和 APK，不处理 AAB；渠道包仍是加固后的独立步骤。
 
-## 1. 前置检查
+## 1. 生成 Profile
 
-在 `dpt-shell` 根目录执行 Profile 命令：
-
-```bash
-cd /Users/admin/AndroidStudioProjects/dpt-shell
-
-# 确认运行时包含 Profile 命令
-jar tf executable/dpt.jar | rg 'com/luoye/dpt/profile'
-```
-
-如果没有任何匹配项，说明 `dpt.jar` 还是旧版，先同步 Profile-aware 的 `dpt.jar`、活动 Bundle 和 Profile 状态，不能直接开始 Profile 加固。
-
-还需要准备：
-
-- JDK 17、Android SDK、CMake。
-- 输入 APK 包含 `arm64-v8a`；MVP 首版只保证 `arm64-v8a`。
-- 项目签名配置可被 `tools/protect_apk.sh` 读取，或可以在脚本提示时手工输入。
-- 暂不支持 AAB，只处理 APK。
-
-## 2. 新应用生成独立壳
-
-把下面的 `com.example.myapp` 换成目标 APK 的真实 `applicationId`。
-
-### 2.1 创建 Profile（每个应用只做一次）
+在 `dpt-shell` 根目录执行。以下命令中的 `com.example.app` 换成目标 APK 的真实 `applicationId`。
 
 ```bash
-bash ./gradlew --no-daemon \
-  -PprofileApplicationId=com.example.myapp \
-  profileCreate
-```
+# 每个 applicationId 只需成功执行一次；同一应用重复执行会复用原 profileId
+bash ./gradlew --no-daemon profileCreate \
+  -PprofileApplicationId=com.example.app
 
-命令会创建唯一的 `profileId`。同一个 `applicationId` 再执行不会创建第二套身份；不同 `applicationId` 必须重新执行。
-
-### 2.2 构建候选壳
-
-```bash
-bash ./gradlew --no-daemon \
-  -PprofileApplicationId=com.example.myapp \
+# 生成候选壳；必须打开 Native 构建，首版产物为 arm64-v8a
+bash ./gradlew --no-daemon profileBuild \
+  -PprofileApplicationId=com.example.app \
   -PprofileRecipe=recipe-a \
-  -PprofileBuildNative=true \
-  profileBuild
+  -PprofileBuildNative=true
 ```
 
-`-PprofileBuildNative=true` 不能省略，否则不会生成可用的 `arm64-v8a` 壳 SO。命令输出中的 `revisionId` 要记下来。候选 Revision 不会自动成为活动 Revision。
+`profileBuild` 输出的 `revisionId` 对应一个候选 Revision，不会自动激活。若使用受限 Overlay，再增加 `-PprofileOverlayDir=/绝对路径/overlay`；Overlay 不能改固定 DEX、JNI 签名、密钥或启动协议。
 
-如需加入该应用专属的受限 Overlay：
+## 2. 生成可移植文件
 
-```bash
-bash ./gradlew --no-daemon \
-  -PprofileApplicationId=com.example.myapp \
-  -PprofileRecipe=recipe-a \
-  -PprofileOverlayDir=/绝对路径/overlay \
-  -PprofileBuildNative=true \
-  profileBuild
+先找到候选 Bundle 目录，通常为：
+
+```text
+<profileStateDir>/candidates/<profileId>/<revisionId>/bundle
 ```
 
-Overlay 只能放启动协调、SO 加载、路径/配置适配和 Profile 私有辅助代码，不能改固定 DEX、JNI、密钥和启动协议。
-
-### 2.3 发布并激活 Revision
-
-发布是硬门槛。必须提供真实的门禁报告和两份可比扫描报告，不能用空报告或手工改 `active.json`：
+执行 pack（不需要 `--profiles-root`，源目录不会被修改）：
 
 ```bash
-bash ./gradlew --no-daemon \
-  -PprofileApplicationId=com.example.myapp \
-  -PprofileRevisionId=<上一步输出的 revisionId> \
+bash ./gradlew --no-daemon profilePack \
+  -PprofileBundleDir=/绝对路径/.../bundle \
+  -PprofileArchiveOut=/绝对路径/com.example.app.candidate.dptprofile
+```
+
+也可以直接调用 CLI：
+
+```bash
+java -cp dpt/build/classes/java/main:... \
+  com.luoye.dpt.profile.cli.ProfileCommandMain pack \
+  --bundle /绝对路径/bundle \
+  --out /绝对路径/com.example.app.candidate.dptprofile
+```
+
+日常优先使用 Gradle 入口；服务器只需要复制候选文件和报告目录，不需要复制 Profile 注册表。
+
+## 3. 门禁通过后晋级
+
+报告目录必须包含以下三个文件，并且报告中的 `profileId`、`revisionId`、候选 APK SHA-256、`applicationId` 和扫描窗口彼此匹配：
+
+```text
+reports/
+  gate-report.json
+  scan-baseline.json
+  scan-candidate.json
+```
+
+```bash
+bash ./gradlew --no-daemon profilePromote \
+  -PprofileCandidate=/绝对路径/com.example.app.candidate.dptprofile \
   -PprofileReportDir=/绝对路径/reports \
-  -PprofileScanBaseline=/绝对路径/reports/scan-baseline.json \
-  -PprofileScanCandidate=/绝对路径/reports/scan-candidate.json \
-  profilePublish
+  -PprofileArchiveOut=/绝对路径/com.example.app.dptprofile
 ```
 
-发布成功后，活动指针才会更新。失败时旧活动 Revision 保持不变。
+`profilePromote` 只接受 candidate 文件，严格失败且不覆盖已有正式文件。只有输出为 `*.dptprofile` 且状态为 `verified` 的文件才能用于正式加固。
 
-## 3. 给 APK 加固
-
-### 3.1 查看或确认当前 Profile
+晋级前可单独验证正式文件：
 
 ```bash
-cd /Users/admin/AndroidStudioProjects/dpt-shell
-bash ./gradlew --no-daemon \
-  -PprofileApplicationId=com.example.myapp \
-  profileShow
+bash ./gradlew --no-daemon profileValidate \
+  -PprofileArchive=/绝对路径/com.example.app.dptprofile
+
+# 可选：同时核对 APK 的 applicationId 和业务 Native ABI
+bash ./gradlew --no-daemon profileValidate \
+  -PprofileArchive=/绝对路径/com.example.app.dptprofile \
+  -PprofileApk=/绝对路径/input.apk
 ```
 
-确认存在活动 Revision，且 Bundle 的 ABI 为 `arm64-v8a`。
+## 4. 使用 Profile 加固 APK
 
-### 3.2 执行加固、对齐和签名
+服务器或本地只需把 `dpt.jar` 和正式 Profile 文件放在一起，显式传入 `--profile`：
 
 ```bash
-cd /Users/admin/AndroidStudioProjects/lanling_couduis
-./tools/protect_apk.sh "/绝对路径/input.apk"
+java -jar /绝对路径/dpt.jar \
+  -f /绝对路径/input.apk \
+  -o /绝对路径/input_protected.apk \
+  --profile /绝对路径/com.example.app.dptprofile
 ```
 
-脚本会按以下顺序处理：
+指定 `--profile` 后不会查询注册表、活动指针或全局 `shell-files`，壳会解包到本次任务的随机目录；任务结束后临时目录清理。APK Manifest、DEX、SO 或配置写入前会检查：
 
-```text
-DPT 加固（-x -S）
-  -> zipalign
-  -> 读取 app/and_res_config.xml 签名
-  -> apksigner 签名与验签
-```
+- Profile 状态必须为 `verified`，且文件完整性校验通过。
+- Profile 的 `applicationId` 必须等于 APK Manifest 的包名。
+- 协议、生成器、核心版本和 `arm64-v8a` ABI 必须匹配。
+- APK 含业务 Native 库时必须存在 `arm64-v8a`。
 
-输出文件默认在输入 APK 同目录，命名为：
+`--profile-file` 是 `--profile` 的同义参数。AAB 不在本变更范围内。
 
-```text
-input_protected.apk
-input_protected_1.apk
-input_protected_2.apk
-```
+## 5. MVP 验收
 
-已有文件不会被覆盖。若签名配置缺失或字段不完整，脚本会提示手工输入签名文件、别名和密码。
-
-### 3.3 可选生成渠道包
-
-只有传入 `--channels` 才会执行 Packer-NG：
+首次安装和启动优先使用真实 `arm64-v8a` 真机：
 
 ```bash
-./tools/protect_apk.sh "/绝对路径/input.apk" \
-  --channels=oppo,vivo,xiaomi
+sha256sum /绝对路径/input.apk /绝对路径/input_protected.apk
+adb install -r /绝对路径/input_protected.apk
+adb shell monkey -p com.example.app 1
 ```
 
-渠道包输出到最终 APK 同目录下的 `<最终 APK 文件名>_channels/`。不需要渠道包时不要传该参数。
+确认安装、冷启动、主要页面和再次启动正常，并检查 `logcat` 没有 `Fatal signal`、`ANR`、`UnsatisfiedLinkError`、`dlopen failed` 或 JNI 注册失败。需要多次安装或矩阵测试时才使用临时通用 AVD，测试结束停止并删除本轮 AVD/缓存，再检查磁盘空间。
 
-## 4. 最小验收
-
-单次人工验收优先使用真实的 `arm64-v8a` Android 真机：
-
-```bash
-APK="/绝对路径/input_protected.apk"
-SDK="${ANDROID_HOME:-$HOME/Library/Android/sdk}"
-BT="$SDK/build-tools/33.0.1"
-
-"$BT/aapt" dump badging "$APK" | rg "package: name"
-"$BT/zipalign" -c -P 16 -v 4 "$APK"
-"$BT/apksigner" verify --verbose "$APK"
-adb install -r "$APK"
-adb shell monkey -p <applicationId> 1
-```
-
-验收至少确认：安装成功、冷启动成功、主要业务路径正常、退出后再次启动正常，并检查 `adb logcat` 没有 `Fatal signal`、`ANR`、`UnsatisfiedLinkError`、`dlopen failed` 或 JNI 注册失败。
-
-需要重复安装或跑矩阵时，才使用临时通用 AVD；测试结束必须停止并删除本轮 AVD、快照和临时目录，再检查磁盘空间。真机结果和 AVD 结果分开记录。
-
-## 5. 已有 Profile 的日常命令
-
-已有应用通常只需要：
-
-```bash
-cd /Users/admin/AndroidStudioProjects/dpt-shell
-bash ./gradlew --no-daemon \
-  -PprofileApplicationId=com.example.myapp \
-  profileShow
-
-cd /Users/admin/AndroidStudioProjects/lanling_couduis
-./tools/protect_apk.sh "/绝对路径/input.apk"
-```
-
-只有要更换壳代码或生成新 Revision 时，才重新执行 `profileBuild` 和完整的 `profilePublish`。
-
-## 6. 常见失败处理
+## 6. 常见失败
 
 | 现象 | 处理 |
 | --- | --- |
-| 找不到 Profile 命令 | 同步 Profile-aware `executable/dpt.jar`，不要使用旧 JAR。 |
-| 没有活动 Revision | 先完成 `profileBuild` 和 `profilePublish`。 |
-| `arm64-v8a` 不兼容 | 检查 APK 和 Bundle 是否都包含 `arm64-v8a`。 |
-| 输出文件已存在 | 脚本会自动追加 `_1`、`_2`，无需删除旧包。 |
-| 签名信息缺失 | 检查 `app/and_res_config.xml`，或按提示手工输入。 |
-| 发布报告不完整 | 补齐真实 `gate-report.json`、`scan-baseline.json` 和 `scan-candidate.json`，不要绕过门禁。 |
-
-## 7. 当前项目 Profile A 示例
-
-`com.tangyu.momogirl` 已有独立 Profile：
-
-```text
-profileId：pf_c5dfbe76167029ff
-活动 Revision：r000001
-壳 ABI：arm64-v8a
-```
-
-使用前仍建议先执行 `profileShow`，再运行 `tools/protect_apk.sh`。业务项目 `tools/executable/dpt.jar` 如果检查不到 `com/luoye/dpt/profile` 类，必须先同步新版运行时。
+| candidate 不能用于加固 | 先用真实报告执行 `profilePromote`，不要改清单状态。 |
+| applicationId 不匹配 | 为该应用创建/选择正确的 Profile，不能跨应用复用。 |
+| arm64 不兼容 | 检查 APK 和 Profile 是否都包含 `arm64-v8a`。 |
+| 输出已存在 | 改用新的输出文件名；工具不会覆盖旧文件。 |
+| 报告缺失或不可比 | 补齐三份报告并重新生成，不能跳过硬门槛。 |

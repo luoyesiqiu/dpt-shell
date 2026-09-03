@@ -324,3 +324,62 @@ tasks.named("profileRollback").configure {
         }
     }
 }
+
+def profileArchiveProperty = { Project project, String name, String taskName ->
+    def value = project.findProperty(name)?.toString()?.trim()
+    if (!value) {
+        throw new GradleException("[DPT-PROFILE-1001] 缺少必填参数：${name}（${taskName}）")
+    }
+    return project.file(value).absoluteFile
+}
+
+tasks.register("profilePack") {
+    group = "profile"
+    description = "Packs a candidate Profile Bundle into a portable .candidate.dptprofile file."
+    dependsOn(":dpt:classes")
+    doLast {
+        File bundle = profileArchiveProperty(project, "profileBundleDir", "profilePack")
+        File output = profileArchiveProperty(project, "profileArchiveOut", "profilePack")
+        project.javaexec {
+            classpath = project(":dpt").sourceSets.main.runtimeClasspath
+            mainClass = "com.luoye.dpt.profile.cli.ProfileCommandMain"
+            args "pack", "--bundle", bundle.absolutePath, "--out", output.absolutePath
+        }
+    }
+}
+
+tasks.register("profileValidate") {
+    group = "profile"
+    description = "Validates a verified portable .dptprofile file."
+    dependsOn(":dpt:classes")
+    doLast {
+        File profile = profileArchiveProperty(project, "profileArchive", "profileValidate")
+        def apkValue = project.findProperty("profileApk")?.toString()?.trim()
+        File apk = apkValue ? project.file(apkValue).absoluteFile : null
+        project.javaexec {
+            classpath = project(":dpt").sourceSets.main.runtimeClasspath
+            mainClass = "com.luoye.dpt.profile.cli.ProfileCommandMain"
+            args "validate", "--profile", profile.absolutePath
+            if (apk != null) {
+                args "--apk", apk.absolutePath
+            }
+        }
+    }
+}
+
+tasks.register("profilePromote") {
+    group = "profile"
+    description = "Promotes a gated candidate Profile archive to verified form."
+    dependsOn(":dpt:classes")
+    doLast {
+        File candidate = profileArchiveProperty(project, "profileCandidate", "profilePromote")
+        File reports = profileArchiveProperty(project, "profileReportDir", "profilePromote")
+        File output = profileArchiveProperty(project, "profileArchiveOut", "profilePromote")
+        project.javaexec {
+            classpath = project(":dpt").sourceSets.main.runtimeClasspath
+            mainClass = "com.luoye.dpt.profile.cli.ProfileCommandMain"
+            args "promote", "--candidate", candidate.absolutePath,
+                    "--reports", reports.absolutePath, "--out", output.absolutePath
+        }
+    }
+}

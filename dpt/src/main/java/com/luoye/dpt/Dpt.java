@@ -110,6 +110,10 @@ public class Dpt {
         options.addOption(new Option(null, Const.OPTION_DUMP_CODE_LONG, false, "Dump the code item of DEX and save it to .json files."));
         options.addOption(new Option(null, Const.OPTION_OPEN_NOISY_LOG_LONG, false, "Open noisy log."));
         options.addOption(new Option(Const.OPTION_INPUT_FILE, Const.OPTION_INPUT_FILE_LONG, true, "Need to protect android package(*.apk, *.aab) file."));
+        options.addOption(new Option(null, Const.OPTION_PROFILE_LONG, true,
+                "Verified .dptprofile file used for this APK protection run."));
+        options.addOption(new Option(null, Const.OPTION_PROFILE_FILE_LONG, true,
+                "Alias of --profile."));
         options.addOption(new Option(null, Const.OPTION_DEBUGGABLE_LONG, false, "Make package debuggable."));
         options.addOption(new Option(null, Const.OPTION_DISABLE_APP_COMPONENT_FACTORY_LONG, false, "Disable app component factory(just use for debug)."));
         options.addOption(new Option(Const.OPTION_OUTPUT_PATH, Const.OPTION_OUTPUT_PATH_LONG, true, "Output directory for protected package."));
@@ -157,6 +161,16 @@ public class Dpt {
             }
 
             String filePath = commandLine.getOptionValue(Const.OPTION_INPUT_FILE);
+            String profilePath = commandLine.getOptionValue(Const.OPTION_PROFILE_LONG);
+            String profileFilePath = commandLine.getOptionValue(Const.OPTION_PROFILE_FILE_LONG);
+            if (profilePath != null && profileFilePath != null
+                    && !profilePath.equals(profileFilePath)) {
+                usage(options, "Specify only one of --profile and --profile-file.");
+                return null;
+            }
+            if (profilePath == null) {
+                profilePath = profileFilePath;
+            }
 
             int riskCheckFlags = 0;
             if (commandLine.hasOption(Const.OPTION_DISABLE_FRIDA_DETECT_LONG)) {
@@ -184,9 +198,14 @@ public class Dpt {
                         .protectConfigFile(commandLine.getOptionValue(Const.OPTION_PROTECT_CONFIG))
                         .verifySign(commandLine.hasOption(Const.OPTION_VERIFY_SIGN))
                         .riskCheckFlags(riskCheckFlags)
+                        .profileArchive(profilePath == null ? null : new File(profilePath).toPath())
                         .build();
             }
             else if(filePath.endsWith(".aab")) {
+                if (profilePath != null) {
+                    usage(options, "--profile 目前只支持 APK，不支持 AAB。");
+                    return null;
+                }
                 return new Aab.Builder()
                         .filePath(filePath)
                         .outputPath(commandLine.getOptionValue(Const.OPTION_OUTPUT_PATH))

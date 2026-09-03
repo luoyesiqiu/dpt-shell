@@ -4,7 +4,12 @@ import com.android.apksigner.ApkSignerTool;
 import com.luoye.dpt.config.Const;
 import com.luoye.dpt.config.ShellConfig;
 import com.luoye.dpt.profile.apk.ApkProfileProtectionContext;
+import com.luoye.dpt.profile.apk.ApkProfileInputValidator;
 import com.luoye.dpt.profile.apk.ApkProfileResolver;
+import com.luoye.dpt.profile.archive.ProfileArchiveBundle;
+import com.luoye.dpt.profile.archive.ProfileArchiveReader;
+import com.luoye.dpt.profile.error.ProfileCommandException;
+import com.luoye.dpt.profile.error.ProfileErrorCode;
 import com.luoye.dpt.util.FileUtils;
 import com.luoye.dpt.util.KeyUtils;
 import com.luoye.dpt.util.LogUtils;
@@ -37,6 +42,12 @@ public class Apk extends AndroidPackage {
         }
 
         @Override
+        public Builder profileArchive(Path profileArchive) {
+            super.profileArchive(profileArchive);
+            return this;
+        }
+
+        @Override
         public Apk build() {
             return new Apk(this);
         }
@@ -44,6 +55,7 @@ public class Apk extends AndroidPackage {
 
     private final Path profilesRoot;
     private final Path activeProfilesRoot;
+    private final Path profileArchive;
     private final Path runRoot;
     private ApkProfileProtectionContext profileContext;
 
@@ -56,6 +68,8 @@ public class Apk extends AndroidPackage {
                         : projectRoot.resolve("profiles"));
         activeProfilesRoot = normalizeRoot(builder.activeProfilesRoot,
                 executableRoot.resolve("profiles"));
+        profileArchive = builder.profileArchive == null ? null
+                : builder.profileArchive.toAbsolutePath().normalize();
         runRoot = Paths.get(Const.ROOT_OF_OUT_DIR,
                 "dptApk-" + StringUtils.generateIdentifier(16)).toAbsolutePath().normalize();
     }
@@ -293,6 +307,13 @@ public class Apk extends AndroidPackage {
     }
 
     private void cleanupRunRoot() {
+        if (profileContext != null) {
+            try {
+                profileContext.close();
+            } catch (IOException exception) {
+                LogUtils.warn("Failed to close Profile archive workspace: %s", exception.getMessage());
+            }
+        }
         File runDirectory = runRoot.toFile();
         if (runDirectory.exists()) {
             FileUtils.deleteRecurse(runDirectory);
@@ -304,9 +325,75 @@ public class Apk extends AndroidPackage {
     }
 
     void resolveProfileInputs(Path unpackedApkRoot) throws IOException {
+        if (profileArchive != null) {
+            resolveArchiveProfileInputs(unpackedApkRoot);
+            return;
+        }
         profileContext = new ApkProfileResolver(profilesRoot, activeProfilesRoot)
                 .resolve(unpackedApkRoot);
         setProfileContract(profileContext.getContract());
+    }
+
+    private void resolveArchiveProfileInputs(Path unpackedApkRoot) throws IOException {
+        ApkProfileInputValidator.Metadata apkMetadata =
+                ApkProfileInputValidator.inspectUnpacked(unpackedApkRoot);
+        Path manifest = unpackedApkRoot.resolve("AndroidManifest.xml");
+        String applicationId = apkMetadata.getApplicationId();
+        Path extractionRoot = runRoot.resolve("profile-archive");
+        try {
+            ProfileArchiveBundle archive = new ProfileArchiveReader().readVerified(
+                    profileArchive, extractionRoot, applicationId);
+            ApkProfileInputValidator.validate(archive, apkMetadata);
+            profileContext = ApkProfileProtectionContext.fromArchive(applicationId,
+                    archive.getProfileId(), archive.getRevisionId(),
+                    apkMetadata.getBusinessNativeAbis(), archive);
+            setProfileContract(profileContext.getContract());
+        } catch (ProfileCommandException exception) {
+            throw exception;
+        } catch (IOException | RuntimeException exception) {
+            throw archiveResolutionFailure(applicationId, exception);
+        }
+    }
+
+    private static ProfileCommandException archiveResolutionFailure(String applicationId,
+                                                                      Throwable cause) {
+        String message = exceptionMessages(cause);
+        if (message.contains("candidate") || message.contains("候选")) {
+            return new ProfileCommandException(ProfileErrorCode.ARCHIVE_CANDIDATE_REQUIRED,
+                    "正式加固只能使用 verified Profile：applicationId=" + applicationId
+                            + "，原因=" + message, cause);
+        }
+        if (message.contains("applicationId") || message.contains("目标应用")) {
+            return new ProfileCommandException(ProfileErrorCode.APK_PROFILE_TARGET_MISMATCH,
+                    "Profile 目标应用不匹配：applicationId=" + applicationId
+                            + "，原因=" + message, cause);
+        }
+        if (message.contains("protocol") || message.contains("协议")
+                || message.contains("schema") || message.contains("生成器")
+                || message.contains("generatorVersion") || message.contains("toolchainVersion")
+                || message.contains("core")) {
+            return new ProfileCommandException(ProfileErrorCode.APK_PROFILE_PROTOCOL_INCOMPATIBLE,
+                    "Profile 协议或生成器版本不兼容：applicationId=" + applicationId
+                            + "，原因=" + message, cause);
+        }
+        return new ProfileCommandException(ProfileErrorCode.APK_BUNDLE_INTEGRITY_FAILED,
+                "Profile 归档完整性校验失败：applicationId=" + applicationId
+                        + "，原因=" + message, cause);
+    }
+
+    private static String exceptionMessages(Throwable throwable) {
+        StringBuilder result = new StringBuilder();
+        Throwable current = throwable;
+        while (current != null) {
+            if (current.getMessage() != null && !current.getMessage().isEmpty()) {
+                if (result.length() > 0) {
+                    result.append(" <- ");
+                }
+                result.append(current.getMessage());
+            }
+            current = current.getCause();
+        }
+        return result.toString();
     }
 
     private ApkProfileProtectionContext requireProfileContext() {

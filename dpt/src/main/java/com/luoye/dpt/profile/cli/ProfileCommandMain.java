@@ -2,6 +2,12 @@ package com.luoye.dpt.profile.cli;
 
 import com.alibaba.fastjson2.JSON;
 import com.alibaba.fastjson2.JSONWriter;
+import com.luoye.dpt.profile.archive.ProfileArchiveBundle;
+import com.luoye.dpt.profile.archive.ProfileArchivePromotionService;
+import com.luoye.dpt.profile.archive.ProfileArchiveReader;
+import com.luoye.dpt.profile.archive.ProfileArchiveStatus;
+import com.luoye.dpt.profile.archive.ProfileArchiveWriter;
+import com.luoye.dpt.profile.apk.ApkProfileInputValidator;
 import com.luoye.dpt.profile.error.ProfileCommandException;
 import com.luoye.dpt.profile.error.ProfileErrorCode;
 import com.luoye.dpt.profile.storage.ProfileCreationResult;
@@ -16,6 +22,7 @@ import com.luoye.dpt.profile.storage.ProfileShowService;
 import com.luoye.dpt.profile.model.ActiveRevisionPointer;
 import com.luoye.dpt.profile.model.ProfileRevisionManifest;
 
+import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.LinkedHashMap;
@@ -40,8 +47,22 @@ public final class ProfileCommandMain {
             throw missingParameter("command");
         }
         Map<String, String> options = parseOptions(args);
+        String command = args[0];
+        if ("pack".equals(command)) {
+            executePack(options);
+            return;
+        }
+        if ("validate".equals(command)) {
+            executeValidate(options);
+            return;
+        }
+        if ("promote".equals(command)) {
+            executePromote(options);
+            return;
+        }
+
         String profilesRoot = requireOption(options, "--profiles-root");
-        if ("create".equals(args[0])) {
+        if ("create".equals(command)) {
             String applicationId = requireOption(options, "--application-id");
             ProfileCreationResult result = new ProfileCreationService(Paths.get(profilesRoot))
                     .create(applicationId);
@@ -49,7 +70,7 @@ public final class ProfileCommandMain {
                     + " created=" + result.isCreated());
             return;
         }
-        if ("show".equals(args[0])) {
+        if ("show".equals(command)) {
             String activeProfilesRoot = requireOption(options, "--active-profiles-root");
             ProfileShowResult result = new ProfileShowService(Paths.get(profilesRoot),
                     Paths.get(activeProfilesRoot)).show(optionalOption(options, "--application-id"),
@@ -58,7 +79,7 @@ public final class ProfileCommandMain {
                     JSONWriter.Feature.WriteNulls));
             return;
         }
-        if ("build".equals(args[0])) {
+        if ("build".equals(command)) {
             String activeProfilesRoot = requireOption(options, "--active-profiles-root");
             String overlayDir = optionalOption(options, "--overlay-dir");
             Path overlayPath = overlayDir == null ? null : Paths.get(overlayDir);
@@ -75,7 +96,7 @@ public final class ProfileCommandMain {
                     JSONWriter.Feature.WriteNulls));
             return;
         }
-        if ("assemble-candidate".equals(args[0])) {
+        if ("assemble-candidate".equals(command)) {
             String applicationId = requireOption(options, "--application-id");
             String profileId = requireOption(options, "--profile-id");
             String revisionId = requireOption(options, "--revision-id");
@@ -95,7 +116,7 @@ public final class ProfileCommandMain {
             System.out.println("PROFILE_BUNDLE_RESULT " + JSON.toJSONString(result));
             return;
         }
-        if ("publish".equals(args[0])) {
+        if ("publish".equals(command)) {
             String activeProfilesRoot = requireOption(options, "--active-profiles-root");
             String revisionId = requireOption(options, "--revision-id");
             Path reportDir = Paths.get(requireOption(options, "--report-dir"));
@@ -117,7 +138,7 @@ public final class ProfileCommandMain {
             System.out.println("PROFILE_PUBLISH_RESULT " + JSON.toJSONString(result));
             return;
         }
-        if ("rollback".equals(args[0])) {
+        if ("rollback".equals(command)) {
             String activeProfilesRoot = requireOption(options, "--active-profiles-root");
             String revisionId = requireOption(options, "--revision-id");
             ActiveRevisionPointer result = new ProfilePublishService(Paths.get(profilesRoot),
@@ -127,7 +148,105 @@ public final class ProfileCommandMain {
             return;
         }
         throw new ProfileCommandException(ProfileErrorCode.MISSING_PARAMETER,
-                "不支持的 Profile 命令：" + args[0]);
+                "不支持的 Profile 命令：" + command);
+    }
+
+    private static void executePack(Map<String, String> options) throws Exception {
+        Path bundle = Paths.get(requireOption(options, "--bundle"));
+        Path output = Paths.get(requireOption(options, "--out"));
+        if (output.getFileName() == null
+                || !output.getFileName().toString().endsWith(ProfileArchiveWriter.CANDIDATE_SUFFIX)) {
+            throw archiveError(ProfileErrorCode.ARCHIVE_INVALID,
+                    "pack 输出文件必须以 " + ProfileArchiveWriter.CANDIDATE_SUFFIX + " 结尾", null);
+        }
+        if (java.nio.file.Files.exists(output.toAbsolutePath().normalize(),
+                java.nio.file.LinkOption.NOFOLLOW_LINKS)) {
+            throw archiveError(ProfileErrorCode.ARCHIVE_OUTPUT_EXISTS,
+                    "Profile 归档输出已存在，拒绝覆盖：" + output.toAbsolutePath().normalize(), null);
+        }
+        try {
+            Path packed = new ProfileArchiveWriter().packCandidate(bundle, output);
+            Map<String, Object> result = new LinkedHashMap<>();
+            result.put("status", ProfileArchiveStatus.CANDIDATE.name());
+            result.put("profile", packed.toString());
+            System.out.println("PROFILE_PACK_RESULT " + JSON.toJSONString(result));
+        } catch (ProfileCommandException exception) {
+            throw exception;
+        } catch (IOException | RuntimeException exception) {
+            throw archiveError(ProfileErrorCode.ARCHIVE_INVALID,
+                    "Profile 候选归档失败：" + messageOf(exception), exception);
+        }
+    }
+
+    private static void executeValidate(Map<String, String> options) throws Exception {
+        Path profile = Paths.get(requireOption(options, "--profile"));
+        Path apk = optionalPath(options, "--apk");
+        try (ProfileArchiveBundle bundle = new ProfileArchiveReader().readVerified(profile)) {
+            if (apk != null) {
+                ApkProfileInputValidator.validate(bundle,
+                        ApkProfileInputValidator.inspectArchive(apk));
+            }
+            String expectedApplicationId = optionalOption(options, "--application-id");
+            if (expectedApplicationId != null
+                    && !expectedApplicationId.equals(bundle.getApplicationId())) {
+                throw new ProfileCommandException(ProfileErrorCode.APK_PROFILE_TARGET_MISMATCH,
+                        "Profile 目标应用不匹配：期望=" + expectedApplicationId
+                                + "，实际=" + bundle.getApplicationId());
+            }
+            Map<String, Object> result = new LinkedHashMap<>();
+            result.put("status", bundle.getStatus().name());
+            result.put("applicationId", bundle.getApplicationId());
+            result.put("profileId", bundle.getProfileId());
+            result.put("revisionId", bundle.getRevisionId());
+            result.put("abi", bundle.getManifest().getAbi());
+            result.put("profile", profile.toAbsolutePath().normalize().toString());
+            System.out.println("PROFILE_VALIDATE_RESULT " + JSON.toJSONString(result));
+        } catch (ProfileCommandException exception) {
+            throw exception;
+        } catch (IOException | RuntimeException exception) {
+            String message = messageOf(exception);
+            ProfileErrorCode code = message.contains("candidate") || message.contains("候选")
+                    ? ProfileErrorCode.ARCHIVE_CANDIDATE_REQUIRED
+                    : ProfileErrorCode.ARCHIVE_INVALID;
+            throw archiveError(code, "Profile 校验失败：" + message, exception);
+        }
+    }
+
+    private static void executePromote(Map<String, String> options) throws Exception {
+        Path candidate = Paths.get(requireOption(options, "--candidate"));
+        Path reports = Paths.get(requireOption(options, "--reports"));
+        Path output = Paths.get(requireOption(options, "--out"));
+        if (java.nio.file.Files.exists(output.toAbsolutePath().normalize(),
+                java.nio.file.LinkOption.NOFOLLOW_LINKS)) {
+            throw archiveError(ProfileErrorCode.ARCHIVE_OUTPUT_EXISTS,
+                    "Profile 正式归档输出已存在，拒绝覆盖：" + output.toAbsolutePath().normalize(), null);
+        }
+        try {
+            Path promoted = new ProfileArchivePromotionService().promote(candidate, reports, output);
+            Map<String, Object> result = new LinkedHashMap<>();
+            result.put("status", ProfileArchiveStatus.VERIFIED.name());
+            result.put("profile", promoted.toString());
+            System.out.println("PROFILE_PROMOTE_RESULT " + JSON.toJSONString(result));
+        } catch (IOException | RuntimeException exception) {
+            String message = messageOf(exception);
+            ProfileErrorCode code = message.contains("门禁") || message.contains("扫描")
+                    ? ProfileErrorCode.ARCHIVE_GATE_FAILED
+                    : message.contains("candidate") || message.contains("候选")
+                    ? ProfileErrorCode.ARCHIVE_CANDIDATE_REQUIRED
+                    : ProfileErrorCode.ARCHIVE_INVALID;
+            throw archiveError(code, "Profile promote 失败：" + message, exception);
+        }
+    }
+
+    private static ProfileCommandException archiveError(ProfileErrorCode code, String message,
+                                                         Throwable cause) {
+        return new ProfileCommandException(code, message, cause);
+    }
+
+    private static String messageOf(Throwable throwable) {
+        String message = throwable.getMessage();
+        return message == null || message.trim().isEmpty()
+                ? throwable.getClass().getSimpleName() : message;
     }
 
     private static Map<String, String> parseOptions(String[] args) throws ProfileCommandException {

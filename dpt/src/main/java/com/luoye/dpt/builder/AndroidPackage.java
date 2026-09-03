@@ -40,6 +40,7 @@ import java.io.InputStream;
 import java.io.RandomAccessFile;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.security.KeyStore;
@@ -72,6 +73,7 @@ public abstract class AndroidPackage {
         public boolean verifySign = false;
         public int riskCheckFlags = 0;
         public ProfileContract profileContract;
+        public Path profileArchive;
 
         public Builder filePath(String path) {
             this.filePath = path;
@@ -115,6 +117,11 @@ public abstract class AndroidPackage {
 
         public Builder profileContract(ProfileContract profileContract) {
             this.profileContract = profileContract;
+            return this;
+        }
+
+        public Builder profileArchive(Path profileArchive) {
+            this.profileArchive = profileArchive;
             return this;
         }
 
@@ -509,6 +516,14 @@ public abstract class AndroidPackage {
         return new File(FileUtils.getExecutablePath(), "shell-files" + File.separator + "libs");
     }
 
+    /**
+     * Profile archives use Android ABI names, while the shell runtime uses VM instruction-set
+     * directory names (for example, arm64-v8a is loaded from arm64).
+     */
+    protected String getRuntimeAbiDirName(String abiName) {
+        return "arm64-v8a".equals(abiName) ? "arm64" : abiName;
+    }
+
     protected String getRenameDexPath() {
         return FileUtils.getExecutablePath() + File.separator + "shell-files" + File.separator + "dex" + File.separator + "rename_classes.dex";
     }
@@ -601,12 +616,14 @@ public abstract class AndroidPackage {
 
             String abiName = abiDir.getName();
 
-            if (excludedAbi != null && excludedAbi.contains(abiName)) {
+            String runtimeAbiName = getRuntimeAbiDirName(abiName);
+            if (excludedAbi != null && (excludedAbi.contains(abiName)
+                    || excludedAbi.contains(runtimeAbiName))) {
                 LogUtils.info("Skipping excluded ABI: " + abiName);
                 continue;
             }
 
-            File destAbiDir = new File(destDirRoot, abiName);
+            File destAbiDir = new File(destDirRoot, runtimeAbiName);
             if (!destAbiDir.exists()) {
                 destAbiDir.mkdirs();
             }
