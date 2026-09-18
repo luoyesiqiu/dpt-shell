@@ -154,8 +154,16 @@ public final class ProfileCommandMain {
     private static void executePack(Map<String, String> options) throws Exception {
         Path bundle = Paths.get(requireOption(options, "--bundle"));
         Path output = Paths.get(requireOption(options, "--out"));
-        if (output.getFileName() == null
-                || !output.getFileName().toString().endsWith(ProfileArchiveWriter.CANDIDATE_SUFFIX)) {
+        boolean production = "true".equalsIgnoreCase(optionalOption(options, "--production"));
+        String fileName = output.getFileName() == null ? "" : output.getFileName().toString();
+        if (production) {
+            if (!fileName.endsWith(ProfileArchiveWriter.VERIFIED_SUFFIX)
+                    || fileName.endsWith(ProfileArchiveWriter.CANDIDATE_SUFFIX)) {
+                throw archiveError(ProfileErrorCode.ARCHIVE_INVALID,
+                        "pack --production 输出文件必须以 " + ProfileArchiveWriter.VERIFIED_SUFFIX
+                                + " 结尾且不能是 candidate", null);
+            }
+        } else if (!fileName.endsWith(ProfileArchiveWriter.CANDIDATE_SUFFIX)) {
             throw archiveError(ProfileErrorCode.ARCHIVE_INVALID,
                     "pack 输出文件必须以 " + ProfileArchiveWriter.CANDIDATE_SUFFIX + " 结尾", null);
         }
@@ -165,16 +173,20 @@ public final class ProfileCommandMain {
                     "Profile 归档输出已存在，拒绝覆盖：" + output.toAbsolutePath().normalize(), null);
         }
         try {
-            Path packed = new ProfileArchiveWriter().packCandidate(bundle, output);
+            ProfileArchiveWriter writer = new ProfileArchiveWriter();
+            Path packed = production
+                    ? writer.packProduction(bundle, output)
+                    : writer.packCandidate(bundle, output);
             Map<String, Object> result = new LinkedHashMap<>();
-            result.put("status", ProfileArchiveStatus.CANDIDATE.name());
+            result.put("status", production ? ProfileArchiveStatus.VERIFIED.name()
+                    : ProfileArchiveStatus.CANDIDATE.name());
             result.put("profile", packed.toString());
             System.out.println("PROFILE_PACK_RESULT " + JSON.toJSONString(result));
         } catch (ProfileCommandException exception) {
             throw exception;
         } catch (IOException | RuntimeException exception) {
             throw archiveError(ProfileErrorCode.ARCHIVE_INVALID,
-                    "Profile 候选归档失败：" + messageOf(exception), exception);
+                    "Profile 归档失败：" + messageOf(exception), exception);
         }
     }
 

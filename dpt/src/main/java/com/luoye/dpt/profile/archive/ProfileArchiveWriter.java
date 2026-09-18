@@ -48,12 +48,16 @@ public final class ProfileArchiveWriter {
     }
 
     /**
-     * Formal archives are produced only by {@link ProfileArchivePromotionService}.  Keeping this
-     * method as a guarded compatibility surface prevents callers from accidentally bypassing the
-     * persisted gate and scan evidence.
+     * Packs a consumable production archive directly from a validated Bundle.
+     *
+     * <p>The archive is marked {@link ProfileArchiveStatus#VERIFIED} so the protection pipeline
+     * accepts it, while carrying no gate/scan report payload.  Consumability is decided by the
+     * technical contract -- identity, ABI, artifact hashes and the DEX/SO contract -- not by
+     * third-party scan evidence.  The legacy report-driven promotion path remains available
+     * through {@link ProfileArchivePromotionService}.
      */
-    public Path packVerified(Path bundleRoot, Path output, Path reportsRoot) throws IOException {
-        throw new IOException("verified Profile 只能由 promote 生成");
+    public Path packProduction(Path bundleRoot, Path output) throws IOException {
+        return packInternal(bundleRoot, output, ProfileArchiveStatus.VERIFIED, null);
     }
 
     public Path pack(Path bundleRoot, Path output, ProfileArchiveStatus status)

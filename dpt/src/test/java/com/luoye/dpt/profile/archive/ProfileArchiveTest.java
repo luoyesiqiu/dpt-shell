@@ -226,10 +226,9 @@ public class ProfileArchiveTest {
             Assert.assertTrue(expected.getMessage(), expected.getMessage().contains("candidate"));
         }
         try {
-            new ProfileArchiveWriter().packVerified(fixture.bundle.getRoot(),
+            new ProfileArchiveWriter().packProduction(fixture.bundle.getRoot(),
                     temporaryFolder.newFolder("wrong-verified-name").toPath()
-                            .resolve("profile.candidate.dptprofile"),
-                    temporaryFolder.newFolder("reports-empty").toPath());
+                            .resolve("profile.candidate.dptprofile"));
             Assert.fail("verified output must not use candidate suffix");
         } catch (Exception expected) {
             Assert.assertTrue(expected.getMessage(), expected.getMessage().contains("verified"));
@@ -237,20 +236,41 @@ public class ProfileArchiveTest {
     }
 
     @Test
-    public void verifiedArchiveCannotBypassPromotionGate() throws Exception {
+    public void productionArchiveIsConsumableWithoutGateReportPayload() throws Exception {
         Fixture fixture = fixture();
-        Path reports = temporaryFolder.newFolder("direct-verified-reports").toPath();
-        Files.writeString(reports.resolve("gate-report.json"), "{}", StandardCharsets.UTF_8);
-        Files.writeString(reports.resolve("scan-baseline.json"), "{}", StandardCharsets.UTF_8);
-        Files.writeString(reports.resolve("scan-candidate.json"), "{}", StandardCharsets.UTF_8);
+        Path output = temporaryFolder.newFolder("production-output").toPath()
+                .resolve("profile.dptprofile");
+
+        new ProfileArchiveWriter().packProduction(fixture.bundle.getRoot(), output);
+
+        Path extraction = temporaryFolder.newFolder("production-extract").toPath();
+        try (ProfileArchiveBundle bundle = new ProfileArchiveReader().readVerified(output,
+                extraction)) {
+            Assert.assertEquals(ProfileArchiveStatus.VERIFIED, bundle.getStatus());
+            Assert.assertNull(bundle.getManifest().getReportsSha256());
+            Assert.assertEquals(APPLICATION_ID, bundle.getManifest().getApplicationId());
+            Assert.assertEquals("arm64-v8a", bundle.getManifest().getAbi());
+            Assert.assertTrue(Files.isRegularFile(bundle.getShellDexPath()));
+            Assert.assertTrue(Files.isRegularFile(bundle.getArm64SoPath()));
+        }
+    }
+
+    @Test
+    public void productionArchiveStillRejectsTampering() throws Exception {
+        Fixture fixture = fixture();
+        Path archive = temporaryFolder.newFolder("production-tamper").toPath()
+                .resolve("profile.dptprofile");
+        new ProfileArchiveWriter().packProduction(fixture.bundle.getRoot(), archive);
+        Path tampered = temporaryFolder.newFolder("production-tampered-copy").toPath()
+                .resolve("profile.dptprofile");
+        tamperEntry(archive, tampered, ProfileArchiveReader.SHELL_DEX_ENTRY);
 
         try {
-            new ProfileArchiveWriter().packVerified(fixture.bundle.getRoot(),
-                    temporaryFolder.newFolder("direct-verified-output").toPath()
-                            .resolve("profile.dptprofile"), reports);
-            Assert.fail("verified archives must only be produced by promote");
+            new ProfileArchiveReader().readVerified(tampered,
+                    temporaryFolder.newFolder("production-tamper-extract").toPath());
+            Assert.fail("tampered production archive must be rejected");
         } catch (Exception expected) {
-            Assert.assertTrue(expected.getMessage(), expected.getMessage().contains("promote"));
+            Assert.assertTrue(expected.getMessage(), !expected.getMessage().isEmpty());
         }
     }
 

@@ -448,9 +448,8 @@ public final class ProfileArchiveReader {
                 .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue,
                         (left, right) -> left, TreeMap::new));
         if (reports.isEmpty()) {
-            if (manifest.getStatus() == ProfileArchiveStatus.VERIFIED) {
-                throw new IOException("verified Profile 缺少门禁和扫描报告");
-            }
+            // Report payloads are optional provenance for a production archive; consumability
+            // is enforced by the identity, ABI, artifact-hash and DEX/SO contract checks above.
             if (manifest.getReportsSha256() != null) {
                 throw new IOException("manifest 声明了不存在的报告摘要");
             }

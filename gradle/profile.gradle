@@ -335,15 +335,20 @@ def profileArchiveProperty = { Project project, String name, String taskName ->
 
 tasks.register("profilePack") {
     group = "profile"
-    description = "Packs a candidate Profile Bundle into a portable .candidate.dptprofile file."
+    description = "Packs a Profile Bundle into a portable .dptprofile file (candidate by default, production with -PprofileProduction=true)."
     dependsOn(":dpt:classes")
     doLast {
         File bundle = profileArchiveProperty(project, "profileBundleDir", "profilePack")
         File output = profileArchiveProperty(project, "profileArchiveOut", "profilePack")
+        def production = project.findProperty("profileProduction")?.toString()?.trim()?.toBoolean()
+                ?: false
         project.javaexec {
             classpath = project(":dpt").sourceSets.main.runtimeClasspath
             mainClass = "com.luoye.dpt.profile.cli.ProfileCommandMain"
             args "pack", "--bundle", bundle.absolutePath, "--out", output.absolutePath
+            if (production) {
+                args "--production", "true"
+            }
         }
     }
 }

@@ -51,19 +51,53 @@ ext {
 
 }
 
-def profileStateDir = file(findProperty("profileStateDir") ?: "${rootDir}/profiles")
+// Keep reproducible Profile build state under Gradle's disposable build tree. A caller that
+// needs a persistent registry can still pass -PprofileStateDir explicitly.
+def defaultProfileBuildRoot = file("${rootDir}/build/dpt-profile")
+def profileStateDir = file(findProperty("profileStateDir") ?: "${defaultProfileBuildRoot}/state")
+def profileActiveDir = file(findProperty("profileActiveDir") ?: "${defaultProfileBuildRoot}/active")
+def profileStateDirUsesDefault = !findProperty("profileStateDir")
+def profileActiveDirUsesDefault = !findProperty("profileActiveDir")
 ext.profileStateDir = profileStateDir
-ext.profileActiveDir = file(findProperty("profileActiveDir") ?: "${rootDir}/executable/profiles")
+ext.profileActiveDir = profileActiveDir
+def makeProfileBuildTreeWritable = { File root ->
+    if (!root.exists()) {
+        return
+    }
+    // Published Profile files are intentionally read-only; make disposable build output
+    // removable before asking Gradle to delete it.
+    root.setWritable(true, false)
+    root.eachFileRecurse { File child ->
+        child.setWritable(true, false)
+    }
+}
 def profileClean = tasks.register("profileClean") {
     group = "build"
-    description = "Deletes only regenerable Profile build directories."
+    description = "Deletes the disposable Profile build tree."
     doLast {
+        if (profileStateDirUsesDefault && profileActiveDirUsesDefault) {
+            if (defaultProfileBuildRoot.exists()) {
+                makeProfileBuildTreeWritable(defaultProfileBuildRoot)
+                delete(defaultProfileBuildRoot)
+                println("Deleted ${defaultProfileBuildRoot}")
+            }
+            return
+        }
+
+        // Explicit state roots may contain the stable registry/source; only remove generated
+        // subtrees and leave identity and audit data intact.
         ["generated", "cache", "candidates"].each { directoryName ->
             def directory = new File(profileStateDir, directoryName)
             if (directory.exists()) {
+                makeProfileBuildTreeWritable(directory)
                 delete(directory)
                 println("Deleted ${directory}")
             }
+        }
+        if (profileActiveDir.exists()) {
+            makeProfileBuildTreeWritable(profileActiveDir)
+            delete(profileActiveDir)
+            println("Deleted ${profileActiveDir}")
         }
     }
 }

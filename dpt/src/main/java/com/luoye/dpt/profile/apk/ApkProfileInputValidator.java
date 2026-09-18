@@ -23,6 +23,9 @@ public final class ApkProfileInputValidator {
     public static final String REQUIRED_ABI = "arm64-v8a";
     private static final String MANIFEST_FILE_NAME = "AndroidManifest.xml";
     private static final long MAX_MANIFEST_SIZE = 16L * 1024L * 1024L;
+    // Real release APKs can contain thousands of resource entries; the byte limit remains the
+    // primary zip-bomb guard while this count accommodates standard ZIP entry ranges.
+    private static final int MAX_ENTRY_COUNT = 65536;
     private static final long MAX_ARCHIVE_BYTES = 512L * 1024L * 1024L;
 
     private ApkProfileInputValidator() {
@@ -41,7 +44,7 @@ public final class ApkProfileInputValidator {
                  ZipInputStream zip = new ZipInputStream(file)) {
                 ZipEntry entry;
                 while ((entry = zip.getNextEntry()) != null) {
-                    if (++entryCount > 4096) {
+                    if (++entryCount > MAX_ENTRY_COUNT) {
                         throw new IOException("APK 条目数量超过限制");
                     }
                     if (entry.isDirectory()) {
