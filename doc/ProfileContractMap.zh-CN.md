@@ -1,6 +1,6 @@
 # Profile 跨层契约现状映射
 
-本文档记录任务 3.1 的 CodeGraph 调查结果，用于约束后续 Profile 契约实现。本文只描述 APK 链路；AAB 虽复用部分旧代码，但不属于本次变更的实现和验收范围。
+本文档记录 Profile 跨层契约的字段归属：哪些字段构成稳定身份、哪些随 Revision 变化、哪些必须按单次 APK 生成。本文只描述 APK 链路，AAB 不在范围内。
 
 ## 当前调用链
 
@@ -54,10 +54,10 @@ JNI_OnLoad
 
 | 层级 | 当前状态源 | 当前消费者 | 结论 |
 |---|---|---|---|
-| 根构建 | `build/dpt-build-ids.properties`、根工程 `ext.soName/ext.dptBuildKey` | `dpt` JAR Manifest、`shell/build.gradle`、CMake | 全应用共享且会被普通旧构建覆盖，后续必须由当前 Revision 契约替代 |
+| 根构建 | `build/dpt-build-ids.properties`、根工程 `ext.soName/ext.dptBuildKey` | `dpt` JAR Manifest、`shell/build.gradle`、CMake | 显式传 `--profile` 时以归档内契约为准；未传时回退这组全局值 |
 | 壳构建 | `BuildConfig.SO_NAME`、`SO_NAME`、`DPT_BUILD_KEY` CMake 宏 | Java `Global`、Native 配置解密 | 值应来自 Profile；宏名和用途保持固定 |
-| 打包进程 | `ShellConfig` 单例 | Manifest、DEX 注入、配置 JSON、签名/风险选项 | 当前是进程级可变状态；Profile 字段必须从单次只读上下文注入，避免并发串值 |
-| Profile 身份 | `identity.lock.json` | 当前仅 Profile 管理/查看入口 | 已具备稳定专属字段，但尚未接入打包器、Java 和 Native |
+| 打包进程 | `ShellConfig` 单例（优先读 `profileContract`） | Manifest、DEX 注入、配置 JSON、签名/风险选项 | 单次 APK 通过 `ApkProfileProtectionContext` 注入只读契约；`ShellConfig` 只在无 Profile 时提供旧值 |
+| Profile 身份 | `identity.lock.json` | 打包器、Java 声明、Native JNI 注册表 | 已接入：代理入口、JNI Bridge 名、SO/资产名和 build-key 均由契约提供 |
 | 单次 APK | Manifest、命令行选项、随机 `encKey`、业务 DEX 签名 | 配置加密、SO key slot、风险/签名校验 | 必须继续按 APK 单次生成，不能固化进 Profile |
 | APK 运行时 | 加密配置资产 -> Native `g_shell_config` | JNI 注册、原组件恢复、风险检查 | JSON key 和解析语义固定，字段值按 APK/Profile 注入 |
 
@@ -124,7 +124,7 @@ Recipe 还可以改变 Java/Native 内部辅助类型、方法、namespace、可
 - `recipeId` 和完整 Recipe 版本。
 - Overlay 内容及 SHA-256。
 - 生成器版本、不可变核心版本和工具链版本。
-- 生成源码摘要、产物摘要和门禁报告摘要。
+- 生成源码摘要和产物摘要（可选的发布报告摘要不影响壳身份）。
 - Java/Native 内部组织和辅助符号；前提是跨层契约、固定生命周期与失败语义不变。
 
 ## 单次 APK 字段
@@ -136,15 +136,12 @@ Recipe 还可以改变 Java/Native 内部辅助类型、方法、namespace、可
 - 单次随机 `encKey`、由其派生的配置 AES key、CodeItem RC4 key 和写入 SO key slot 的 16 字节值。
 - 输入/输出路径、临时工作目录、签名和 zipalign 参数。
 
-## 已确认的接入缺口
+## 契约接入现状
 
-1. `ProfileContract` 与 `ProfileIdentityLock` 已存在，但 APK 打包器仍读取 `ShellConfig` 和全局 `executable/shell-files`。
-2. `AndroidPackage.getProxyApplicationName/getProxyComponentFactory` 仍写死代理类简单名。
-3. `ShellConfig.getJniSlashClassName` 仍写死 `JniBridge`；`ReflectionClinitInjector` 仍写死方法名 `clinit`。
-4. Java `JniBridge` 声明和 Native `gMethods` 仍写死全部方法名，尚未由同一语义映射生成。
-5. `Const`、Java `Global/FileUtils` 和 Native `dpt_macro.h` 分别写死同一组资产/目录名，存在跨层失配风险。
-6. 根 Gradle 和 `shell/build.gradle` 仍使用全局 SO 名、`build-key` 和覆盖式 `shell-files` 输出，不能支持并发 Profile。
-7. `ShellConfig` 是进程级可变单例；后续 APK 链路必须把活动 Bundle 封装成单次只读上下文，避免并发任务串值。
-8. `JNI_BRIDGE_NAME` CMake 定义目前没有形成完整数据链，不能作为契约来源。
+显式传入 `--profile` 时，壳身份的唯一来源是归档内的 Profile 契约：代理入口类名、JNI Bridge 名、
+SO 名、资产目录名、build-key 和壳 SO/DEX 全部由契约驱动，不再读取全局 `shell-files` 或全局
+SO 名/build-key（见 `Apk.getShellNativeLibsRoot`、`ShellConfig.getJniSlashClassName`、
+`AndroidPackage.getProxyApplicationName`）。
 
-后续 3.2～3.6 必须以一份规范化、确定性序列化的 Profile 契约为唯一来源，再分别生成或校验打包器配置、Java 声明、Native 注册表、Manifest 入口、CMake 参数和 R8 keep 规则。不得继续增加彼此独立的常量副本。
+未传 `--profile` 时仍保留注册表 + 活动 Revision 的目录 Bundle 旧路径，仅用于迁移和回归；
+新增调用一律显式传 `--profile`。日常操作见 [dpt-profile.zh-CN.md](./dpt-profile.zh-CN.md)。

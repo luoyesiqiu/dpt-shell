@@ -57,6 +57,9 @@ usage: java -jar dpt.jar [option] -f <package_file>
                              application packages.
     --noisy-log              Open noisy log.
  -o,--output <arg>           Output directory for protected package.
+    --profile <arg>          Verified .dptprofile file used for this APK
+                             protection run.
+    --profile-file <arg>     Alias of --profile.
  -r,--rules-file <arg>       Rules file for class names that will not be
                              protected.
  -S,--smaller                Trade some of the app's performance for a
