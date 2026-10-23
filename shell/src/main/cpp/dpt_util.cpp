@@ -20,6 +20,9 @@
 #include "dpt_util.h"
 #include "common/dpt_log.h"
 
+// dpt.cpp 里由 dpt.jar 写入的应用包名
+extern uint8_t SN_APP_PKG[128];
+
 using namespace dpt;
 
 DPT_DATA_SECTION uint8_t DATA_R_FLAG[] = "r";
@@ -241,6 +244,99 @@ AAsset *getAsset(JNIEnv *env, jobject context, const char *filename) {
     return nullptr;
 }
 
+// ---- 读 java 系统属性 ----
+static std::string propGet(JNIEnv *env, const char *key) {
+    std::string out;
+    jclass sysCls = env->FindClass("java/lang/System");
+    if (sysCls == nullptr) { env->ExceptionClear(); return out; }
+    jmethodID mid = env->GetStaticMethodID(sysCls, "getProperty",
+                                           "(Ljava/lang/String;)Ljava/lang/String;");
+    if (mid == nullptr) { env->ExceptionClear(); return out; }
+    jstring jKey = env->NewStringUTF(key);
+    jstring jVal = (jstring) env->CallStaticObjectMethod(sysCls, mid, jKey);
+    if (jVal != nullptr) {
+        const char *chs = env->GetStringUTFChars(jVal, nullptr);
+        if (chs != nullptr) { out.assign(chs); env->ReleaseStringUTFChars(jVal, chs); }
+    }
+    if (env->ExceptionCheck()) { env->ExceptionClear(); }
+    return out;
+}
+
+// ---- 回退 1: java.class.path 里找 apk（app_process 用户服务进程）----
+//
+// 必须按「烘进 so 的包名」过滤，不能直接取第一个 .apk。
+//
+// 原因：Shizuku 的 user service 由 app_process 拉起，进程的 java.class.path
+// 指向的是 **Shizuku 自己的 APK**：
+//   /data/app/.../moe.shizuku.privileged.api-.../base.apk
+// 而不是被托管应用的 APK。若直接返回它：
+//   1) sha256_of_apk_signer() 算出 Shizuku 的证书摘要
+//   2) 自封装块是用应用包名 + 应用证书封的，认证必然失败
+//   3) sn::init 失败 -> keys().ready=false
+//   4) decrypt_bitcode_stage() 走 _exit(70)，进程静默退出
+static std::string findApkInClassPath(JNIEnv *env) {
+    std::string cp = propGet(env, "java.class.path");
+    if (cp.empty()) { return cp; }
+
+    std::string wantPkg(reinterpret_cast<const char *>(SN_APP_PKG));
+    bool havePkg = !wantPkg.empty() && wantPkg != "0";
+
+    std::string firstApk;
+    size_t pos = 0;
+    while (pos <= cp.size()) {
+        size_t sep = cp.find(':', pos);
+        std::string item = cp.substr(pos, sep == std::string::npos ? std::string::npos : sep - pos);
+        if (item.size() > 4 && item.compare(item.size() - 4, 4, ".apk") == 0) {
+            if (havePkg && item.find(wantPkg) != std::string::npos) {
+                DLOGD("source dir from java.class.path (pkg match): %s", item.c_str());
+                return item;
+            }
+            if (firstApk.empty()) { firstApk = item; }
+        }
+        if (sep == std::string::npos) { break; }
+        pos = sep + 1;
+    }
+
+    if (!firstApk.empty()) {
+        // 没有烘入包名时只能退回旧行为；有包名却都没命中则返回空，
+        // 让上层继续走 maps 回退，而不是拿错 APK 去算证书。
+        if (!havePkg) {
+            DLOGW("source dir from java.class.path (no pkg embedded): %s", firstApk.c_str());
+            return firstApk;
+        }
+        DLOGW("no classpath apk matches pkg '%s', skip: %s", wantPkg.c_str(), firstApk.c_str());
+    }
+    return std::string();
+}
+
+// ---- 回退 2: 自身 /proc/self/maps 里被映射的 apk ----
+// 注意：maps 行里 inode 与路径之间可能有多个空格，不能按「第 N 个空格」定位。
+// 直接在行内找路径起点，遇到空白即结束（顺带正确处理 " (deleted)" 后缀）。
+static std::string findApkInSelfMaps() {
+    std::string found;
+    std::string anyApk;
+    FILE *fp = fopen("/proc/self/maps", "r");
+    if (fp == nullptr) { return found; }
+    char line[2048];
+    while (fgets(line, sizeof(line), fp) != nullptr) {
+        if (strstr(line, ".apk") == nullptr) { continue; }
+        char *p = strstr(line, "/data/");
+        if (p == nullptr) { p = strstr(line, "/mnt/"); }
+        if (p == nullptr) { continue; }
+        char *end = p;
+        while (*end != '\0' && *end != '\n' && *end != ' ' && *end != '\t') { end++; }
+        if (end <= p) { continue; }
+        std::string cand(p, (size_t)(end - p));
+        if (cand.size() <= 4 || cand.compare(cand.size() - 4, 4, ".apk") != 0) { continue; }
+        if (cand.find("base.apk") != std::string::npos) { found = cand; break; }
+        if (anyApk.empty()) { anyApk = cand; }
+    }
+    fclose(fp);
+    if (found.empty()) { found = anyApk; }
+    if (!found.empty()) { DLOGD("source dir from maps: %s", found.c_str()); }
+    return found;
+}
+
 std::string getSourceDir(JNIEnv *env) {
     reflect::android_app_ActivityThread activityThread(env);
     jobject mBoundApplicationObj = activityThread.getBoundApplication();
@@ -251,15 +347,25 @@ std::string getSourceDir(JNIEnv *env) {
     reflect::android_content_pm_ApplicationInfo applicationInfo(env, appInfoObj);
     auto sourceDir = applicationInfo.getSourceDir();
 
-    const char *sourceDirChs = env->GetStringUTFChars(sourceDir, nullptr);
+    // 判空：app_process 进程里这条反射链返回 null，
+    // 直接把 null 传给 GetStringUTFChars 是未定义行为（ART 上 abort）。
+    if (sourceDir != nullptr) {
+        const char *sourceDirChs = env->GetStringUTFChars(sourceDir, nullptr);
+        if (sourceDirChs != nullptr) {
+            DLOGD("source dir: %s", sourceDirChs);
+            std::string sourceDirStr{sourceDirChs};
+            env->ReleaseStringUTFChars(sourceDir, sourceDirChs);
+            return sourceDirStr;
+        }
+    }
+    env->ExceptionClear();
 
-    DLOGD("source dir: %s", sourceDirChs);
-
-    auto sourceDirStr = std::string{sourceDirChs};
-
-    env->ReleaseStringUTFChars(sourceDir, sourceDirChs);
-
-    return sourceDirStr;
+    // app_process 拉起的进程没有正常 bindApplication，上面的反射链返回 null，
+    // 回退到 classpath 与自身 maps。找不到时返回空串（调用方须判空）。
+    DLOGW("ActivityThread reflection unavailable, falling back");
+    std::string fromCp = findApkInClassPath(env);
+    if (!fromCp.empty()) { return fromCp; }
+    return findApkInSelfMaps();
 }
 
 std::string getDataDir(JNIEnv *env) {

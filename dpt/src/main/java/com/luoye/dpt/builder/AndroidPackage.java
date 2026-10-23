@@ -14,6 +14,7 @@ import com.luoye.dpt.model.MultiDexCode;
 import com.luoye.dpt.task.ThreadPool;
 import com.luoye.dpt.util.CryptoUtils;
 import com.luoye.dpt.util.DexUtils;
+import com.luoye.dpt.util.DexVersionUtils;
 import com.luoye.dpt.util.FileUtils;
 import com.luoye.dpt.util.HexUtils;
 import com.luoye.dpt.util.IoUtils;
@@ -449,7 +450,12 @@ public abstract class AndroidPackage {
         String dexDir = getDexDir(packageDir);
         File mainDex = new File(dexDir, "classes.dex");
         File junkCodeDex = new File(getJunkCodeDexPath());
+        // dx 的 DexMerger 只会写出 DEX 035。这里先记住原 dex 版本，合并成功后恢复，
+        // 否则 037+ 的主 dex（Kotlin 接口默认方法等）会被降级并在运行时抛
+        // IncompatibleClassChangeError。
+        int mainDexVersion = DexVersionUtils.readDexVersion(mainDex);
         if(mainDex.exists() && DexUtils.mergeDex(mainDex, junkCodeDex)) {
+            DexVersionUtils.restoreDexVersion(mainDex, mainDexVersion);
             LogUtils.info("Merge junk code into classes.dex");
         }
         else {
@@ -707,13 +713,11 @@ public abstract class AndroidPackage {
                     injectedDexFile.delete();
                 }
 
-                if(isKeepClasses() && DexUtils.dexContainsKeepInPlace(dexFile)) {
-                    // Skip split entirely for dexes containing keep-in-place classes (e.g. Compose):
-                    // the re-partition would break Compose's cross-dex interface linking and cause IncompatibleClassChangeError.
-                    // The dex still goes through extractAllMethods (rule-matched classes are skipped as usual); it is just not split.
-                    LogUtils.info("Skip split for dex with keep-in-place classes (e.g. Compose): %s", dexFile.getName());
-                }
-                else if(isKeepClasses()) {
+                // splitDex 已把 keep-in-place（Compose）类排除在 keep 集之外，
+                // 让它们原样留在主 dex，因此含 Compose 的 dex 也可以安全 split。
+                // 旧逻辑是「含 Compose 的 dex 整个跳过 split」—— 那会让 -r 规则
+                // 在这类 dex 上完全失效（规则命中的类仍留在加密容器里）。
+                if(isKeepClasses()) {
                     File keepDex = new File(getKeepDexTempDir(packageDir).getAbsolutePath() + File.separator + dexFile.getName());
                     File splitDex = new File(dexFile.getAbsolutePath() + "_split.dex");
 

@@ -1,5 +1,6 @@
 package com.luoye.dpt.dex;
 
+import com.luoye.dpt.util.DexVersionUtils;
 import com.android.tools.smali.dexlib2.AccessFlags;
 import com.android.tools.smali.dexlib2.DexFileFactory;
 import com.android.tools.smali.dexlib2.Opcode;
@@ -69,6 +70,19 @@ public class ReflectionClinitInjector {
     }
 
     public static void inject(String inputDex, String outputDex, String jniClassSig) throws IOException {
+        inject(inputDex, outputDex, jniClassSig, null);
+    }
+
+    /**
+     * 带跳过判定的版本。
+     *
+     * <p>{@code skipType} 命中的类不做 clinit 注入。目前用于 keep-in-place
+     * （Compose）类：它们不参与指令抽取，也不应被注入反射调用 ——
+     * 注入的代码会引用 JniBridge，而这些类在 -K 场景下留在主 dex，
+     * 可能早于壳初始化就被加载。
+     */
+    public static void inject(String inputDex, String outputDex, String jniClassSig,
+                              java.util.function.Predicate<String> skipType) throws IOException {
         File inputFile = new File(inputDex);
         DexBackedDexFile dexFile = DexFileFactory.loadDexFile(inputFile, Opcodes.getDefault());
 
@@ -93,6 +107,9 @@ public class ReflectionClinitInjector {
 
         for (ClassDef classDef : allClasses) {
             if (isSkippedClass(classDef.getType())) {
+                continue;
+            }
+            if (skipType != null && skipType.test(classDef.getType())) {
                 continue;
             }
             for (Method method : classDef.getMethods()) {
@@ -131,6 +148,7 @@ public class ReflectionClinitInjector {
 
         DexFile outDex = new ImmutableDexFile(dexFile.getOpcodes(), newClasses);
         DexFileFactory.writeDexFile(outputDex, outDex);
+        DexVersionUtils.restoreDexVersion(new File(outputDex), DexVersionUtils.readDexVersion(inputFile));
 
         LogUtils.debug("reflection clinit inject: helpers=%d, clinits=%d, methods=%d",
                 state.helperRefs.size(), state.clinitIndex, state.totalMethodCount);
