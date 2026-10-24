@@ -18,6 +18,21 @@ public class ShellConfig {
     @JSONField(name = "shellPkgName")
     private String shellPackageName;
 
+    /**
+     * 应用包名，随壳配置一起下发。
+     *
+     * <p>壳在 app_process 进程（Shizuku / libsu 的 user service）里需要知道
+     * 自己属于哪个应用，才能从 java.class.path / /proc/self/maps 里挑出正确的
+     * APK —— 那些进程的 classpath 指向的是 Shizuku 自己的 APK，直接取第一个
+     * .apk 会算错签名证书，导致自封装块认证失败、进程静默退出。
+     *
+     * <p>故意不单独导出一个 .so 符号：符号表里多一个语义直白的名字（例如
+     * SN_APP_PKG）等于告诉分析者"这里有个和包名相关的东西"。随 config 走，
+     * 符号表里不会多出任何东西。
+     */
+    @JSONField(name = "app_pkg_name")
+    private String appPackageName;
+
     @JSONField(name = "app_sign_sha256")
     private String appSignSha256;
 
@@ -190,6 +205,17 @@ public class ShellConfig {
         return String.format(Locale.US, "L%s;", getJniSlashClassName());
     }
 
+    /** config JSON 里应用包名的键名。native 侧用同一个字符串读取。 */
+    public static final String AY_KEY_PKG = "app_pkg_name";
+
+    public String getAppPackageName() {
+        return appPackageName;
+    }
+
+    public void setAppPackageName(String appPackageName) {
+        this.appPackageName = appPackageName;
+    }
+
     public String toJson() {
         JSONObject jsonObject = new JSONObject();
         jsonObject.put("app_name", getApplicationName());
@@ -202,6 +228,7 @@ public class ShellConfig {
         jsonObject.put("dex_sign", getDexSign());
         jsonObject.put("junk_cls_name", getJunkClassName());
         jsonObject.put("risk_check_flags", getRiskCheckFlags());
+        jsonObject.put(AY_KEY_PKG, getAppPackageName());
         return jsonObject.toString();
     }
 

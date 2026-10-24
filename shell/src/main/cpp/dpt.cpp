@@ -559,6 +559,7 @@ DPT_ENCRYPT void read_shell_config(JNIEnv *env) {
                 const char *keyDexSign = AY_OBFUSCATE("dex_sign");
                 const char *keyJunkClsName = AY_OBFUSCATE("junk_cls_name");
                 const char *keyRiskCheckFlags = AY_OBFUSCATE("risk_check_flags");
+                const char *keyAppPkgName = AY_OBFUSCATE("app_pkg_name");
                 g_shell_config.application_name = shell_config.value(keyAppName, "");
                 g_shell_config.application_component_factory = shell_config.value(keyAcfName, "");
                 g_shell_config.jni_class_name = shell_config.value(keyJniClsName, "");
@@ -566,6 +567,7 @@ DPT_ENCRYPT void read_shell_config(JNIEnv *env) {
                 g_shell_config.dex_sign = shell_config.value(keyDexSign, "");
                 g_shell_config.junk_class_name = shell_config.value(keyJunkClsName, "");
                 g_shell_config.risk_check_flags = shell_config.value(keyRiskCheckFlags, 0);
+                g_shell_config.app_package_name = shell_config.value(keyAppPkgName, "");
 
                 DLOGD("application_name = %s", g_shell_config.application_name.c_str());
                 DLOGD("application_component_factory = %s", g_shell_config.application_component_factory.c_str());
@@ -574,6 +576,7 @@ DPT_ENCRYPT void read_shell_config(JNIEnv *env) {
                 DLOGD("dex_sign = %s", g_shell_config.dex_sign.c_str());
                 DLOGD("junk_class_name = %s", g_shell_config.junk_class_name.c_str());
                 DLOGD("risk_check_flags = 0x%x", g_shell_config.risk_check_flags);
+                DLOGD("app_package_name = %s", g_shell_config.app_package_name.c_str());
             } catch (const std::exception &e) {
                 DLOGE("parse shell config failed: %s", e.what());
             }

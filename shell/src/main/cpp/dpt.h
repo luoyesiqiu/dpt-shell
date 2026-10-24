@@ -52,9 +52,16 @@ struct ShellConfig {
     std::string app_sign_sha256;
     std::string dex_sign;
     std::string junk_class_name;
+    // 应用包名，随壳配置下发。用于 app_process 进程里挑出正确的 APK。
+    std::string app_package_name;
     uint8_t aes_key[32] = {};
     uint32_t risk_check_flags = 0;
 };
+
+// dpt.cpp 里定义的全局壳配置。dpt_util.cpp 的 getSourceDir 回退需要
+// app_package_name 来挑出属于本应用的 APK —— app_process 进程的
+// java.class.path 指向的是 Shizuku 自己的 APK。
+extern ShellConfig g_shell_config;
 
 void callRealApplicationOnCreate(JNIEnv *env, jclass, jstring realApplicationClassName);
 
