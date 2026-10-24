@@ -14,7 +14,6 @@ import com.luoye.dpt.model.MultiDexCode;
 import com.luoye.dpt.task.ThreadPool;
 import com.luoye.dpt.util.CryptoUtils;
 import com.luoye.dpt.util.DexUtils;
-import com.luoye.dpt.util.DexVersionUtils;
 import com.luoye.dpt.util.FileUtils;
 import com.luoye.dpt.util.HexUtils;
 import com.luoye.dpt.util.IoUtils;
@@ -379,6 +378,13 @@ public abstract class AndroidPackage {
     public void writeConfig(String packageDir, byte[] key) {
         File configFile = new File(getOutAssetsDir(packageDir).getAbsolutePath() + File.separator + Const.KEY_SHELL_CONFIG_STORE_NAME);
         ShellConfig shellConfig = ShellConfig.getInstance();
+        // 把应用包名一起下发给壳。壳在 app_process 进程里需要它来挑出正确的 APK：
+        // 那些进程的 java.class.path 指向 Shizuku 自己的 APK，直接取第一个 .apk
+        // 会算错签名证书。
+        //
+        // 故意不为它单独导出一个 .so 数据符号 —— 符号表里多一个语义直白的名字
+        // （SN_APP_PKG 之类）等于主动告诉分析者这里有什么。
+        shellConfig.setAppPackageName(getPackageName());
         String json = shellConfig.toJson();
         LogUtils.info("Write config: " + json);
         byte[] aesKey = deriveConfigAesKey(key);
@@ -450,12 +456,7 @@ public abstract class AndroidPackage {
         String dexDir = getDexDir(packageDir);
         File mainDex = new File(dexDir, "classes.dex");
         File junkCodeDex = new File(getJunkCodeDexPath());
-        // dx 的 DexMerger 只会写出 DEX 035。这里先记住原 dex 版本，合并成功后恢复，
-        // 否则 037+ 的主 dex（Kotlin 接口默认方法等）会被降级并在运行时抛
-        // IncompatibleClassChangeError。
-        int mainDexVersion = DexVersionUtils.readDexVersion(mainDex);
         if(mainDex.exists() && DexUtils.mergeDex(mainDex, junkCodeDex)) {
-            DexVersionUtils.restoreDexVersion(mainDex, mainDexVersion);
             LogUtils.info("Merge junk code into classes.dex");
         }
         else {
@@ -713,11 +714,13 @@ public abstract class AndroidPackage {
                     injectedDexFile.delete();
                 }
 
-                // splitDex 已把 keep-in-place（Compose）类排除在 keep 集之外，
-                // 让它们原样留在主 dex，因此含 Compose 的 dex 也可以安全 split。
-                // 旧逻辑是「含 Compose 的 dex 整个跳过 split」—— 那会让 -r 规则
-                // 在这类 dex 上完全失效（规则命中的类仍留在加密容器里）。
-                if(isKeepClasses()) {
+                if(isKeepClasses() && DexUtils.dexContainsKeepInPlace(dexFile)) {
+                    // Skip split entirely for dexes containing keep-in-place classes (e.g. Compose):
+                    // the re-partition would break Compose's cross-dex interface linking and cause IncompatibleClassChangeError.
+                    // The dex still goes through extractAllMethods (rule-matched classes are skipped as usual); it is just not split.
+                    LogUtils.info("Skip split for dex with keep-in-place classes (e.g. Compose): %s", dexFile.getName());
+                }
+                else if(isKeepClasses()) {
                     File keepDex = new File(getKeepDexTempDir(packageDir).getAbsolutePath() + File.separator + dexFile.getName());
                     File splitDex = new File(dexFile.getAbsolutePath() + "_split.dex");
 

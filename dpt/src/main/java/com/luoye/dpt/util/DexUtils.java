@@ -79,11 +79,6 @@ public class DexUtils {
         return false;
     }
 
-    /** keep-in-place（Compose）判定对外暴露：供 clinit 注入跳过判定复用。 */
-    public static boolean isKeepInPlace(String type) {
-        return keepInPlace(type);
-    }
-
     /**
      * Returns whether a dex contains "keep-in-place" classes (e.g. Compose).
      * Such a dex must skip splitting entirely: the re-partition in splitDex rewrites the
@@ -92,7 +87,7 @@ public class DexUtils {
      */
     public static boolean dexContainsKeepInPlace(File dexFile) {
         try {
-            DexBackedDexFile dex = DexFileFactory.loadDexFile(dexFile, DexVersionUtils.opcodesFor(dexFile));
+            DexBackedDexFile dex = DexFileFactory.loadDexFile(dexFile, Opcodes.getDefault());
             for (com.android.tools.smali.dexlib2.iface.ClassDef classDef : dex.getClasses()) {
                 if (keepInPlace(classDef.getType())) {
                     return true;
@@ -126,7 +121,7 @@ public class DexUtils {
         AtomicInteger keepClassesCount = new AtomicInteger();
         ProtectRules protectRules = ProtectRules.getInstance();
 
-        DexBackedDexFile dexBackedDexFile = DexFileFactory.loadDexFile(originDex, DexVersionUtils.opcodesFor(originDex));
+        DexBackedDexFile dexBackedDexFile = DexFileFactory.loadDexFile(originDex, Opcodes.getDefault());
 
         DexRewriter keepRewriter = new DexRewriter(new RewriterModule() {
             @Override
@@ -136,11 +131,8 @@ public class DexUtils {
                     totalClassesCount.set(classes.size());
                     Set<com.android.tools.smali.dexlib2.iface.ClassDef> newClasses = new HashSet<>();
                     for (com.android.tools.smali.dexlib2.iface.ClassDef aClass : classes) {
-                        // match rules，但 keep-in-place（Compose）类绝不移动：
-                        // 把它们搬到独立 keep dex 会改变其 dex 归属 / 类型表，破坏
-                        // Compose 接口默认方法的跨 dex 链接（IncompatibleClassChangeError）。
-                        // 它们留在原 dex（走下面的 splitDexFile 分支）。
-                        if (protectRules.matchRules(aClass.getType()) && !keepInPlace(aClass.getType())) {
+                        // match rules
+                        if (protectRules.matchRules(aClass.getType())) {
                             newClasses.add(aClass);
                             keepClassesCount.getAndIncrement();
                         }
@@ -152,8 +144,6 @@ public class DexUtils {
 
         DexFile keepDexFile = keepRewriter.getDexFileRewriter().rewrite(dexBackedDexFile);
         DexFileFactory.writeDexFile(keepDex.getAbsolutePath(), keepDexFile);
-        // dexlib2 写出时会用传入 Opcodes 的版本（默认 035），这里恢复原版本。
-        DexVersionUtils.restoreDexVersion(keepDex, DexVersionUtils.readDexVersion(originDex));
 
         DexRewriter splitRewriter = new DexRewriter(new RewriterModule() {
             @Override
@@ -162,9 +152,8 @@ public class DexUtils {
                     Set<? extends com.android.tools.smali.dexlib2.iface.ClassDef> classes = value.getClasses();
                     Set<com.android.tools.smali.dexlib2.iface.ClassDef> newClasses = new HashSet<>();
                     for (com.android.tools.smali.dexlib2.iface.ClassDef aClass : classes) {
-                        // 保留在原 dex = keep dex 的补集：未命中规则的，
-                        // 以及命中规则但属于 keep-in-place（Compose）的，都留在这里。
-                        if (!(protectRules.matchRules(aClass.getType()) && !keepInPlace(aClass.getType()))) {
+                        // do not match
+                        if (!protectRules.matchRules(aClass.getType())) {
                             newClasses.add(aClass);
                         }
                     }
@@ -174,7 +163,6 @@ public class DexUtils {
         });
         DexFile splitDexFile = splitRewriter.getDexFileRewriter().rewrite(dexBackedDexFile);
         DexFileFactory.writeDexFile(splitDex.getAbsolutePath(), splitDexFile);
-        DexVersionUtils.restoreDexVersion(splitDex, DexVersionUtils.readDexVersion(originDex));
 
         return new ImmutablePair<>(keepClassesCount.get(), totalClassesCount.get());
     }
@@ -202,7 +190,7 @@ public class DexUtils {
 
     public static void renamePackageName(File dexFilePath, File newDexFilePath, String slashShellPackageName) throws IOException {
 
-        DexBackedDexFile dexBackedDexFile = DexFileFactory.loadDexFile(dexFilePath, DexVersionUtils.opcodesFor(dexFilePath));
+        DexBackedDexFile dexBackedDexFile = DexFileFactory.loadDexFile(dexFilePath, Opcodes.getDefault());
 
         LogUtils.debug("Rename shell package name to: " + slashShellPackageName);
         DexRewriter dexMethodRewriter = new DexRewriter(new RewriterModule() {
@@ -225,7 +213,6 @@ public class DexUtils {
 
         DexFile dexFile = dexMethodRewriter.getDexFileRewriter().rewrite(dexBackedDexFile);
         DexFileFactory.writeDexFile(newDexFilePath.getAbsolutePath(), dexFile);
-        DexVersionUtils.restoreDexVersion(newDexFilePath, DexVersionUtils.readDexVersion(dexFilePath));
     }
 
     private static int getCodeOffAppearCount(int dexIndex, int codeOff) {

@@ -18,10 +18,10 @@
 #include <sys/uio.h>
 
 #include "dpt_util.h"
+// getSourceDir 的回退需要 g_shell_config.app_package_name 来挑出本应用的 APK。
+// dpt_util.h 为了避开循环依赖没有 include dpt.h，这里补上。
+#include "dpt.h"
 #include "common/dpt_log.h"
-
-// dpt.cpp 里由 dpt.jar 写入的应用包名
-extern uint8_t SN_APP_PKG[128];
 
 using namespace dpt;
 
@@ -264,22 +264,23 @@ static std::string propGet(JNIEnv *env, const char *key) {
 
 // ---- 回退 1: java.class.path 里找 apk（app_process 用户服务进程）----
 //
-// 必须按「烘进 so 的包名」过滤，不能直接取第一个 .apk。
+// 必须按应用包名过滤，不能直接取第一个 .apk。
 //
 // 原因：Shizuku 的 user service 由 app_process 拉起，进程的 java.class.path
 // 指向的是 **Shizuku 自己的 APK**：
 //   /data/app/.../moe.shizuku.privileged.api-.../base.apk
 // 而不是被托管应用的 APK。若直接返回它：
-//   1) sha256_of_apk_signer() 算出 Shizuku 的证书摘要
-//   2) 自封装块是用应用包名 + 应用证书封的，认证必然失败
-//   3) sn::init 失败 -> keys().ready=false
-//   4) decrypt_bitcode_stage() 走 _exit(70)，进程静默退出
+//   1) 壳会算出 Shizuku 的签名证书摘要
+//   2) 加密用的密钥绑定的是应用包名 + 应用证书，认证必然失败
+//   3) 壳初始化失败，进程静默退出
+//
+// 包名来自壳配置（随 assets 下发，不单独导出 .so 符号）。
 static std::string findApkInClassPath(JNIEnv *env) {
     std::string cp = propGet(env, "java.class.path");
     if (cp.empty()) { return cp; }
 
-    std::string wantPkg(reinterpret_cast<const char *>(SN_APP_PKG));
-    bool havePkg = !wantPkg.empty() && wantPkg != "0";
+    const std::string &wantPkg = g_shell_config.app_package_name;
+    bool havePkg = !wantPkg.empty();
 
     std::string firstApk;
     size_t pos = 0;
@@ -298,10 +299,10 @@ static std::string findApkInClassPath(JNIEnv *env) {
     }
 
     if (!firstApk.empty()) {
-        // 没有烘入包名时只能退回旧行为；有包名却都没命中则返回空，
+        // 没有包名时只能退回旧行为；有包名却都没命中则返回空，
         // 让上层继续走 maps 回退，而不是拿错 APK 去算证书。
         if (!havePkg) {
-            DLOGW("source dir from java.class.path (no pkg embedded): %s", firstApk.c_str());
+            DLOGW("source dir from java.class.path (no pkg in config): %s", firstApk.c_str());
             return firstApk;
         }
         DLOGW("no classpath apk matches pkg '%s', skip: %s", wantPkg.c_str(), firstApk.c_str());
@@ -315,6 +316,7 @@ static std::string findApkInClassPath(JNIEnv *env) {
 static std::string findApkInSelfMaps() {
     std::string found;
     std::string anyApk;
+    const std::string &wantPkg = g_shell_config.app_package_name;
     FILE *fp = fopen("/proc/self/maps", "r");
     if (fp == nullptr) { return found; }
     char line[2048];
@@ -323,13 +325,17 @@ static std::string findApkInSelfMaps() {
         char *p = strstr(line, "/data/");
         if (p == nullptr) { p = strstr(line, "/mnt/"); }
         if (p == nullptr) { continue; }
-        char *end = p;
-        while (*end != '\0' && *end != '\n' && *end != ' ' && *end != '\t') { end++; }
-        if (end <= p) { continue; }
-        std::string cand(p, (size_t)(end - p));
+        char *e = p;
+        while (*e != '\0' && *e != '\n' && *e != ' ' && *e != '\t') { e++; }
+        if (e <= p) { continue; }
+        std::string cand(p, (size_t)(e - p));
         if (cand.size() <= 4 || cand.compare(cand.size() - 4, 4, ".apk") != 0) { continue; }
-        if (cand.find("base.apk") != std::string::npos) { found = cand; break; }
-        if (anyApk.empty()) { anyApk = cand; }
+        // 优先选属于本应用的那个（路径里含包名）
+        if (!wantPkg.empty() && cand.find(wantPkg) != std::string::npos) {
+            found = cand;
+            break;
+        }
+        if (cand.find("base.apk") != std::string::npos && anyApk.empty()) { anyApk = cand; }
     }
     fclose(fp);
     if (found.empty()) { found = anyApk; }
