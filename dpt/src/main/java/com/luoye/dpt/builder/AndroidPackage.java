@@ -14,6 +14,7 @@ import com.luoye.dpt.model.MultiDexCode;
 import com.luoye.dpt.task.ThreadPool;
 import com.luoye.dpt.util.CryptoUtils;
 import com.luoye.dpt.util.DexUtils;
+import com.luoye.dpt.util.DexVersionUtils;
 import com.luoye.dpt.util.FileUtils;
 import com.luoye.dpt.util.HexUtils;
 import com.luoye.dpt.util.IoUtils;
@@ -678,7 +679,7 @@ public abstract class AndroidPackage {
                 || f.getAbsolutePath().endsWith(".aab");
     }
 
-    public void extractDexCode(String packageDir, String dexCodeSavePath, byte[] soKey) {
+    public void processDexFiles(String packageDir, String dexCodeSavePath, byte[] soKey) {
         List<File> dexFiles = getDexFiles(getDexDir(packageDir));
         Map<Integer,List<Instruction>> instructionMap = new HashMap<>();
         String appNameNew = Const.KEY_CODE_ITEM_STORE_NAME;
@@ -692,6 +693,8 @@ public abstract class AndroidPackage {
         shellConfig.setInsnsCryptKey(deriveConfigAesKey(soKey));
         for(File dexFile : dexFiles) {
             ThreadPool.getInstance().execute(() -> {
+
+                int dexVersion = DexVersionUtils.readDexVersion(dexFile);
                 final int dexNo = DexUtils.getDexNumber(dexFile.getName());
                 if(dexNo < 0) {
                     countDownLatch.countDown();
@@ -753,6 +756,8 @@ public abstract class AndroidPackage {
                     DexUtils.writeHashes(extractedDexFile, dexFileRightHashes);
                     dexFile.delete();
                     dexFileRightHashes.renameTo(dexFile);
+
+                    DexVersionUtils.writeDexVersion(dexFile, dexVersion);
                 }
                 catch (Exception e) {
                 }

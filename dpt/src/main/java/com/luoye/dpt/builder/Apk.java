@@ -204,7 +204,7 @@ public class Apk extends AndroidPackage {
         String assetsPath = apk.getOutAssetsDir(apkMainProcessPath).getAbsolutePath();
 
         apk.addJunkCodeDex(apkMainProcessPath);
-        apk.extractDexCode(apkMainProcessPath, assetsPath, encKey);
+        apk.processDexFiles(apkMainProcessPath, assetsPath, encKey);
         apk.compressDexFiles(apkMainProcessPath);
         apk.deleteAllDexFiles(apkMainProcessPath);
         apk.combineDexZipWithShellDex(apkMainProcessPath);
