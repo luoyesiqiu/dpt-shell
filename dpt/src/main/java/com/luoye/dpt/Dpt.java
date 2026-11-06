@@ -15,12 +15,9 @@ import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 
-import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.List;
@@ -62,24 +59,6 @@ public class Dpt {
     }
 
     public static String getBuildKey() {
-        // Prefer the key written next to shell SO artifacts so encrypt side
-        // always matches the native binary being packaged.
-        String executablePath = FileUtils.getExecutablePath();
-        if (executablePath != null && !executablePath.isEmpty()) {
-            File keyFile = new File(executablePath,
-                    "shell-files" + File.separator + Const.KEY_BUILD_KEY_FILE_NAME);
-            if (keyFile.isFile()) {
-                try {
-                    String value = Files.readString(keyFile.toPath(), StandardCharsets.UTF_8).trim();
-                    if (!value.isEmpty()) {
-                        return value;
-                    }
-                } catch (IOException ignored) {
-                    // fall through to jar manifest
-                }
-            }
-        }
-
         try {
             ClassLoader classLoader = Dpt.class.getClassLoader();
             if (classLoader == null) {

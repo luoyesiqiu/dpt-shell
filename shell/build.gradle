@@ -118,11 +118,6 @@ def afterAssembleCopy(Project project, Map archMap, boolean debug) {
         }
     }
 
-    // Keep encrypt/decrypt key next to the SO artifacts that dpt packages.
-    def buildKeyFile = new File(targetDir, "build-key")
-    buildKeyFile.text = "${dptBuildKey}\n"
-    println("[" + project.name + "] wrote build key -> " + buildKeyFile.absolutePath)
-
     // Re-persist ids after assemble so a mid-build clean cannot leave them missing.
     def idsFile = new File(project.rootDir, "build" + File.separator + "dpt-build-ids.properties")
     idsFile.parentFile.mkdirs()
