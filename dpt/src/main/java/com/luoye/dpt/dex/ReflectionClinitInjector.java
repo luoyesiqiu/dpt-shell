@@ -35,6 +35,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Predicate;
 
 /**
  * Inject reflection-based JniBridge.clinit calls into static initializers.
@@ -69,6 +70,19 @@ public class ReflectionClinitInjector {
     }
 
     public static void inject(String inputDex, String outputDex, String jniClassSig) throws IOException {
+        inject(inputDex, outputDex, jniClassSig, null);
+    }
+
+    /**
+     * Same as {@link #inject(String, String, String)}, but classes matched by
+     * {@code skipType} get no clinit injection.
+     *
+     * <p>Used for keep-in-place (Compose) classes: they are not extracted and stay in the
+     * main dex, so they may load before the shell is ready. The injected call resolves
+     * JniBridge reflectively, which would fail at that point.
+     */
+    public static void inject(String inputDex, String outputDex, String jniClassSig,
+                              Predicate<String> skipType) throws IOException {
         File inputFile = new File(inputDex);
         DexBackedDexFile dexFile = DexFileFactory.loadDexFile(inputFile, Opcodes.getDefault());
 
@@ -93,6 +107,9 @@ public class ReflectionClinitInjector {
 
         for (ClassDef classDef : allClasses) {
             if (isSkippedClass(classDef.getType())) {
+                continue;
+            }
+            if (skipType != null && skipType.test(classDef.getType())) {
                 continue;
             }
             for (Method method : classDef.getMethods()) {

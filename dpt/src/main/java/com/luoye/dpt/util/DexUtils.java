@@ -59,9 +59,10 @@ public class DexUtils {
 
     /**
      * Classes with these prefixes must be kept in place: with -K(keep-classes) they are
-     * neither extracted nor moved to a separate keep dex. Moving them would change their
-     * dex membership and break ART's cross-dex linking of interface default methods
-     * (e.g. in Compose), causing IncompatibleClassChangeError at launch.
+     * never moved to the separate keep dex. Moving them would change their dex membership
+     * and break ART's cross-dex linking of interface default methods (e.g. in Compose),
+     * causing IncompatibleClassChangeError at launch. They stay in the dex they came from,
+     * so that dex can still be split for the remaining classes.
      */
     private static final String[] KEEP_IN_PLACE_PREFIXES = {
             "Landroidx/compose/",
@@ -80,25 +81,11 @@ public class DexUtils {
     }
 
     /**
-     * Returns whether a dex contains "keep-in-place" classes (e.g. Compose).
-     * Such a dex must skip splitting entirely: the re-partition in splitDex rewrites the
-     * dex's class layout / type tables and breaks Compose's cross-dex interface linking,
-     * causing IncompatibleClassChangeError at runtime.
+     * Whether the class must stay in the dex it was loaded from. Exposed so the
+     * clinit injector can skip these types as well.
      */
-    public static boolean dexContainsKeepInPlace(File dexFile) {
-        try {
-            DexBackedDexFile dex = DexFileFactory.loadDexFile(dexFile, Opcodes.getDefault());
-            for (com.android.tools.smali.dexlib2.iface.ClassDef classDef : dex.getClasses()) {
-                if (keepInPlace(classDef.getType())) {
-                    return true;
-                }
-            }
-        } catch (Exception e) {
-            LogUtils.warn("check keep-in-place failed for %s, will skip split to be safe: %s",
-                    dexFile.getName(), e);
-            return true;
-        }
-        return false;
+    public static boolean isKeepInPlace(String type) {
+        return keepInPlace(type);
     }
 
     /**
@@ -106,7 +93,17 @@ public class DexUtils {
      * Helper methods are generated via dexlib2 and spread across different classes.
      */
     public static void injectInvokeMethod(String inputDex, String outputDex, String jniClass) throws IOException {
-        ReflectionClinitInjector.inject(inputDex, outputDex, jniClass);
+        ReflectionClinitInjector.inject(inputDex, outputDex, jniClass, null);
+    }
+
+    /**
+     * Same as {@link #injectInvokeMethod(String, String, String)}, but types matched by
+     * {@code skipType} are left untouched. Keep-in-place (Compose) classes use this: the
+     * injected call references JniBridge, which may not be ready when they load.
+     */
+    public static void injectInvokeMethod(String inputDex, String outputDex, String jniClass,
+                                          java.util.function.Predicate<String> skipType) throws IOException {
+        ReflectionClinitInjector.inject(inputDex, outputDex, jniClass, skipType);
     }
 
     /**
@@ -131,8 +128,10 @@ public class DexUtils {
                     totalClassesCount.set(classes.size());
                     Set<com.android.tools.smali.dexlib2.iface.ClassDef> newClasses = new HashSet<>();
                     for (com.android.tools.smali.dexlib2.iface.ClassDef aClass : classes) {
-                        // match rules
-                        if (protectRules.matchRules(aClass.getType())) {
+                        // Match rules, but keep-in-place classes (e.g. Compose) are never moved:
+                        // relocating them would change their dex membership and break ART's
+                        // cross-dex linking of interface default methods.
+                        if (protectRules.matchRules(aClass.getType()) && !keepInPlace(aClass.getType())) {
                             newClasses.add(aClass);
                             keepClassesCount.getAndIncrement();
                         }
@@ -143,7 +142,14 @@ public class DexUtils {
         });
 
         DexFile keepDexFile = keepRewriter.getDexFileRewriter().rewrite(dexBackedDexFile);
-        DexFileFactory.writeDexFile(keepDex.getAbsolutePath(), keepDexFile);
+        if (keepClassesCount.get() > 0) {
+            DexFileFactory.writeDexFile(keepDex.getAbsolutePath(), keepDexFile);
+        }
+        else {
+            // Nothing matched the keep rules: do not emit an empty keep dex. An empty dex
+            // would still be added back into the package by addKeepDexes().
+            LogUtils.debug("no class kept for %s, skip keep dex", originDex.getName());
+        }
 
         DexRewriter splitRewriter = new DexRewriter(new RewriterModule() {
             @Override
@@ -152,8 +158,9 @@ public class DexUtils {
                     Set<? extends com.android.tools.smali.dexlib2.iface.ClassDef> classes = value.getClasses();
                     Set<com.android.tools.smali.dexlib2.iface.ClassDef> newClasses = new HashSet<>();
                     for (com.android.tools.smali.dexlib2.iface.ClassDef aClass : classes) {
-                        // do not match
-                        if (!protectRules.matchRules(aClass.getType())) {
+                        // Everything that is not moved to the keep dex stays here, including
+                        // keep-in-place (Compose) classes.
+                        if (!(protectRules.matchRules(aClass.getType()) && !keepInPlace(aClass.getType()))) {
                             newClasses.add(aClass);
                         }
                     }
