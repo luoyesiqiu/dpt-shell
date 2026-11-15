@@ -115,7 +115,7 @@ public class ReadElf implements AutoCloseable {
 
     public static class SectionHeader {
         public SectionHeader(String sh_name, long sh_type, long sh_flags, long sh_addr, long sh_offset, long sh_size,
-                             long sh_name_offset) {
+                             long sh_name_offset, int index) {
             this.sh_name = sh_name;
             this.sh_type = sh_type;
             this.sh_flags = sh_flags;
@@ -123,6 +123,7 @@ public class ReadElf implements AutoCloseable {
             this.sh_offset = sh_offset;
             this.sh_size = sh_size;
             this.sh_name_offset = sh_name_offset;
+            this.sh_index = index;
         }
 
         public String getName() {
@@ -153,6 +154,12 @@ public class ReadElf implements AutoCloseable {
         public long getNameOffset() {
             return sh_name_offset;
         }
+
+        /** Index of this section in the section header table. */
+        public int getIndex() {
+            return sh_index;
+        }
+
         private  String sh_name;
         private long sh_type;
         private long sh_flags;
@@ -160,6 +167,7 @@ public class ReadElf implements AutoCloseable {
         private long sh_offset;
         private long sh_size;
         private long sh_name_offset;
+        private int sh_index;
 
     }
 
@@ -196,6 +204,15 @@ public class ReadElf implements AutoCloseable {
     /** Dynamic Symbol Table symbol names */
     private Map<String, Symbol> mDynamicSymbols;
     private List<SectionHeader> mSectionHeaderList;
+    /** Section Header Table offset */
+    private long mSectionHeaderOffset;
+    /** Size of a single section header entry */
+    private int mSectionHeaderEntrySize;
+    /** Number of section header entries */
+    private int mSectionCount;
+    /** Index of the section header string table */
+    private int mSectionNameTableIndex;
+    private boolean mIs64Bit;
 
     public static ReadElf read(File file) throws IOException {
         return new ReadElf(file);
@@ -280,6 +297,11 @@ public class ReadElf implements AutoCloseable {
         int e_shentsize = readHalf();
         int e_shnum = readHalf();
         int e_shstrndx = readHalf();
+        mSectionHeaderOffset = sh_off;
+        mSectionHeaderEntrySize = e_shentsize;
+        mSectionCount = e_shnum;
+        mSectionNameTableIndex = e_shstrndx;
+        mIs64Bit = elfClass == ELFCLASS64;
         readSectionHeaders(sh_off, e_shnum, e_shentsize, e_shstrndx);
         readProgramHeaders(ph_off, e_phnum, e_phentsize);
     }
@@ -320,7 +342,7 @@ public class ReadElf implements AutoCloseable {
             final String shName = readShStrTabEntry(sh_name);
 
             mSectionHeaderList.add(new SectionHeader(shName,sh_type,sh_flags,sh_addr,sh_offset,sh_size,
-                    sh_off + (long) i * e_shentsize));
+                    sh_off + (long) i * e_shentsize, i));
 
             if (sh_type == SHT_SYMTAB || sh_type == SHT_DYNSYM) {
                 if (".symtab".equals(shName)) {
@@ -495,5 +517,30 @@ public class ReadElf implements AutoCloseable {
 
     public List<SectionHeader> getSectionHeaders() {
       return mSectionHeaderList;
+    }
+
+    /** File offset of the section header table. */
+    public long getSectionHeaderOffset() {
+        return mSectionHeaderOffset;
+    }
+
+    /** Size in bytes of a single section header entry. */
+    public int getSectionHeaderEntrySize() {
+        return mSectionHeaderEntrySize;
+    }
+
+    /** Number of section header entries, including the null entry. */
+    public int getSectionCount() {
+        return mSectionCount;
+    }
+
+    /** Index of the section header string table. */
+    public int getSectionNameTableIndex() {
+        return mSectionNameTableIndex;
+    }
+
+    /** Whether the ELF file is 64-bit. */
+    public boolean is64Bit() {
+        return mIs64Bit;
     }
 }

@@ -21,13 +21,16 @@ public class SoKeyUtilsTest {
 
     private static final int ELF_HEADER_SIZE = 52;
     private static final int SECTION_HEADER_SIZE = 40;
-    private static final int SECTION_COUNT = 3;
+    private static final int SECTION_COUNT = 4;
     private static final int SECTION_HEADER_OFFSET = 0x100;
     private static final int SECTION_DATA_OFFSET = 0x40;
     private static final int SECTION_NAME_OFFSET = 0x60;
+    private static final int E_SHNUM_OFFSET = 48;
+    private static final int E_SHSTRNDX_OFFSET = 50;
+    private static final int SH_LINK_OFFSET = 24;
 
     @Test
-    public void testWriteKeyErasesSectionName() throws Exception {
+    public void testWriteKeyRemovesSection() throws Exception {
         byte[] key = testKey();
         File soFile = writeElf(Const.KEY_DATA_PLACEHOLDER.getBytes(StandardCharsets.US_ASCII));
 
@@ -36,14 +39,19 @@ public class SoKeyUtilsTest {
         byte[] data = Files.readAllBytes(soFile.toPath());
         Assert.assertArrayEquals(key, Arrays.copyOfRange(data, SECTION_DATA_OFFSET,
                 SECTION_DATA_OFFSET + key.length));
-        // The sh_name field of the first real section header must be cleared.
-        Assert.assertEquals(0, ByteBuffer.wrap(data,
-                        SECTION_HEADER_OFFSET + SECTION_HEADER_SIZE, 4)
-                .order(ByteOrder.LITTLE_ENDIAN).getInt());
+        ByteBuffer buffer = ByteBuffer.wrap(data).order(ByteOrder.LITTLE_ENDIAN);
+        // The section header entry is gone: one less section and a shifted name table index.
+        Assert.assertEquals(SECTION_COUNT - 1, buffer.getShort(E_SHNUM_OFFSET));
+        Assert.assertEquals(2, buffer.getShort(E_SHSTRNDX_OFFSET));
+        // The following section moved up, and its sh_link to the name table was adjusted.
+        Assert.assertEquals(2, buffer.getInt(SECTION_HEADER_OFFSET + SECTION_HEADER_SIZE
+                + SH_LINK_OFFSET));
 
         try (ReadElf readElf = new ReadElf(soFile)) {
             Assert.assertNull(readElf.getSection(Const.KEY_DATA_SECTION_NAME));
-            Assert.assertEquals(SECTION_COUNT - 1, readElf.getSectionHeaders().size());
+            ReadElf.SectionHeader symtab = readElf.getSection(".symtab");
+            Assert.assertNotNull(symtab);
+            Assert.assertEquals(1, symtab.getIndex());
         }
     }
 
@@ -108,7 +116,7 @@ public class SoKeyUtilsTest {
         buffer.putShort((short) 0);                      // e_phnum
         buffer.putShort((short) SECTION_HEADER_SIZE);    // e_shentsize
         buffer.putShort((short) SECTION_COUNT);          // e_shnum
-        buffer.putShort((short) 2);                      // e_shstrndx
+        buffer.putShort((short) 3);                      // e_shstrndx
 
         buffer.position(SECTION_DATA_OFFSET);
         buffer.put(sectionData);
@@ -117,12 +125,20 @@ public class SoKeyUtilsTest {
 
         // Section header #0: SHT_NULL, all zero.
         // Section header #1: the key section.
+        int sectionNameEntrySize = sectionName.length() + 1;
+        int symtabNameOffset = 1 + sectionNameEntrySize;
+        int shstrtabNameOffset = symtabNameOffset + ".symtab".length() + 1;
         buffer.position(sectionHeaderOffset + SECTION_HEADER_SIZE);
-        putSectionHeader(buffer, 1, 1, 3, 0x1000, SECTION_DATA_OFFSET, sectionData.length);
-        // Section header #2: .shstrtab.
+        putSectionHeader(buffer, 1, 1, 3, 0x1000, SECTION_DATA_OFFSET, sectionData.length,
+                0, 0);
+        // Section header #2: .symtab, linked to .shstrtab.
         buffer.position(sectionHeaderOffset + 2 * SECTION_HEADER_SIZE);
-        putSectionHeader(buffer, 1 + sectionName.length() + 1, 3, 0, 0,
-                SECTION_NAME_OFFSET, sectionNameTable.length);
+        putSectionHeader(buffer, symtabNameOffset, 2, 0, 0, SECTION_DATA_OFFSET, 0,
+                3, 0);
+        // Section header #3: .shstrtab.
+        buffer.position(sectionHeaderOffset + 3 * SECTION_HEADER_SIZE);
+        putSectionHeader(buffer, shstrtabNameOffset, 3, 0, 0,
+                SECTION_NAME_OFFSET, sectionNameTable.length, 0, 0);
 
         File soFile = File.createTempFile("dpt-key-test", ".so");
         soFile.deleteOnExit();
@@ -131,24 +147,25 @@ public class SoKeyUtilsTest {
     }
 
     private static void putSectionHeader(ByteBuffer buffer, int name, int type, int flags,
-                                         int addr, int offset, int size) {
+                                         int addr, int offset, int size, int link, int info) {
         buffer.putInt(name);
         buffer.putInt(type);
         buffer.putInt(flags);
         buffer.putInt(addr);
         buffer.putInt(offset);
         buffer.putInt(size);
-        buffer.putInt(0); // sh_link
-        buffer.putInt(0); // sh_info
-        buffer.putInt(1); // sh_addralign
-        buffer.putInt(0); // sh_entsize
+        buffer.putInt(link);   // sh_link
+        buffer.putInt(info);   // sh_info
+        buffer.putInt(1);      // sh_addralign
+        buffer.putInt(0);      // sh_entsize
     }
 
     private static byte[] buildSectionNameTable(String sectionName) {
         ByteBuffer table = ByteBuffer.allocate(sectionName.length() + 1
-                + ".shstrtab".length() + 1 + 1);
+                + ".symtab".length() + 1 + ".shstrtab".length() + 1 + 1);
         table.put((byte) 0);
         putString(table, sectionName);
+        putString(table, ".symtab");
         putString(table, ".shstrtab");
         return table.array();
     }
