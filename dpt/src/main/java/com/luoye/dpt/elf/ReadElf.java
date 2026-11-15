@@ -114,13 +114,15 @@ public class ReadElf implements AutoCloseable {
     }
 
     public static class SectionHeader {
-        public SectionHeader(String sh_name, long sh_type, long sh_flags, long sh_addr, long sh_offset, long sh_size) {
+        public SectionHeader(String sh_name, long sh_type, long sh_flags, long sh_addr, long sh_offset, long sh_size,
+                             long sh_name_offset) {
             this.sh_name = sh_name;
             this.sh_type = sh_type;
             this.sh_flags = sh_flags;
             this.sh_addr = sh_addr;
             this.sh_offset = sh_offset;
             this.sh_size = sh_size;
+            this.sh_name_offset = sh_name_offset;
         }
 
         public String getName() {
@@ -146,12 +148,18 @@ public class ReadElf implements AutoCloseable {
         public long getSize() {
             return sh_size;
         }
+
+        /** File offset of the sh_name field in the section header entry. */
+        public long getNameOffset() {
+            return sh_name_offset;
+        }
         private  String sh_name;
         private long sh_type;
         private long sh_flags;
         private long sh_addr;
         private long sh_offset;
         private long sh_size;
+        private long sh_name_offset;
 
     }
 
@@ -311,7 +319,8 @@ public class ReadElf implements AutoCloseable {
             long sh_size = readX(mAddrSize);
             final String shName = readShStrTabEntry(sh_name);
 
-            mSectionHeaderList.add(new SectionHeader(shName,sh_type,sh_flags,sh_addr,sh_offset,sh_size));
+            mSectionHeaderList.add(new SectionHeader(shName,sh_type,sh_flags,sh_addr,sh_offset,sh_size,
+                    sh_off + (long) i * e_shentsize));
 
             if (sh_type == SHT_SYMTAB || sh_type == SHT_DYNSYM) {
                 if (".symtab".equals(shName)) {
@@ -473,6 +482,15 @@ public class ReadElf implements AutoCloseable {
             }
         }
         return mDynamicSymbols.get(name);
+    }
+
+    public SectionHeader getSection(String name) {
+        for (SectionHeader sectionHeader : mSectionHeaderList) {
+            if (name.equals(sectionHeader.getName())) {
+                return sectionHeader;
+            }
+        }
+        return null;
     }
 
     public List<SectionHeader> getSectionHeaders() {

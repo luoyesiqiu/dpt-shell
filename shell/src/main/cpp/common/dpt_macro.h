@@ -14,6 +14,7 @@ inline int get_cache_page_size() {
 
 #define SECTION_NAME_BITCODE ".bitcode"
 #define SECTION_NAME_DATA ".data"
+#define SECTION_NAME_KEY_DATA ".dpt.data"
 
 #define SECTION(name) __attribute__ ((section(name)))
 #define KEEP_SYMBOL __attribute__((visibility("default")))
@@ -23,6 +24,7 @@ inline int get_cache_page_size() {
 #define SYS_INLINE ALWAYS_INLINE
 #define DPT_ENCRYPT SECTION(SECTION_NAME_BITCODE)
 #define DPT_DATA_SECTION SECTION(SECTION_NAME_DATA)
+#define DPT_KEY_SECTION __attribute__ ((section(SECTION_NAME_KEY_DATA), used))
 
 #define DEXES_ZIP_NAME "i11111i111.zip"
 #define CACHE_DIR "code_cache"

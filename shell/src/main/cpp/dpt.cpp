@@ -20,7 +20,7 @@ std::unordered_map<int,std::vector<data::CodeItem *> *> dexMap;
 
 DPT_DATA_SECTION uint8_t DATA_SECTION_BITCODE[] = ".bitcode";
 DPT_DATA_SECTION uint8_t DATA_SECTION_RO_DATA[] = ".rodata";
-KEEP_SYMBOL DPT_DATA_SECTION uint8_t DPT_UNKNOWN_DATA[] = "1234567890abcdef";
+static DPT_KEY_SECTION uint8_t g_key_data[] = "1234567890abcdef";
 
 ShellConfig g_shell_config;
 
@@ -219,7 +219,7 @@ void decrypt_section(const char* section_name, int temp_prot, int target_prot) {
 
     u_char *bitcode = (u_char *)malloc(size);
     struct rc4_state dec_state;
-    rc4_init(&dec_state, reinterpret_cast<const u_char *>(DPT_UNKNOWN_DATA), 16);
+    rc4_init(&dec_state, reinterpret_cast<const u_char *>(g_key_data), 16);
     rc4_crypt(&dec_state, reinterpret_cast<const u_char *>(target),
               reinterpret_cast<u_char *>(bitcode),
               size);
@@ -527,7 +527,7 @@ DPT_ENCRYPT void read_shell_config(JNIEnv *env) {
             std::string key_material = packageName + keySep + buildKey;
             DLOGD("key material for config key: %s", key_material.c_str());
 
-            auto aes_key = hmac_sha256(DPT_UNKNOWN_DATA,
+            auto aes_key = hmac_sha256(g_key_data,
                                        16,
                                        reinterpret_cast<const uint8_t *>(key_material.data()),
                                        key_material.size());
@@ -541,7 +541,7 @@ DPT_ENCRYPT void read_shell_config(JNIEnv *env) {
             std::vector<uint8_t> indata(entry_data, entry_data + entry_size);
 
             uint8_t iv[16] = {0};
-            memcpy(iv, DPT_UNKNOWN_DATA, 16);
+            memcpy(iv, g_key_data, 16);
             iv[3] = 0x2f;
             iv[9] = 0x76;
             auto decrypted_data = aes_cbc_decrypt(aes_key.data(), 256, iv, indata.data(), entry_size);

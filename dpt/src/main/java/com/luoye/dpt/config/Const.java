@@ -65,7 +65,10 @@ public class Const {
 
     public static final short MULTI_DEX_CODE_VERSION = 2;
 
-    public static final String RC4_KEY_SYMBOL = "DPT_UNKNOWN_DATA";
+    /** Dedicated section in the shell library that stores the per-build key. */
+    public static final String KEY_DATA_SECTION_NAME = ".dpt.data";
+    /** Initial content of the key section; replaced when the package is processed. */
+    public static final String KEY_DATA_PLACEHOLDER = "1234567890abcdef";
 
     public static final String KEY_SHELL_CONFIG_STORE_NAME = "d_shell_data_001";
     public static final String KEY_BUILD_KEY_FILE_NAME = "build-key";
