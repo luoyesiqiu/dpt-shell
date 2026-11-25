@@ -17,27 +17,32 @@ public class ProxyApplication extends Application {
     private String realApplicationName = "";
     private Application realApplication = null;
 
-    private void replaceApplication() {
-        if (Global.sNeedCalledApplication && !TextUtils.isEmpty(realApplicationName)) {
+    private Application getOrAttachRealApplication() {
+        if (realApplication == null) {
             realApplication = (Application) JniBridge.ra(realApplicationName);
-            Log.d(TAG, "applicationExchange: " + realApplicationName + ", realApplication: " + realApplication.getClass().getName());
-
-            JniBridge.craoc(realApplicationName);
-            Global.sNeedCalledApplication = false;
+            if (realApplication == null) {
+                throw new IllegalStateException("Could not attach " + realApplicationName);
+            }
         }
+        return realApplication;
     }
+
     @Override
     public void onCreate() {
         super.onCreate();
         Log.d(TAG, "dpt onCreate");
-        replaceApplication();
+        if (Global.sNeedCalledApplication && !TextUtils.isEmpty(realApplicationName)) {
+            Application application = getOrAttachRealApplication();
+            Global.sNeedCalledApplication = false;
+            application.onCreate();
+        }
     }
     @Override
     public Context createPackageContext(String packageName, int flags) throws PackageManager.NameNotFoundException {
         Log.d(TAG, "createPackageContext: " + realApplicationName);
         if(!TextUtils.isEmpty(realApplicationName)){
-            replaceApplication();
-            return realApplication;
+            // Providers need the application context before Android dispatches onCreate().
+            return getOrAttachRealApplication();
         }
         return super.createPackageContext(packageName, flags);
     }
